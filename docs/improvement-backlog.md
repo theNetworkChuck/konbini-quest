@@ -65,7 +65,7 @@
 **Files modified:** game.js, npc.js, engine.js, sprites.js
 
 ### 2026-03-18 — #2 Listening Comprehension Mode ✅
-**Commit:** (pending)
+**Commit:** `b59f72e`
 
 **What was added:**
 - New "Listening Mode" that activates when encountering previously-learned phrases
