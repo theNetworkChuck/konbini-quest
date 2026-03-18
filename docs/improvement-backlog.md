@@ -14,7 +14,7 @@
 
 ### Batch 3: Better Graphics & Polish
 7. ~~**Animated Store Entry**~~ ✅ - Sliding door animation when entering stores instead of just fade-to-black.
-8. **Weather System** - Rain, night, cherry blossom petals. Makes the overworld feel alive.
+8. ~~**Weather System**~~ ✅ - Rain, night, cherry blossom petals. Makes the overworld feel alive.
 9. **NPC Walk Cycles** - Street NPCs wander around instead of standing still. More Pokemon-like.
 10. **Particle Effects** - Stars burst when completing levels, sparkles on correct answers.
 
@@ -177,6 +177,29 @@
 - Testing hooks: forceReward(tier), togglePhraseBook()
 
 **Files modified:** npc.js, audio.js, sprites.js, engine.js, game.js
+
+### 2026-03-19 -- #8 Weather System ✅
+**Commit:** `c01794a`
+
+**What was added:**
+- Cherry blossom petal particle system: 30 pink petals with elliptical shapes, sway motion (sine wave), rotation, and drift
+- 7 shades of pink for natural variety (#FFB7C5, #FF9CAD, #FFDDE1, etc.)
+- Each petal has a white highlight for 3D depth effect
+- Rain particle system: 80 rain streaks with diagonal fall, varying lengths and transparency
+- Rain ground splash effects: animated expanding circles at the bottom of the screen
+- Ambient rain audio: 5 layered bandpass-filtered oscillators creating realistic rain texture
+- Rain audio fades in over 2s and out over 1.5s for smooth transitions
+- Day/night cycle with 4 phases over 120s: day → dusk (warm orange-purple) → night (deep blue) → dawn (soft pink)
+- Smooth alpha interpolation between phases (no jarring transitions)
+- Twinkling star field during nighttime: 15 deterministic stars with sine-based twinkle
+- Weather auto-cycles every 45s: cherry blossoms → clear → rain → clear → cherry blossoms
+- Weather only renders on the street (map 0) — store interiors are unaffected
+- Rain ambient sound stops when entering stores, resumes when returning to street
+- Time-of-day tint renders below sprites/NPCs but above map tiles for proper layering
+- Weather particles render above player but below HUD for correct visual hierarchy
+- Testing hooks: getWeatherInfo(), setWeather()
+
+**Files modified:** engine.js, audio.js, game.js
 
 ### 2026-03-18 -- #7 Animated Store Entry ✅
 **Commit:** `9c47443`
