@@ -376,6 +376,137 @@ const Engine = (() => {
 
   function isFading() { return fadeDir !== 0; }
 
+  // ============ SLIDING DOOR ANIMATION ============
+  // State: null = inactive, object = animation running
+  let doorAnim = null;
+
+  // storeColor: the store's brand color for door frames
+  // doorScreenX, doorScreenY: pixel position of the door on screen
+  // direction: 'enter' = opening to go in, 'exit' = opening to come out
+  function startDoorAnimation(storeColor, doorTileX, doorTileY, camXVal, camYVal, direction, callback) {
+    const screenX = doorTileX * T - camXVal;
+    const screenY = doorTileY * T - camYVal;
+    doorAnim = {
+      progress: 0,        // 0 to 1
+      duration: 0.5,      // seconds for full open
+      storeColor: storeColor,
+      screenX: screenX,   // left door tile screen X
+      screenY: screenY,
+      direction: direction,
+      callback: callback,
+      phase: 'opening',   // opening -> hold -> done
+      holdTimer: 0,
+      holdDuration: 0.15, // brief hold when fully open
+    };
+  }
+
+  function updateDoorAnimation(dt) {
+    if (!doorAnim) return;
+
+    if (doorAnim.phase === 'opening') {
+      doorAnim.progress += dt / doorAnim.duration;
+      if (doorAnim.progress >= 1) {
+        doorAnim.progress = 1;
+        doorAnim.phase = 'hold';
+        doorAnim.holdTimer = 0;
+      }
+    } else if (doorAnim.phase === 'hold') {
+      doorAnim.holdTimer += dt;
+      if (doorAnim.holdTimer >= doorAnim.holdDuration) {
+        doorAnim.phase = 'done';
+        if (doorAnim.callback) doorAnim.callback();
+        doorAnim = null;
+      }
+    }
+  }
+
+  function renderDoorAnimation() {
+    if (!doorAnim) return;
+
+    const anim = doorAnim;
+    const progress = anim.progress;
+
+    // Easing: ease-out cubic for smooth deceleration
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    // The door area spans 2 tiles wide (32px) x 1 tile tall (16px)
+    // We render as an overlay on top of the scene
+    const doorW = T * 2;  // 32px total width
+    const doorH = T;      // 16px height
+    const dx = anim.screenX;
+    const dy = anim.screenY;
+    const halfW = doorW / 2;
+
+    // The slide offset: each panel moves from center to edge
+    const slideOffset = eased * halfW; // 0 to 16px
+
+    // Draw the surrounding door frame first
+    ctx.fillStyle = '#5a5040';
+    // Top frame bar
+    ctx.fillRect(dx - 1, dy - 2, doorW + 2, 2);
+    // Left frame
+    ctx.fillRect(dx - 2, dy - 2, 2, doorH + 4);
+    // Right frame
+    ctx.fillRect(dx + doorW, dy - 2, 2, doorH + 4);
+
+    // Interior glow visible behind doors (warm konbini light)
+    const glowAlpha = eased * 0.8;
+    ctx.fillStyle = `rgba(255, 248, 220, ${glowAlpha})`;
+    ctx.fillRect(dx, dy, doorW, doorH);
+    // Add a warm tint band at top
+    ctx.fillStyle = `rgba(255, 220, 150, ${glowAlpha * 0.5})`;
+    ctx.fillRect(dx, dy, doorW, 4);
+
+    // Left door panel (slides left)
+    const leftPanelW = halfW - slideOffset;
+    if (leftPanelW > 0) {
+      // Door panel body
+      ctx.fillStyle = anim.storeColor;
+      ctx.fillRect(dx, dy, leftPanelW, doorH);
+      // Glass section
+      ctx.fillStyle = '#8ec8e8';
+      ctx.fillRect(dx + 1, dy + 1, Math.max(0, leftPanelW - 2), doorH - 4);
+      // Glass reflection
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillRect(dx + 2, dy + 2, Math.max(0, Math.min(3, leftPanelW - 3)), doorH - 6);
+      // Door edge (right side of left panel)
+      ctx.fillStyle = '#444';
+      ctx.fillRect(dx + leftPanelW - 1, dy, 1, doorH);
+    }
+
+    // Right door panel (slides right)
+    const rightPanelStart = dx + halfW + slideOffset;
+    const rightPanelW = halfW - slideOffset;
+    if (rightPanelW > 0) {
+      // Door panel body
+      ctx.fillStyle = anim.storeColor;
+      ctx.fillRect(rightPanelStart, dy, rightPanelW, doorH);
+      // Glass section
+      ctx.fillStyle = '#8ec8e8';
+      ctx.fillRect(rightPanelStart + 1, dy + 1, Math.max(0, rightPanelW - 2), doorH - 4);
+      // Glass reflection
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      const refX = rightPanelStart + rightPanelW - 5;
+      if (refX > rightPanelStart) {
+        ctx.fillRect(refX, dy + 2, Math.min(3, rightPanelW - 3), doorH - 6);
+      }
+      // Door edge (left side of right panel)
+      ctx.fillStyle = '#444';
+      ctx.fillRect(rightPanelStart, dy, 1, doorH);
+    }
+
+    // Automatic sliding door sensor indicator (red dot above door)
+    const sensorPulse = Math.sin(performance.now() / 150) * 0.3 + 0.7;
+    ctx.fillStyle = `rgba(255, 60, 60, ${sensorPulse})`;
+    ctx.fillRect(dx + halfW - 1, dy - 4, 2, 2);
+
+    // Door mat below
+    ctx.fillStyle = '#555';
+    ctx.fillRect(dx + 2, dy + doorH, doorW - 4, 2);
+  }
+
+  function isDoorAnimating() { return doorAnim !== null; }
+
   // ============ TITLE SCREEN ============
   function renderTitle() {
     // Dark background
@@ -447,6 +578,8 @@ const Engine = (() => {
     renderMap, renderStoreLabels, renderPlayer, renderNPCs, renderHUD,
     // Fade
     startFadeOut, startFadeIn, updateFade, renderFade, isFading,
+    // Sliding door animation
+    startDoorAnimation, updateDoorAnimation, renderDoorAnimation, isDoorAnimating,
     // Title
     renderTitle,
   };

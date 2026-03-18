@@ -63,6 +63,7 @@
   // ============ UPDATE ============
   function update(dt) {
     Engine.updateFade(dt);
+    Engine.updateDoorAnimation(dt);
     Dialogue.update(dt);
 
     if (state.phase === 'title') {
@@ -90,7 +91,7 @@
   }
 
   function updatePlaying(dt) {
-    if (Engine.isFading()) return;
+    if (Engine.isFading() || Engine.isDoorAnimating()) return;
 
     // Update stamp notification timer
     if (state.stampNotification) {
@@ -229,39 +230,85 @@
   }
 
   // ============ WARPS ============
+
+  // Store brand colors for door animation
+  const STORE_COLORS = {
+    '7-Eleven': '#d4380d',
+    'Lawson': '#1a6fc4',
+    'FamilyMart': '#27ae60',
+  };
+
   function checkWarp() {
     const warp = Maps.getWarp(state.currentMap, state.player.x, state.player.y);
     if (!warp) return;
 
-    GameAudio.playDoor();
+    const targetMap = Maps.allMaps[warp.targetMap];
+    const isEnteringStore = state.currentMap === 0 && targetMap && targetMap.store;
 
-    Engine.startFadeOut(() => {
-      state.currentMap = warp.targetMap;
-      state.player.x = warp.targetX;
-      state.player.y = warp.targetY;
-      state.player.dir = 'down';
-      state.player.walking = false;
-      state.greetingShown = false;
+    if (isEnteringStore) {
+      // Animated sliding door entry!
+      const storeColor = STORE_COLORS[targetMap.store] || '#888';
 
-      // Play store chime if entering a store
-      const map = Maps.allMaps[warp.targetMap];
-      if (map && map.store) {
-        state.enteredStore = map.store;
-        GameAudio.playStoreChime(map.store);
+      // Find the leftmost door tile for this store pair
+      // Door warps come in pairs at (x, y) and (x+1, y) — use the left one
+      const doorX = Math.min(warp.x, warp.x); // Current warp position
+      // Street map door tiles are at row 2, find the pair
+      const streetWarps = Maps.allMaps[0].warps.filter(w => w.targetMap === warp.targetMap);
+      const leftDoorX = Math.min(...streetWarps.map(w => w.x));
+      const doorY = warp.y;
 
-        // Show greeting after fade
-        setTimeout(() => {
-          if (!state.greetingShown) {
-            state.greetingShown = true;
-            Dialogue.show('Clerk', 'いらっしゃいませ！', () => {
-              GameAudio.speakJapanese('いらっしゃいませ');
-            });
-          }
-        }, 600);
-      }
+      // Get current camera position for screen coordinate calc
+      const map = Maps.allMaps[state.currentMap];
+      Engine.updateCamera(state.player.x, state.player.y, map.width, map.height);
+      const camXVal = Engine.camX();
+      const camYVal = Engine.camY();
 
-      Engine.startFadeIn();
-    });
+      // Play sliding door sound
+      GameAudio.playSlidingDoor();
+
+      // Start the door opening animation, then fade to black
+      Engine.startDoorAnimation(storeColor, leftDoorX, doorY, camXVal, camYVal, 'enter', () => {
+        // Door fully open → fade to black and transition
+        Engine.startFadeOut(() => {
+          state.currentMap = warp.targetMap;
+          state.player.x = warp.targetX;
+          state.player.y = warp.targetY;
+          state.player.dir = 'down';
+          state.player.walking = false;
+          state.greetingShown = false;
+          state.enteredStore = targetMap.store;
+
+          // Play store chime as we enter
+          GameAudio.playStoreChime(targetMap.store);
+
+          // Show greeting after fade-in
+          setTimeout(() => {
+            if (!state.greetingShown) {
+              state.greetingShown = true;
+              Dialogue.show('Clerk', 'いらっしゃいませ！', () => {
+                GameAudio.speakJapanese('いらっしゃいませ');
+              });
+            }
+          }, 600);
+
+          Engine.startFadeIn();
+        });
+      });
+    } else {
+      // Exiting store → simple fade with door close sound
+      GameAudio.playSlidingDoorClose();
+
+      Engine.startFadeOut(() => {
+        state.currentMap = warp.targetMap;
+        state.player.x = warp.targetX;
+        state.player.y = warp.targetY;
+        state.player.dir = 'down';
+        state.player.walking = false;
+        state.greetingShown = false;
+
+        Engine.startFadeIn();
+      });
+    }
   }
 
   // ============ INTERACTION ============
@@ -1219,6 +1266,9 @@
         state.time
       );
     }
+
+    // Sliding door animation overlay (above scene, below fade)
+    Engine.renderDoorAnimation();
 
     // Fade overlay (always on top)
     Engine.renderFade();

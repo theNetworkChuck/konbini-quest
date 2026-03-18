@@ -10,7 +10,7 @@
 ### Batch 2: Addictive Game Mechanics
 4. ~~**Daily Challenge / Streak System**~~ ✅ - A special NPC on the street offers a daily challenge. Visual streak counter on the HUD. Creates the "Hooked" cycle (trigger → action → variable reward → investment).
 5. ~~**Collection Mechanic**~~ ✅ - "Konbini Stamp Card" that fills up as you master phrases. Visual progress toward completion triggers completionist drive.
-6. **Variable Rewards** - Random rare items/phrases with special animations. The "variable reward" is the most addictive element per Nir Eyal's framework.
+6. ~~**Variable Rewards**~~ -- Random rare items/phrases with special animations. The "variable reward" is the most addictive element per Nir Eyal's framework.
 
 ### Batch 3: Better Graphics & Polish
 7. **Animated Store Entry** - Sliding door animation when entering stores instead of just fade-to-black.
@@ -147,3 +147,33 @@
 - Testing hooks: window.setDisplayMode(), window.unlockToLevel()
 
 **Files modified:** levels.js, game.js, dialogue.js
+
+### 2026-03-18 -- #6 Variable Rewards System
+**Commit:** `87532eb`
+
+**What was added:**
+- Variable reward system based on Nir Eyal's Hooked Model (variable ratio reinforcement schedule)
+- 20 collectible bonus phrases in 3 rarity tiers:
+  - Common (8 phrases, ~60% drop chance): everyday konbini phrases like straw requests, wet towels, separate bags
+  - Rare (6 phrases, ~30% drop chance): situational phrases like asking for restroom, spicy food check, IC card charge
+  - Ultra Rare (6 phrases, ~10% drop chance): advanced keigo and cultural phrases like polite restroom request, itadakimasu, gochisousama
+- ~25% base chance to roll a reward on any correct answer, with streak bonus up to +15%
+- Tier-specific reward animations:
+  - Common: bronze-colored slide-in banner
+  - Rare: silver banner with pulsing glow effect and sparkle particles
+  - Ultra Rare: golden double-bordered banner with dramatic glow, 8 orbiting sparkle particles
+- Tier-specific reward sound effects:
+  - Common: 3-note ascending chime
+  - Rare: 5-note sparkle ascending sequence
+  - Ultra Rare: dramatic 9-note fanfare with overtone sparkles
+- Bonus Phrase Book overlay (press [Q] from the street) showing all collected phrases
+  - Sorted by rarity (ultra rare first)
+  - Pulsing "NEW" indicators on unseen phrases
+  - Color-coded tier dots and legend (bronze/silver/gold)
+  - Progress bar showing X/20 collection progress
+- HUD indicator in top-right: book icon + collected count, golden border when new phrases available
+- Japanese TTS reads each bonus phrase aloud after the reward animation
+- Rewards trigger during store quizzes, listening mode, and challenge mode
+- Testing hooks: forceReward(tier), togglePhraseBook()
+
+**Files modified:** npc.js, audio.js, sprites.js, engine.js, game.js

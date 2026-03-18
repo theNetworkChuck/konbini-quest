@@ -135,12 +135,43 @@ const GameAudio = (() => {
     playNote(freq, ctx.currentTime, 0.03, 'square', 0.03);
   }
 
-  // Door transition
+  // Door transition (old simple beep)
   function playDoor() {
     if (!ctx) return; resume();
     let t = ctx.currentTime;
     playNote(220, t, 0.15, 'triangle', 0.12);
     playNote(330, t + 0.08, 0.2, 'triangle', 0.1);
+  }
+
+  // Sliding door open sound (whoosh + mechanical slide)
+  function playSlidingDoor() {
+    if (!ctx || muted) return; resume();
+    let t = ctx.currentTime;
+    // Mechanical click/latch
+    playNote(800, t, 0.04, 'square', 0.08);
+    // Sliding whoosh - descending frequency sweep
+    playNote(400, t + 0.05, 0.12, 'triangle', 0.1);
+    playNote(350, t + 0.10, 0.12, 'triangle', 0.12);
+    playNote(300, t + 0.15, 0.12, 'triangle', 0.12);
+    playNote(250, t + 0.20, 0.15, 'triangle', 0.10);
+    playNote(200, t + 0.28, 0.18, 'triangle', 0.08);
+    // Soft thud at end of slide
+    playNote(100, t + 0.42, 0.08, 'triangle', 0.06);
+    // Subtle pneumatic hiss (noise-like high freq)
+    playNote(2000, t + 0.05, 0.35, 'sawtooth', 0.015);
+  }
+
+  // Sliding door close sound (reverse whoosh)
+  function playSlidingDoorClose() {
+    if (!ctx || muted) return; resume();
+    let t = ctx.currentTime;
+    // Reverse slide
+    playNote(200, t, 0.12, 'triangle', 0.08);
+    playNote(250, t + 0.08, 0.12, 'triangle', 0.10);
+    playNote(300, t + 0.14, 0.12, 'triangle', 0.10);
+    playNote(350, t + 0.20, 0.10, 'triangle', 0.08);
+    // Click shut
+    playNote(900, t + 0.30, 0.04, 'square', 0.08);
   }
 
   // Exclamation "!"
@@ -219,5 +250,6 @@ const GameAudio = (() => {
     playLevelComplete, playStar, playSelect,
     playCursor, playFootstep, playDoor, playAlert,
     speakJapanese, playRewardSound,
+    playSlidingDoor, playSlidingDoorClose,
   };
 })();
