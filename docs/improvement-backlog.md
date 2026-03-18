@@ -9,7 +9,7 @@
 
 ### Batch 2: Addictive Game Mechanics
 4. ~~**Daily Challenge / Streak System**~~ ✅ - A special NPC on the street offers a daily challenge. Visual streak counter on the HUD. Creates the "Hooked" cycle (trigger → action → variable reward → investment).
-5. **Collection Mechanic** - "Konbini Stamp Card" that fills up as you master phrases. Visual progress toward completion triggers completionist drive.
+5. ~~**Collection Mechanic**~~ ✅ - "Konbini Stamp Card" that fills up as you master phrases. Visual progress toward completion triggers completionist drive.
 6. **Variable Rewards** - Random rare items/phrases with special animations. The "variable reward" is the most addictive element per Nir Eyal's framework.
 
 ### Batch 3: Better Graphics & Polish
@@ -105,6 +105,25 @@
 - Testing hooks added to render_game_to_text for challenge state
 
 **Files modified:** game.js, npc.js, engine.js, sprites.js
+
+### 2026-03-18 — #5 Collection Mechanic (Stamp Card) ✅
+**Commit:** `0c7d788`
+
+**What was added:**
+- Full stamp card collection system with 3 tiers: bronze (3+ mistakes), silver (1-2 mistakes), gold (perfect)
+- Each store has 4 stamp slots + 1 locked "Master Stamp" that unlocks when all 4 are gold
+- Cherry blossom-styled stamp icons with tier-colored variants (brown/silver/gold)
+- Full-screen stamp card overlay accessible via TAB key from the street
+- Shows all 3 stores (7-Eleven, Lawson, FamilyMart) with color-coded headers
+- Level names displayed under each stamp slot
+- Total progress bar at bottom with percentage
+- HUD indicator in top-right corner: stamp book icon + count (e.g., "6/15")
+- Floating notification banner when new stamps are earned (金/銀/銅 + GOLD/SILVER/BRONZE)
+- Master stamp features golden crown icon when unlocked, "?" when locked
+- Stamps only upgrade (never downgrade) — replay levels to earn better tiers
+- Testing hooks: toggleStampCard(), awardTestStamp()
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js
 
 ### 2026-03-18 — #3 Romaji → Kana Transition ✅
 **Commit:** `8751bcd`
