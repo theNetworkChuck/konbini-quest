@@ -15,7 +15,7 @@
 ### Batch 3: Better Graphics & Polish
 7. ~~**Animated Store Entry**~~ ✅ - Sliding door animation when entering stores instead of just fade-to-black.
 8. ~~**Weather System**~~ ✅ - Rain, night, cherry blossom petals. Makes the overworld feel alive.
-9. **NPC Walk Cycles** - Street NPCs wander around instead of standing still. More Pokemon-like.
+9. ~~**NPC Walk Cycles**~~ -- Street NPCs wander around instead of standing still. More Pokemon-like.
 10. **Particle Effects** - Stars burst when completing levels, sparkles on correct answers.
 
 ### Batch 4: Deeper Japanese Content
@@ -177,6 +177,25 @@
 - Testing hooks: forceReward(tier), togglePhraseBook()
 
 **Files modified:** npc.js, audio.js, sprites.js, engine.js, game.js
+
+### 2026-03-19 -- #9 NPC Walk Cycles
+**Commit:** `d5b71fb`
+
+**What was added:**
+- Pokemon-style wandering AI for 3 street NPCs: Old Man, Schoolgirl, Businessman
+- Tile-based random movement: NPCs pick a random direction, walk one tile with smooth pixel interpolation, then pause
+- 2-frame walk animation for each NPC type (alternating foot positions for walk cycle)
+- Pause duration between walks varies randomly: 1.5 to 4 seconds (staggered start times so they don't all move in sync)
+- 3-tile leash distance from home position prevents NPCs from wandering too far
+- Full collision system: NPCs check walkable map tiles, player position, and other NPC positions before moving
+- NPCs freeze immediately when dialogue is active (no awkward walking-while-talking)
+- If an NPC cannot find a walkable tile, it randomly turns to face a new direction (adds life without displacement)
+- Sensei and Challenger NPCs remain stationary -- players need to reliably find them for reviews and challenges
+- Store clerks are unaffected (they are on indoor maps only)
+- Walk speed: 12 frames per tile (~200ms), matching a natural slow amble pace
+- NPC walk state initialized when game starts (on title screen -> playing transition)
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js
 
 ### 2026-03-19 -- #8 Weather System ✅
 **Commit:** `c01794a`
