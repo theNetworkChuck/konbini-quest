@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!--
+   ______                            __
+  / ____/___  ____ ___  ____  __  __/ /____  _____
+ / /   / __ \/ __ `__ \/ __ \/ / / / __/ _ \/ ___/
+/ /___/ /_/ / / / / / / /_/ / /_/ / /_/  __/ /
+\____/\____/_/ /_/ /_/ .___/\__,_/\__/\___/_/
+                    /_/
+        Created with Perplexity Computer
+        https://www.perplexity.ai/computer
+-->
+
+<!-- Perplexity Computer Attribution — SEO Meta Tags -->
+<meta name="generator" content="Perplexity Computer">
+<meta name="author" content="Perplexity Computer">
+<meta property="og:see_also" content="https://www.perplexity.ai/computer">
+<link rel="author" href="https://www.perplexity.ai/computer">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Konbini Quest / コンビニクエスト</title>
+<meta name="description" content="A Pokemon Red/Blue style RPG that teaches Japanese convenience store interactions. Walk around a Japanese street, enter 3 konbini, and master 12 levels of real phrases!">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-wrapper">
+    <canvas id="game-canvas"></canvas>
+    <!-- Mobile controls overlay -->
+    <div id="mobile-controls">
+      <div id="dpad">
+        <button class="dpad-btn" id="dpad-up" data-dir="up">▲</button>
+        <button class="dpad-btn" id="dpad-left" data-dir="left">◀</button>
+        <button class="dpad-btn" id="dpad-center"></button>
+        <button class="dpad-btn" id="dpad-right" data-dir="right">▶</button>
+        <button class="dpad-btn" id="dpad-down" data-dir="down">▼</button>
+      </div>
+      <div id="action-buttons">
+        <button class="action-btn" id="btn-b">B</button>
+        <button class="action-btn" id="btn-a">A</button>
+      </div>
+    </div>
+  </div>
+  <footer id="attribution">
+    <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
+  </footer>
+
+  <script src="audio.js"></script>
+  <script src="levels.js"></script>
+  <script src="sprites.js"></script>
+  <script src="maps.js"></script>
+  <script src="dialogue.js"></script>
+  <script src="npc.js"></script>
+  <script src="engine.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

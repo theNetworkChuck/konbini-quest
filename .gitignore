@@ -1,0 +1,16 @@
+# Screenshots from QA testing
+screenshot-*.jpg
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Node modules (if added later)
+node_modules/
