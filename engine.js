@@ -234,6 +234,10 @@ const Engine = (() => {
         if (npc.isSensei && NPCs.hasReviewsAvailable()) {
           Sprites.drawReviewBubble(ctx, sx, sy, time);
         }
+        // Show challenge bubble above challenger when challenge ready
+        if (npc.isChallenger && NPCs.isChallengeReady()) {
+          Sprites.drawChallengeBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing
@@ -264,15 +268,35 @@ const Engine = (() => {
     ctx.fillStyle = '#fff';
     ctx.fillText(name, nameX + 6, 11);
 
+    // Streak counter (top right, above stars if streak > 0)
+    const chalState = NPCs.getChallengeState();
+    let hudRightY = 2;
+
+    if (chalState.streak > 0) {
+      const streakText = '🔥' + chalState.streak;
+      const streakW = 36;
+      ctx.fillStyle = 'rgba(26,26,46,0.85)';
+      ctx.fillRect(CANVAS_W - streakW - 2, hudRightY, streakW, 12);
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(CANVAS_W - streakW - 2, hudRightY, streakW, 12);
+      // Draw fire icon + number
+      Sprites.drawStreakFire(ctx, CANVAS_W - streakW, hudRightY + 1, chalState.streak);
+      ctx.fillStyle = '#f39c12';
+      ctx.fillText('x' + chalState.streak, CANVAS_W - streakW + 10, hudRightY + 9);
+      hudRightY += 14;
+    }
+
     // Star count (top right)
     const stars = NPCs.getTotalStars();
     const starText = '★' + stars;
     ctx.fillStyle = 'rgba(26,26,46,0.85)';
-    ctx.fillRect(CANVAS_W - 40, 2, 38, 12);
+    ctx.fillRect(CANVAS_W - 40, hudRightY, 38, 12);
     ctx.strokeStyle = '#fff';
-    ctx.strokeRect(CANVAS_W - 40, 2, 38, 12);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(CANVAS_W - 40, hudRightY, 38, 12);
     ctx.fillStyle = '#f1c40f';
-    ctx.fillText(starText, CANVAS_W - 36, 11);
+    ctx.fillText(starText, CANVAS_W - 36, hudRightY + 9);
   }
 
   // ============ FADE SYSTEM ============

@@ -389,11 +389,37 @@ const Sprites = (() => {
     'R': '#8b2252', 'G': '#d4af37', '5': '#4a3a2a'
   };
 
+  // Challenge Master NPC - energetic game-show host type with headband
+  const npcChallenger = `
+....HHHH....
+...HhHHhH...
+..RRRRRRrr..
+..SSEESSE..
+..SSSSSSSS..
+...SSMSS....
+..YYYYYYYY..
+..YYWYYWYY..
+..YYYYYYYY..
+...YYYYYY...
+..YYYYYYYY..
+..YY.YY.YY..
+..YY.YY.YY..
+...YY..YY...
+...WW..WW...
+...WW..WW...`;
+
+  const npcChallengerPalette = {
+    'H': '#1a1a2e', 'h': '#2a2a3e', 'S': '#f5d0a9', 'E': '#222', 'M': '#c0a080',
+    'R': '#e74c3c', 'r': '#c0392b', // red headband
+    'Y': '#f1c40f', 'W': '#fff', // yellow outfit, white shoes
+  };
+
   const npcSprites = {
     oldman: { map: npcOldMan, palette: npcOldManPalette },
     schoolgirl: { map: npcSchoolGirl, palette: npcSchoolGirlPalette },
     businessman: { map: npcBusinessMan, palette: npcBusinessManPalette },
     sensei: { map: npcSensei, palette: npcSenseiPalette },
+    challenger: { map: npcChallenger, palette: npcChallengerPalette },
   };
 
   function drawNPC(ctx, x, y, type) {
@@ -807,6 +833,38 @@ const Sprites = (() => {
     ctx.globalAlpha = 1;
   }
 
+  // Challenge available indicator (pulsing flame/lightning icon)
+  function drawChallengeBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 5) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (red/yellow gradient feel)
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Lightning bolt icon
+    ctx.fillStyle = '#f1c40f';
+    ctx.fillRect(x + 7, y - 13, 3, 2);
+    ctx.fillRect(x + 6, y - 11, 3, 2);
+    ctx.fillRect(x + 5, y - 9, 3, 2);
+    ctx.fillRect(x + 7, y - 7, 3, 2);
+    ctx.globalAlpha = 1;
+  }
+
+  // Streak fire icon for HUD
+  function drawStreakFire(ctx, x, y, streak) {
+    // Flame base
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(x + 2, y + 3, 4, 5);
+    ctx.fillRect(x + 1, y + 5, 6, 3);
+    // Flame tip
+    ctx.fillStyle = '#f39c12';
+    ctx.fillRect(x + 3, y + 1, 2, 4);
+    ctx.fillRect(x + 2, y + 4, 4, 2);
+    // Inner glow
+    ctx.fillStyle = '#f1c40f';
+    ctx.fillRect(x + 3, y + 3, 2, 3);
+  }
+
   function drawStar(ctx, x, y, filled) {
     ctx.fillStyle = filled ? '#f1c40f' : '#555';
     // Simple 8-pixel star shape
@@ -829,6 +887,8 @@ const Sprites = (() => {
     drawSpeechBubble,
     drawCheckmark,
     drawReviewBubble,
+    drawChallengeBubble,
+    drawStreakFire,
     drawStar,
     drawPixelMap,
   };

@@ -50,6 +50,15 @@ const NPCs = (() => {
         "Pro tip: say [method]でお願いします for any payment — cash, card, Suica, anything!"
       ]
     },
+    // Challenge Master NPC (daily challenge / streak system)
+    { map: 0, x: 12, y: 14, type: 'challenger', name: 'Hana', dir: 'left',
+      isChallenger: true,
+      dialogues: [
+        "チャレンジタイム！ I'm Hana, the Challenge Master!",
+        "Test your konbini skills with my rapid-fire quizzes!",
+        "Build a streak and earn bonus stars! 連勝 (renshō) means winning streak!"
+      ]
+    },
 
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
@@ -158,6 +167,100 @@ const NPCs = (() => {
       else if (phraseTracker[key].mastery >= 1) learning++;
     }
     return { total, mastered, learning, due: getReviewPhrases(99).length };
+  }
+
+  // ============ CHALLENGE / STREAK SYSTEM ============
+  // Session-only streak tracking (in-memory only, resets on page reload)
+  const challengeState = {
+    streak: 0,
+    bestStreak: 0,
+    challengesCompleted: 0,
+    lastChallengeCorrect: 0,
+    lastChallengeTotal: 0,
+    cooldownUntil: 0, // timestamp when next challenge is available
+  };
+
+  // Challenge types for variable reward
+  const CHALLENGE_TYPES = [
+    { name: 'Speed Round', nameJp: 'スピードラウンド', count: 3, description: '3 quick-fire questions!' },
+    { name: 'Mix Master', nameJp: 'ミックスマスター', count: 4, description: '4 questions from different stores!' },
+    { name: 'Survival', nameJp: 'サバイバル', count: 5, description: '5 questions — one mistake and it\'s over!' },
+  ];
+
+  // Get a random challenge if player has learned enough phrases
+  function canStartChallenge() {
+    const tracked = Object.keys(phraseTracker);
+    return tracked.length >= 3; // need at least 3 phrases to create a challenge
+  }
+
+  // Build a random challenge quiz set from learned phrases
+  function buildChallengeQuiz(count) {
+    const allTracked = Object.keys(phraseTracker).map(key => phraseTracker[key]);
+    if (allTracked.length < count) count = allTracked.length;
+
+    // Weighted random selection: harder phrases (lower mastery, more wrong) are more likely
+    const weighted = allTracked.map(p => ({
+      ...p,
+      weight: (5 - p.mastery) * 2 + p.wrongCount + 1 + Math.random() * 2
+    }));
+    weighted.sort((a, b) => b.weight - a.weight);
+
+    // Pick top N but shuffle to prevent predictability
+    const selected = weighted.slice(0, Math.min(count + 2, weighted.length));
+    // Shuffle and take 'count'
+    for (let i = selected.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [selected[i], selected[j]] = [selected[j], selected[i]];
+    }
+    return selected.slice(0, count);
+  }
+
+  // Get a random challenge type (variable reward = different types)
+  function getRandomChallengeType() {
+    // Higher streaks have higher chance of harder challenges
+    const streakBonus = Math.min(challengeState.streak, 5);
+    const weights = [
+      Math.max(1, 5 - streakBonus),  // Speed Round (easier, less likely at high streak)
+      3,                               // Mix Master (always mid)
+      1 + streakBonus,                 // Survival (harder, more likely at high streak)
+    ];
+    const totalWeight = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * totalWeight;
+    for (let i = 0; i < weights.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return CHALLENGE_TYPES[i];
+    }
+    return CHALLENGE_TYPES[0];
+  }
+
+  // Record challenge result
+  function recordChallengeResult(correct, total, isSurvival) {
+    challengeState.lastChallengeCorrect = correct;
+    challengeState.lastChallengeTotal = total;
+    challengeState.challengesCompleted++;
+
+    // For survival mode: any mistake breaks streak
+    const passed = isSurvival ? (correct === total) : (correct >= Math.ceil(total * 0.6));
+
+    if (passed) {
+      challengeState.streak++;
+      challengeState.bestStreak = Math.max(challengeState.bestStreak, challengeState.streak);
+    } else {
+      challengeState.streak = 0;
+    }
+
+    // Short cooldown between challenges (30 seconds of game time)
+    challengeState.cooldownUntil = Date.now() + 30000;
+
+    return passed;
+  }
+
+  function getChallengeState() {
+    return { ...challengeState };
+  }
+
+  function isChallengeReady() {
+    return canStartChallenge() && Date.now() >= challengeState.cooldownUntil;
   }
 
   // Street NPC dialogue index
@@ -272,5 +375,12 @@ const NPCs = (() => {
     getInteractionForPhrase,
     getReviewStats,
     phraseTracker,
+    // Challenge system
+    canStartChallenge,
+    isChallengeReady,
+    getRandomChallengeType,
+    buildChallengeQuiz,
+    recordChallengeResult,
+    getChallengeState,
   };
 })();

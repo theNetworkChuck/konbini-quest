@@ -237,6 +237,11 @@
       interactWithSensei(npc);
       return;
     }
+    // Check if this is the Challenge Master NPC
+    if (npc.isChallenger) {
+      interactWithChallenger(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
   }
@@ -384,6 +389,220 @@
     ], () => {
       state.inReview = false;
       state.reviewPhrases = [];
+    });
+  }
+
+  // ============ CHALLENGE MASTER ============
+  // Challenge state tracked in game.js
+  const challengeGameState = {
+    inChallenge: false,
+    challengeType: null,
+    challengePhrases: [],
+    challengeIdx: 0,
+    challengeCorrect: 0,
+    challengeTotal: 0,
+    isSurvival: false,
+    survivalFailed: false,
+  };
+
+  function interactWithChallenger(npc) {
+    const chalState = NPCs.getChallengeState();
+
+    if (!NPCs.canStartChallenge()) {
+      // Player hasn't learned enough phrases yet
+      Dialogue.show('Hana', [
+        'チャレンジタイム！ I\'m Hana, the Challenge Master!',
+        'You need to learn more phrases before I can challenge you.',
+        'Complete some store levels first, then come back!',
+        'がんばって！ Do your best!'
+      ]);
+      return;
+    }
+
+    if (!NPCs.isChallengeReady()) {
+      // Cooldown active
+      Dialogue.show('Hana', [
+        'Great effort! Take a breather. 休憩 (kyūkei)!',
+        chalState.streak > 0
+          ? `Your streak: ${chalState.streak} 🔥 Keep it going!`
+          : 'Come back in a moment for another challenge!'
+      ]);
+      return;
+    }
+
+    // Pick a random challenge type
+    const challengeType = NPCs.getRandomChallengeType();
+    const phrases = NPCs.buildChallengeQuiz(challengeType.count);
+
+    if (phrases.length < 2) {
+      Dialogue.show('Hana', 'I need more phrases to work with. Learn more at the stores!');
+      return;
+    }
+
+    // Set up challenge state
+    challengeGameState.inChallenge = true;
+    challengeGameState.challengeType = challengeType;
+    challengeGameState.challengePhrases = phrases;
+    challengeGameState.challengeIdx = 0;
+    challengeGameState.challengeCorrect = 0;
+    challengeGameState.challengeTotal = phrases.length;
+    challengeGameState.isSurvival = challengeType.name === 'Survival';
+    challengeGameState.survivalFailed = false;
+
+    // Intro dialogue with challenge type reveal
+    const streakMsg = chalState.streak > 0
+      ? `\n連勝 streak: ${chalState.streak} 🔥`
+      : '';
+
+    GameAudio.playAlert();
+    Dialogue.show('Hana', [
+      `チャレンジ！ ${challengeType.nameJp}!`,
+      `${challengeType.name}: ${challengeType.description}${streakMsg}`,
+      challengeGameState.isSurvival
+        ? 'Perfect score or your streak resets! 覚悟を決めて！'
+        : 'Get 60%+ to keep your streak alive! 準備はいい？'
+    ], () => {
+      runChallengeQuestion();
+    });
+  }
+
+  function runChallengeQuestion() {
+    if (challengeGameState.challengeIdx >= challengeGameState.challengePhrases.length) {
+      finishChallenge();
+      return;
+    }
+
+    // Check if survival failed early
+    if (challengeGameState.isSurvival && challengeGameState.survivalFailed) {
+      finishChallenge();
+      return;
+    }
+
+    const phraseData = challengeGameState.challengePhrases[challengeGameState.challengeIdx];
+    const interaction = NPCs.getInteractionForPhrase(phraseData);
+
+    if (!interaction) {
+      challengeGameState.challengeIdx++;
+      runChallengeQuestion();
+      return;
+    }
+
+    const qNum = challengeGameState.challengeIdx + 1;
+    const qTotal = challengeGameState.challengeTotal;
+    const header = `Challenge ${qNum}/${qTotal}`;
+
+    // Show the question with clerk dialogue
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      Dialogue.show(header, [
+        interaction.clerkJp,
+        interaction.question || 'What\'s the best response?'
+      ], () => {
+        showChallengeQuiz(interaction, phraseData);
+      });
+    } else if (interaction.playerPrompt) {
+      Dialogue.show(header, interaction.playerPrompt, () => {
+        showChallengeQuiz(interaction, phraseData);
+      });
+    }
+  }
+
+  function showChallengeQuiz(interaction, phraseData) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    // Shuffle options
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleChallengeAnswer(interaction, selected, phraseData);
+    });
+  }
+
+  function handleChallengeAnswer(interaction, selected, phraseData) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      challengeGameState.challengeCorrect++;
+      NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
+
+      const encouragements = [
+        '正解！ Correct!', 'いいね！ Nice!',
+        'すごい！ Amazing!', 'バッチリ！ Perfect!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+
+      Dialogue.show('Hana', msg, () => {
+        challengeGameState.challengeIdx++;
+        runChallengeQuestion();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+      NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
+
+      if (challengeGameState.isSurvival) {
+        challengeGameState.survivalFailed = true;
+      }
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Hana', [
+        '残念！ Not quite!',
+        explanation
+      ], () => {
+        challengeGameState.challengeIdx++;
+        runChallengeQuestion();
+      });
+    }
+  }
+
+  function finishChallenge() {
+    const correct = challengeGameState.challengeCorrect;
+    const total = challengeGameState.challengeTotal;
+    const isSurvival = challengeGameState.isSurvival;
+
+    const passed = NPCs.recordChallengeResult(correct, total, isSurvival);
+    const chalState = NPCs.getChallengeState();
+
+    GameAudio.playLevelComplete();
+
+    let resultLines;
+    if (passed) {
+      const streakEmoji = '🔥'.repeat(Math.min(chalState.streak, 5));
+      resultLines = [
+        `Challenge Complete: ${correct}/${total} correct!`,
+        `連勝 Streak: ${chalState.streak} ${streakEmoji}`,
+      ];
+
+      // Streak milestone bonuses (variable reward)
+      if (chalState.streak === 3) {
+        resultLines.push('★ 3-streak bonus! すごいね！');
+      } else if (chalState.streak === 5) {
+        resultLines.push('★★ 5-streak! コンビニマスター！');
+      } else if (chalState.streak === 10) {
+        resultLines.push('★★★ 10-streak! 伝説級！ LEGENDARY!');
+      } else if (chalState.streak > 0) {
+        resultLines.push('がんばって！ Keep the streak alive!');
+      }
+    } else {
+      resultLines = [
+        `Challenge Complete: ${correct}/${total} correct.`,
+        isSurvival ? 'サバイバル失敗... Survival failed!' : 'Streak reset... もう一回！',
+        chalState.bestStreak > 0 ? `Best streak: ${chalState.bestStreak}` : '',
+        'Try again after a short break!'
+      ].filter(l => l.length > 0);
+    }
+
+    Dialogue.show('Hana', resultLines, () => {
+      challengeGameState.inChallenge = false;
+      challengeGameState.challengePhrases = [];
     });
   }
 
@@ -892,6 +1111,10 @@
       inReview: state.inReview,
       reviewStats: NPCs.getReviewStats(),
       reviewsAvailable: NPCs.hasReviewsAvailable(),
+      // Challenge system
+      inChallenge: challengeGameState.inChallenge,
+      challengeState: NPCs.getChallengeState(),
+      challengeReady: NPCs.isChallengeReady(),
     });
   };
 
