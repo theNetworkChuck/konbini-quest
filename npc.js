@@ -17,6 +17,15 @@ const NPCs = (() => {
 
   const npcDefs = [
     // === MAP 0: STREET ===
+    // Review Sensei (spaced repetition NPC)
+    { map: 0, x: 8, y: 13, type: 'sensei', name: 'Sensei', dir: 'down',
+      isSensei: true,
+      dialogues: [
+        "Practice makes perfect! Let me quiz you on what you've learned.",
+        "Repetition is the mother of all learning! 復習は学習の母！",
+        "Come back after completing more levels for review practice!"
+      ]
+    },
     // Old man near park bench
     { map: 0, x: 5, y: 10, type: 'oldman', name: 'Old Man', dir: 'down',
       dialogues: [
@@ -62,6 +71,94 @@ const NPCs = (() => {
     'Lawson':   { current: 0, completed: [], stars: {} },
     'FamilyMart': { current: 0, completed: [], stars: {} },
   };
+
+  // ============ SPACED REPETITION SYSTEM ============
+  // Each phrase is keyed by "levelId_interactionIdx"
+  // mastery: 0=new, 1=seen, 2=learning, 3=familiar, 4=mastered
+  // interval: how many completed levels before next review
+  // wrongCount: total times answered wrong
+  // lastReviewAt: completedLevelsCount when last reviewed
+  const phraseTracker = {};
+  let completedLevelsCount = 0; // global counter of levels finished
+
+  function trackPhrase(levelId, interactionIdx, wasCorrect) {
+    const key = `${levelId}_${interactionIdx}`;
+    if (!phraseTracker[key]) {
+      phraseTracker[key] = {
+        levelId, interactionIdx,
+        mastery: 0, interval: 1, wrongCount: 0,
+        lastReviewAt: completedLevelsCount,
+        correctStreak: 0
+      };
+    }
+    const p = phraseTracker[key];
+    p.lastReviewAt = completedLevelsCount;
+
+    if (wasCorrect) {
+      p.correctStreak++;
+      // Increase interval: 1 → 2 → 4 → 8 (capped)
+      if (p.correctStreak >= 2) {
+        p.interval = Math.min(8, p.interval * 2);
+        p.mastery = Math.min(4, p.mastery + 1);
+      } else {
+        p.mastery = Math.max(1, p.mastery);
+      }
+    } else {
+      p.wrongCount++;
+      p.correctStreak = 0;
+      // Reset interval on mistakes
+      p.interval = 1;
+      p.mastery = Math.max(1, p.mastery - 1);
+    }
+  }
+
+  function incrementCompletedLevels() {
+    completedLevelsCount++;
+  }
+
+  // Get phrases that are due for review (interval elapsed)
+  function getReviewPhrases(maxCount) {
+    const due = [];
+    for (const key of Object.keys(phraseTracker)) {
+      const p = phraseTracker[key];
+      const elapsed = completedLevelsCount - p.lastReviewAt;
+      if (elapsed >= p.interval && p.mastery < 4) {
+        due.push({ ...p, key, priority: p.wrongCount * 3 + (4 - p.mastery) + elapsed });
+      }
+    }
+    // Sort by priority (hardest/most overdue first)
+    due.sort((a, b) => b.priority - a.priority);
+    return due.slice(0, maxCount || 5);
+  }
+
+  // Check if any reviews are available
+  function hasReviewsAvailable() {
+    for (const key of Object.keys(phraseTracker)) {
+      const p = phraseTracker[key];
+      const elapsed = completedLevelsCount - p.lastReviewAt;
+      if (elapsed >= p.interval && p.mastery < 4) return true;
+    }
+    return false;
+  }
+
+  // Get the interaction data for a tracked phrase
+  function getInteractionForPhrase(phraseData) {
+    const level = LEVELS.find(l => l.id === phraseData.levelId);
+    if (!level) return null;
+    return level.interactions[phraseData.interactionIdx] || null;
+  }
+
+  // Get review stats for display
+  function getReviewStats() {
+    let total = Object.keys(phraseTracker).length;
+    let mastered = 0;
+    let learning = 0;
+    for (const key of Object.keys(phraseTracker)) {
+      if (phraseTracker[key].mastery >= 4) mastered++;
+      else if (phraseTracker[key].mastery >= 1) learning++;
+    }
+    return { total, mastered, learning, due: getReviewPhrases(99).length };
+  }
 
   // Street NPC dialogue index
   const streetNPCState = {};
@@ -167,5 +264,13 @@ const NPCs = (() => {
     getTotalStars,
     getMaxStars,
     getStreetDialogue,
+    // Spaced repetition
+    trackPhrase,
+    incrementCompletedLevels,
+    getReviewPhrases,
+    hasReviewsAvailable,
+    getInteractionForPhrase,
+    getReviewStats,
+    phraseTracker,
   };
 })();

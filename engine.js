@@ -229,6 +229,11 @@ const Engine = (() => {
         }
       } else {
         Sprites.drawNPC(ctx, sx, sy, npc.type);
+
+        // Show review bubble above sensei when reviews available
+        if (npc.isSensei && NPCs.hasReviewsAvailable()) {
+          Sprites.drawReviewBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing

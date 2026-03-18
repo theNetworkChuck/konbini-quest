@@ -365,10 +365,35 @@ const Sprites = (() => {
     '4': '#2c3e50', '3': '#1a1a1a'
   };
 
+  // Sensei (review NPC) - older wise teacher with traditional look
+  const npcSensei = `
+....HHHH....
+...HHHHHH...
+...HHHHHH...
+..SSEESSE..
+..SSSSSSSS..
+..SSMMSS....
+..RRRRRRRR..
+..RRGRRGRR..
+..RRRRRRRR..
+...RRRRRR...
+..RRRRRRRR..
+..RR.RR.RR..
+..RR.RR.RR..
+...RR..RR...
+...55..55...
+...55..55...`;
+
+  const npcSenseiPalette = {
+    'H': '#888', 'S': '#e8c090', 'E': '#222', 'M': '#c0a080',
+    'R': '#8b2252', 'G': '#d4af37', '5': '#4a3a2a'
+  };
+
   const npcSprites = {
     oldman: { map: npcOldMan, palette: npcOldManPalette },
     schoolgirl: { map: npcSchoolGirl, palette: npcSchoolGirlPalette },
     businessman: { map: npcBusinessMan, palette: npcBusinessManPalette },
+    sensei: { map: npcSensei, palette: npcSenseiPalette },
   };
 
   function drawNPC(ctx, x, y, type) {
@@ -761,6 +786,27 @@ const Sprites = (() => {
     ctx.fillRect(x + 7, y - 5, 2, 2);
   }
 
+  // Review available indicator (pulsing book/scroll icon)
+  function drawReviewBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 4) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (golden)
+    ctx.fillStyle = '#f39c12';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Book icon
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 4, y - 12, 8, 6);
+    ctx.fillStyle = '#f39c12';
+    ctx.fillRect(x + 7, y - 12, 2, 6); // spine
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(x + 5, y - 11, 2, 1);
+    ctx.fillRect(x + 9, y - 11, 2, 1);
+    ctx.fillRect(x + 5, y - 9, 2, 1);
+    ctx.fillRect(x + 9, y - 9, 2, 1);
+    ctx.globalAlpha = 1;
+  }
+
   function drawStar(ctx, x, y, filled) {
     ctx.fillStyle = filled ? '#f1c40f' : '#555';
     // Simple 8-pixel star shape
@@ -782,6 +828,7 @@ const Sprites = (() => {
     drawExclamation,
     drawSpeechBubble,
     drawCheckmark,
+    drawReviewBubble,
     drawStar,
     drawPixelMap,
   };

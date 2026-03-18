@@ -25,6 +25,12 @@
     // Entry greeting tracking
     enteredStore: null,
     greetingShown: false,
+    // Review system state
+    inReview: false,
+    reviewPhrases: [],
+    reviewIdx: 0,
+    reviewCorrect: 0,
+    reviewTotal: 0,
   };
 
   let audioInitialized = false;
@@ -216,8 +222,159 @@
   }
 
   function interactWithStreetNPC(npc) {
+    // Check if this is the Sensei NPC
+    if (npc.isSensei) {
+      interactWithSensei(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
+  }
+
+  // ============ REVIEW SENSEI ============
+  function interactWithSensei(npc) {
+    const reviewPhrases = NPCs.getReviewPhrases(5);
+    const stats = NPCs.getReviewStats();
+
+    if (reviewPhrases.length === 0) {
+      // No reviews available
+      if (stats.total === 0) {
+        Dialogue.show('Sensei', [
+          "Welcome, young learner! I am the Review Sensei.",
+          "Complete some store levels first, then come back.",
+          "I'll quiz you on phrases you've learned to help them stick!",
+          "復習 (fukushū) means review — the key to mastery!"
+        ]);
+      } else {
+        const masteredPct = stats.total > 0 ? Math.round(stats.mastered / stats.total * 100) : 0;
+        Dialogue.show('Sensei', [
+          `Phrases learned: ${stats.total} | Mastered: ${stats.mastered}`,
+          masteredPct === 100
+            ? "You've mastered everything! Come back after new levels."
+            : "No phrases due for review yet. Keep learning!",
+          "Complete more levels and I'll have new reviews for you!"
+        ]);
+      }
+      return;
+    }
+
+    // Start review session
+    state.inReview = true;
+    state.reviewPhrases = reviewPhrases;
+    state.reviewIdx = 0;
+    state.reviewCorrect = 0;
+    state.reviewTotal = reviewPhrases.length;
+
+    Dialogue.show('Sensei', [
+      `復習タイム！ Review Time!`,
+      `${reviewPhrases.length} phrase${reviewPhrases.length > 1 ? 's' : ''} to review.`,
+      "Let's see how well you remember!"
+    ], () => {
+      runReview();
+    });
+  }
+
+  function runReview() {
+    if (state.reviewIdx >= state.reviewPhrases.length) {
+      finishReview();
+      return;
+    }
+
+    const phraseData = state.reviewPhrases[state.reviewIdx];
+    const interaction = NPCs.getInteractionForPhrase(phraseData);
+
+    if (!interaction) {
+      // Skip if interaction data not found
+      state.reviewIdx++;
+      runReview();
+      return;
+    }
+
+    // Show as quick-fire review (shorter format)
+    const header = `Review ${state.reviewIdx + 1}/${state.reviewTotal}`;
+
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      Dialogue.show(header, [
+        interaction.clerkJp,
+        interaction.question || 'What\'s the best response?'
+      ], () => {
+        showReviewQuiz(interaction, phraseData);
+      });
+    } else if (interaction.playerPrompt) {
+      Dialogue.show(header, interaction.playerPrompt, () => {
+        showReviewQuiz(interaction, phraseData);
+      });
+    }
+  }
+
+  function showReviewQuiz(interaction, phraseData) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    // Shuffle options for review to prevent memorizing positions
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleReviewAnswer(interaction, selected, phraseData);
+    });
+  }
+
+  function handleReviewAnswer(interaction, selected, phraseData) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      state.reviewCorrect++;
+      NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
+
+      Dialogue.show('Sensei', 'よくできた！ Well done!', () => {
+        state.reviewIdx++;
+        runReview();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+      NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Sensei', [
+        'もう一回！ Let\'s review that...',
+        explanation
+      ], () => {
+        state.reviewIdx++;
+        runReview();
+      });
+    }
+  }
+
+  function finishReview() {
+    const correct = state.reviewCorrect;
+    const total = state.reviewTotal;
+    const pct = Math.round(correct / total * 100);
+
+    GameAudio.playLevelComplete();
+
+    let rating;
+    if (pct === 100) rating = '完璧！ Perfect! ★★★';
+    else if (pct >= 70) rating = 'いいね！ Great job! ★★☆';
+    else rating = 'がんばれ！ Keep practicing! ★☆☆';
+
+    Dialogue.show('Sensei', [
+      `Review Complete: ${correct}/${total} correct!`,
+      rating,
+      "Phrases you missed will come back sooner for extra practice.",
+      "Come back after completing more levels!"
+    ], () => {
+      state.inReview = false;
+      state.reviewPhrases = [];
+    });
   }
 
   function interactWithClerk(npc) {
@@ -307,6 +464,15 @@
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
 
+      // Track for spaced repetition
+      if (state.currentInteractionLevel) {
+        NPCs.trackPhrase(
+          state.currentInteractionLevel.id,
+          state.currentInteractionIdx,
+          true
+        );
+      }
+
       const explanation = interaction.correctExplanation || 'Correct!';
       Dialogue.show('', explanation, () => {
         // Move to next interaction in this level
@@ -318,6 +484,15 @@
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
       state.interactionMistakes++;
+
+      // Track mistake for spaced repetition
+      if (state.currentInteractionLevel) {
+        NPCs.trackPhrase(
+          state.currentInteractionLevel.id,
+          state.currentInteractionIdx,
+          false
+        );
+      }
 
       const explanation = interaction.wrongExplanation || 'Not quite...';
       Dialogue.show('', explanation, () => {
@@ -340,6 +515,7 @@
       NPCs.completeLevelInteraction(store, i, stars);
     }
     NPCs.advanceStoreLevel(store);
+    NPCs.incrementCompletedLevels();
 
     GameAudio.playLevelComplete();
     GameAudio.playStar();
@@ -418,6 +594,9 @@
       dialogue: Dialogue.isActive(),
       stars: NPCs.getTotalStars(),
       interacting: state.interacting,
+      inReview: state.inReview,
+      reviewStats: NPCs.getReviewStats(),
+      reviewsAvailable: NPCs.hasReviewsAvailable(),
     });
   };
 
