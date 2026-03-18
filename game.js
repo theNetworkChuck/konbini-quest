@@ -35,6 +35,9 @@
     romajiPeekActive: false,
     romajiPeekData: null, // stores romaji text for current choices
     currentDisplayMode: 'romaji', // current level's display mode
+    // Stamp card overlay
+    stampCardOpen: false,
+    stampNotification: null, // {text, timer} for new stamp earned
   };
 
   let audioInitialized = false;
@@ -85,6 +88,30 @@
 
   function updatePlaying(dt) {
     if (Engine.isFading()) return;
+
+    // Update stamp notification timer
+    if (state.stampNotification) {
+      state.stampNotification.timer -= dt;
+      if (state.stampNotification.timer <= 0) {
+        state.stampNotification = null;
+      }
+    }
+
+    // Handle stamp card overlay
+    if (state.stampCardOpen) {
+      if (Engine.inputB() || Engine.wasPressed('tab')) {
+        state.stampCardOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
+    // Open stamp card with Tab key (on street map only)
+    if (Engine.wasPressed('tab') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
+      state.stampCardOpen = true;
+      GameAudio.playSelect();
+      return;
+    }
 
     // Handle dialogue
     if (Dialogue.isActive()) {
@@ -937,16 +964,36 @@
     NPCs.advanceStoreLevel(store);
     NPCs.incrementCompletedLevels();
 
+    // Award stamp based on performance
+    // stars maps directly to stamp tier: 3=gold, 2=silver, 1=bronze
+    const storeProgress = NPCs.getStoreProgress(store);
+    const levelIdx = storeProgress.current - 1; // just advanced, so -1
+    NPCs.awardStamp(store, levelIdx, stars);
+
+    // Check for new stamp notification
+    const tierNames = { 3: 'GOLD', 2: 'SILVER', 1: 'BRONZE' };
+    const tierJp = { 3: '\u91D1', 2: '\u9280', 1: '\u9285' };
+    const stampMsg = `${tierJp[stars]}\u30B9\u30BF\u30F3\u30D7 ${tierNames[stars]} STAMP!`;
+
     GameAudio.playLevelComplete();
     GameAudio.playStar();
 
-    const starText = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+    const starText = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
+
+    // Check if master stamp was just unlocked
+    const card = NPCs.getStampCard(store);
+    const masterMsg = card.masterStamp ? `\n\u30DE\u30B9\u30BF\u30FC\u30B9\u30BF\u30F3\u30D7\u89E3\u9664\uFF01 MASTER STAMP UNLOCKED!` : '';
+
+    // Show stamp notification popup
+    state.stampNotification = { text: stampMsg, timer: 3.0 };
+
     Dialogue.show('', [
       `Level Complete: ${level.name}!`,
       `${starText}`,
+      `${stampMsg}${masterMsg}`,
       NPCs.isStoreComplete(store)
         ? `You've mastered ${store}!`
-        : `Next level unlocked!`
+        : `Next level unlocked! [TAB] View Stamp Card`
     ], () => {
       state.interacting = false;
       state.currentInteractionStore = null;
@@ -1086,8 +1133,61 @@
       renderRomajiPeek(ctx);
     }
 
+    // Stamp card overlay
+    if (state.stampCardOpen) {
+      Sprites.drawStampCardOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        NPCs.getAllStampCards(), null, state.time
+      );
+    }
+
+    // Stamp earned notification (floating banner)
+    if (state.stampNotification) {
+      renderStampNotification(ctx);
+    }
+
     // Fade overlay (always on top)
     Engine.renderFade();
+  }
+
+  // ============ STAMP NOTIFICATION RENDER ============
+  function renderStampNotification(ctx) {
+    if (!state.stampNotification) return;
+
+    const notif = state.stampNotification;
+    const CANVAS_W = Engine.CANVAS_W;
+
+    // Fade in/out based on timer
+    let alpha = 1;
+    if (notif.timer > 2.5) alpha = (3.0 - notif.timer) * 2; // fade in
+    else if (notif.timer < 0.5) alpha = notif.timer * 2; // fade out
+
+    // Slide up from center
+    const slideY = notif.timer > 2.5 ? (3.0 - notif.timer) * 40 : 20;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Banner background
+    const bannerW = 160;
+    const bannerH = 16;
+    const bannerX = (CANVAS_W - bannerW) / 2;
+    const bannerY = slideY;
+
+    ctx.fillStyle = 'rgba(26,26,46,0.9)';
+    ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+    ctx.strokeStyle = '#D4AF37';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+
+    // Text
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#F1C40F';
+    ctx.textAlign = 'center';
+    ctx.fillText(notif.text, CANVAS_W / 2, bannerY + 11);
+    ctx.textAlign = 'left';
+
+    ctx.restore();
   }
 
   // ============ TESTING HOOKS ============
@@ -1115,7 +1215,21 @@
       inChallenge: challengeGameState.inChallenge,
       challengeState: NPCs.getChallengeState(),
       challengeReady: NPCs.isChallengeReady(),
+      // Stamp card
+      stampCardOpen: state.stampCardOpen,
+      stampCards: NPCs.getAllStampCards(),
+      totalStamps: NPCs.getTotalStamps(),
     });
+  };
+
+  // Testing hook: open/close stamp card
+  window.toggleStampCard = () => {
+    state.stampCardOpen = !state.stampCardOpen;
+  };
+
+  // Testing hook: award a test stamp
+  window.awardTestStamp = (store, levelIdx, tier) => {
+    NPCs.awardStamp(store || '7-Eleven', levelIdx || 0, tier || 3);
   };
 
   // Testing hook: force next interaction to use listening mode

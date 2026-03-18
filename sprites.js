@@ -877,6 +877,239 @@ const Sprites = (() => {
     ctx.fillRect(x + 5, y + 5, 2, 1);
   }
 
+  // ============ STAMP CARD VISUALS ============
+  const STAMP_COLORS = {
+    empty:  { fill: '#333', border: '#555', icon: '#444' },
+    bronze: { fill: '#8B5E3C', border: '#A0764A', icon: '#D4A76A' },
+    silver: { fill: '#A8A8A8', border: '#CCC', icon: '#E8E8E8' },
+    gold:   { fill: '#D4AF37', border: '#F1C40F', icon: '#FFF8DC' },
+  };
+
+  // Draw a single stamp circle (12x12)
+  function drawStamp(ctx, x, y, tier, size) {
+    size = size || 12;
+    const tierName = tier >= 3 ? 'gold' : tier >= 2 ? 'silver' : tier >= 1 ? 'bronze' : 'empty';
+    const colors = STAMP_COLORS[tierName];
+    const r = size / 2;
+    const cx = x + r;
+    const cy = y + r;
+
+    // Outer circle
+    ctx.fillStyle = colors.border;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Inner circle
+    ctx.fillStyle = colors.fill;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r - 1, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (tier > 0) {
+      // Stamp icon: cherry blossom pattern for filled stamps
+      ctx.fillStyle = colors.icon;
+      // Center dot
+      ctx.fillRect(cx - 1, cy - 1, 2, 2);
+      // Petals (4 directions)
+      ctx.fillRect(cx - 1, cy - 3, 2, 2); // top
+      ctx.fillRect(cx - 1, cy + 1, 2, 2); // bottom
+      ctx.fillRect(cx - 3, cy - 1, 2, 2); // left
+      ctx.fillRect(cx + 1, cy - 1, 2, 2); // right
+    } else {
+      // Empty stamp: just a faint outline
+      ctx.strokeStyle = colors.border;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // Draw master stamp (larger, special golden seal)
+  function drawMasterStamp(ctx, x, y, unlocked) {
+    const size = 16;
+    const r = size / 2;
+    const cx = x + r;
+    const cy = y + r;
+
+    if (unlocked) {
+      // Golden seal with sparkle
+      ctx.fillStyle = '#F1C40F';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#D4AF37';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 1, 0, Math.PI * 2);
+      ctx.fill();
+      // Crown/star icon
+      ctx.fillStyle = '#FFF8DC';
+      ctx.fillRect(cx - 3, cy - 2, 6, 1);
+      ctx.fillRect(cx - 4, cy - 1, 8, 3);
+      ctx.fillRect(cx - 2, cy - 4, 1, 2);
+      ctx.fillRect(cx + 1, cy - 4, 1, 2);
+      ctx.fillRect(cx - 1, cy - 3, 2, 1);
+    } else {
+      // Locked: dark circle with ? mark
+      ctx.fillStyle = '#222';
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#555';
+      ctx.font = '8px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.fillText('?', cx, cy + 3);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Draw stamp card HUD icon (small stamp book icon)
+  function drawStampBookIcon(ctx, x, y, stampCount, maxStamps) {
+    // Small book shape 14x10
+    ctx.fillStyle = '#8B2252';
+    ctx.fillRect(x, y, 14, 10);
+    ctx.fillStyle = '#A83279';
+    ctx.fillRect(x + 1, y + 1, 12, 8);
+    // Spine
+    ctx.fillStyle = '#6B1A42';
+    ctx.fillRect(x + 6, y, 2, 10);
+    // Stamp dots on cover
+    ctx.fillStyle = stampCount > 0 ? '#F1C40F' : '#555';
+    ctx.fillRect(x + 3, y + 3, 2, 2);
+    ctx.fillRect(x + 9, y + 3, 2, 2);
+    ctx.fillRect(x + 3, y + 6, 2, 2);
+    ctx.fillRect(x + 9, y + 6, 2, 2);
+  }
+
+  // Draw the full stamp card overlay
+  function drawStampCardOverlay(ctx, canvasW, canvasH, stampCards, storeColors, time) {
+    // Semi-transparent backdrop
+    ctx.fillStyle = 'rgba(10, 10, 30, 0.92)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Card background
+    const cardX = 12;
+    const cardY = 14;
+    const cardW = canvasW - 24;
+    const cardH = canvasH - 28;
+
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#D4AF37';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#8B2252';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cardX + 2, cardY + 2, cardW - 4, cardH - 4);
+
+    // Title
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillStyle = '#D4AF37';
+    ctx.textAlign = 'center';
+    ctx.fillText('STAMP CARD', canvasW / 2, cardY + 14);
+    ctx.font = '10px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#F1C40F';
+    ctx.fillText('\u30B9\u30BF\u30F3\u30D7\u30AB\u30FC\u30C9', canvasW / 2, cardY + 26);
+
+    // Store stamp rows
+    const stores = ['7-Eleven', 'Lawson', 'FamilyMart'];
+    const storeLabels = ['7-ELEVEN', 'LAWSON', 'FamilyMart'];
+    const storeClrs = {
+      '7-Eleven': '#d4380d',
+      'Lawson': '#1a6fc4',
+      'FamilyMart': '#27ae60'
+    };
+
+    const rowStartY = cardY + 34;
+    const rowH = 48;
+
+    for (let s = 0; s < 3; s++) {
+      const store = stores[s];
+      const card = stampCards[store];
+      const rowY = rowStartY + s * rowH;
+
+      // Store label background
+      const labelClr = storeClrs[store];
+      ctx.fillStyle = labelClr;
+      ctx.fillRect(cardX + 6, rowY, cardW - 12, 10);
+      ctx.font = '5px "Press Start 2P"';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(storeLabels[s], canvasW / 2, rowY + 8);
+
+      // Stamp slots
+      const stampStartX = cardX + 20;
+      const stampY = rowY + 14;
+      const stampSpacing = 38;
+
+      // Level names for this store
+      const levelNames = [];
+      const storeLvls = NPCs.storeLevels[store];
+      for (let i = 0; i < storeLvls.length; i++) {
+        levelNames.push(LEVELS[storeLvls[i]].name);
+      }
+
+      for (let i = 0; i < 4; i++) {
+        const sx = stampStartX + i * stampSpacing;
+        const tier = card.stamps[i];
+
+        // Animate new stamps with a pulse
+        const stampAlpha = tier > 0 ? 1.0 : 0.4;
+        ctx.globalAlpha = stampAlpha;
+        drawStamp(ctx, sx, stampY, tier, 14);
+        ctx.globalAlpha = 1;
+
+        // Level name below stamp
+        ctx.font = '4px "Press Start 2P"';
+        ctx.fillStyle = tier > 0 ? '#ccc' : '#555';
+        ctx.textAlign = 'center';
+        const lvlName = levelNames[i] || '';
+        ctx.fillText(lvlName.substring(0, 8), sx + 7, stampY + 20);
+      }
+
+      // Master stamp at end
+      const masterX = stampStartX + 4 * stampSpacing - 8;
+      drawMasterStamp(ctx, masterX, stampY - 1, card.masterStamp);
+
+      ctx.textAlign = 'left';
+    }
+
+    // Footer: total progress
+    const { total, max } = NPCs.getTotalStamps();
+    const pct = max > 0 ? Math.round(total / max * 100) : 0;
+
+    // Progress bar
+    const barX = cardX + 20;
+    const barY = cardY + cardH - 22;
+    const barW = cardW - 40;
+    const barH = 6;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#D4AF37';
+    ctx.fillRect(barX, barY, barW * (pct / 100), barH);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    // Progress text
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#D4AF37';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${total}/${max} (${pct}%)`, canvasW / 2, barY + 14);
+
+    // Close hint
+    ctx.fillStyle = '#888';
+    ctx.fillText('[B] Close', canvasW / 2, cardY + cardH - 4);
+
+    ctx.textAlign = 'left';
+  }
+
   return {
     T,
     drawPlayer,
@@ -891,5 +1124,10 @@ const Sprites = (() => {
     drawStreakFire,
     drawStar,
     drawPixelMap,
+    // Stamp card
+    drawStamp,
+    drawMasterStamp,
+    drawStampBookIcon,
+    drawStampCardOverlay,
   };
 })();

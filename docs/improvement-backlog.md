@@ -8,7 +8,7 @@
 3. ~~**Romaji → Kana Transition**~~ ✅ - Early levels show romaji, later levels show only hiragana/katakana. Gradually removes the crutch.
 
 ### Batch 2: Addictive Game Mechanics
-4. **Daily Challenge / Streak System** - A special NPC on the street offers a daily challenge. Visual streak counter on the HUD. Creates the "Hooked" cycle (trigger → action → variable reward → investment).
+4. ~~**Daily Challenge / Streak System**~~ ✅ - A special NPC on the street offers a daily challenge. Visual streak counter on the HUD. Creates the "Hooked" cycle (trigger → action → variable reward → investment).
 5. **Collection Mechanic** - "Konbini Stamp Card" that fills up as you master phrases. Visual progress toward completion triggers completionist drive.
 6. **Variable Rewards** - Random rare items/phrases with special animations. The "variable reward" is the most addictive element per Nir Eyal's framework.
 
@@ -83,6 +83,28 @@
 - Added listeningMode state to render_game_to_text for testing
 
 **Files modified:** dialogue.js, game.js
+
+### 2026-03-18 — #4 Daily Challenge / Streak System ✅
+**Commit:** `cf1048c`
+
+**What was added:**
+- New "Challenge Master" NPC named Hana on the street — bright yellow outfit with red headband
+- 3 challenge types with variable rewards (Nir Eyal's Hooked Model):
+  - **Speed Round** (スピードラウンド): 3 quick-fire questions
+  - **Mix Master** (ミックスマスター): 4 questions from different stores
+  - **Survival** (サバイバル): 5 questions, one mistake breaks the streak
+- Session-based streak counter with fire icon in HUD (top-right, stacked above stars)
+- Pulsing red/yellow lightning bolt indicator above Hana when challenge is ready
+- Higher streaks shift challenge type distribution toward harder modes
+- Streak milestone bonuses at 3, 5, and 10 with Japanese celebration messages
+- 30-second cooldown between challenges to prevent burnout
+- Quiz questions pulled from learned phrases with weighted selection (harder phrases appear more)
+- Shuffled answer options prevent position memorization
+- Challenge answers feed back into spaced repetition tracking
+- Japanese encouragement messages with variety (正解、いいね、すごい、バッチリ)
+- Testing hooks added to render_game_to_text for challenge state
+
+**Files modified:** game.js, npc.js, engine.js, sprites.js
 
 ### 2026-03-18 — #3 Romaji → Kana Transition ✅
 **Commit:** `8751bcd`

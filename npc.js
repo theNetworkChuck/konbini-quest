@@ -263,6 +263,73 @@ const NPCs = (() => {
     return canStartChallenge() && Date.now() >= challengeState.cooldownUntil;
   }
 
+  // ============ STAMP CARD COLLECTION SYSTEM ============
+  // Each store has a stamp card with slots for each level
+  // Stamps have tiers: empty(0), bronze(1)=completed, silver(2)=few mistakes, gold(3)=perfect
+  // Collecting all gold stamps per store unlocks a "Master Stamp"
+  const stampCards = {
+    '7-Eleven': { stamps: [0, 0, 0, 0], masterStamp: false },
+    'Lawson':   { stamps: [0, 0, 0, 0], masterStamp: false },
+    'FamilyMart': { stamps: [0, 0, 0, 0], masterStamp: false },
+  };
+
+  // Award stamp when a level is completed
+  // tier: 3=gold(perfect), 2=silver(1-2 mistakes), 1=bronze(3+ mistakes)
+  function awardStamp(store, levelIdx, tier) {
+    const card = stampCards[store];
+    if (!card) return;
+    // Only upgrade, never downgrade
+    card.stamps[levelIdx] = Math.max(card.stamps[levelIdx], tier);
+    // Check if all stamps are gold for master stamp
+    if (card.stamps.every(s => s >= 3)) {
+      card.masterStamp = true;
+    }
+  }
+
+  function getStampCard(store) {
+    return stampCards[store] || { stamps: [0, 0, 0, 0], masterStamp: false };
+  }
+
+  function getAllStampCards() {
+    return { ...stampCards };
+  }
+
+  // Get total stamps collected (any tier > 0 counts)
+  function getTotalStamps() {
+    let total = 0;
+    let max = 0;
+    for (const store of Object.keys(stampCards)) {
+      const card = stampCards[store];
+      for (const s of card.stamps) {
+        if (s > 0) total++;
+      }
+      max += card.stamps.length;
+      if (card.masterStamp) total++; // bonus for master
+      max++; // master slot
+    }
+    return { total, max };
+  }
+
+  // Get stamp tier label
+  function getStampTierName(tier) {
+    if (tier >= 3) return 'gold';
+    if (tier >= 2) return 'silver';
+    if (tier >= 1) return 'bronze';
+    return 'empty';
+  }
+
+  // Check if any new stamp was just earned (for notification)
+  let lastStampCount = 0;
+  function checkNewStamp() {
+    const { total } = getTotalStamps();
+    if (total > lastStampCount) {
+      const diff = total - lastStampCount;
+      lastStampCount = total;
+      return diff;
+    }
+    return 0;
+  }
+
   // Street NPC dialogue index
   const streetNPCState = {};
 
@@ -382,5 +449,12 @@ const NPCs = (() => {
     buildChallengeQuiz,
     recordChallengeResult,
     getChallengeState,
+    // Stamp card collection
+    awardStamp,
+    getStampCard,
+    getAllStampCards,
+    getTotalStamps,
+    getStampTierName,
+    checkNewStamp,
   };
 })();

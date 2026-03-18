@@ -297,6 +297,21 @@ const Engine = (() => {
     ctx.strokeRect(CANVAS_W - 40, hudRightY, 38, 12);
     ctx.fillStyle = '#f1c40f';
     ctx.fillText(starText, CANVAS_W - 36, hudRightY + 9);
+    hudRightY += 14;
+
+    // Stamp card indicator (top right, below stars)
+    const { total: stampTotal, max: stampMax } = NPCs.getTotalStamps();
+    const stampW = 42;
+    ctx.fillStyle = 'rgba(26,26,46,0.85)';
+    ctx.fillRect(CANVAS_W - stampW - 2, hudRightY, stampW, 12);
+    ctx.strokeStyle = '#D4AF37';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(CANVAS_W - stampW - 2, hudRightY, stampW, 12);
+    // Stamp book icon
+    Sprites.drawStampBookIcon(ctx, CANVAS_W - stampW, hudRightY + 1, stampTotal, stampMax);
+    // Count text
+    ctx.fillStyle = '#D4AF37';
+    ctx.fillText(stampTotal + '/' + stampMax, CANVAS_W - stampW + 16, hudRightY + 9);
   }
 
   // ============ FADE SYSTEM ============
