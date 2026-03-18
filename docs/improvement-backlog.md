@@ -13,7 +13,7 @@
 6. ~~**Variable Rewards**~~ -- Random rare items/phrases with special animations. The "variable reward" is the most addictive element per Nir Eyal's framework.
 
 ### Batch 3: Better Graphics & Polish
-7. **Animated Store Entry** - Sliding door animation when entering stores instead of just fade-to-black.
+7. ~~**Animated Store Entry**~~ ✅ - Sliding door animation when entering stores instead of just fade-to-black.
 8. **Weather System** - Rain, night, cherry blossom petals. Makes the overworld feel alive.
 9. **NPC Walk Cycles** - Street NPCs wander around instead of standing still. More Pokemon-like.
 10. **Particle Effects** - Stars burst when completing levels, sparkles on correct answers.
@@ -148,7 +148,7 @@
 
 **Files modified:** levels.js, game.js, dialogue.js
 
-### 2026-03-18 -- #6 Variable Rewards System
+### 2026-03-18 -- #6 Variable Rewards System ✅
 **Commit:** `87532eb`
 
 **What was added:**
@@ -177,3 +177,23 @@
 - Testing hooks: forceReward(tier), togglePhraseBook()
 
 **Files modified:** npc.js, audio.js, sprites.js, engine.js, game.js
+
+### 2026-03-18 -- #7 Animated Store Entry ✅
+**Commit:** `9c47443`
+
+**What was added:**
+- Konbini-style automatic sliding door animation when entering stores from the street
+- Two glass door panels slide apart with ease-out cubic easing (0.5s duration)
+- Warm interior glow visible through opening doors (simulates konbini fluorescent lighting)
+- Store brand colors on door panels: red for 7-Eleven, blue for Lawson, green for FamilyMart
+- Pulsing red sensor dot above door (mimics real konbini automatic door sensors)
+- Door frame and mat rendering details for authenticity
+- New sliding door open sound effect: mechanical click + descending frequency sweep + pneumatic hiss
+- New sliding door close sound effect when exiting stores: reverse slide + click shut
+- Player movement blocked during door animation for smooth, uninterruptible transition
+- Full entry flow: door slides open → fade to black → map switch → fade in → store chime → clerk greeting
+- Exit flow: door close sound → fade to black → map switch → fade in (simpler, no door anim needed since player faces away)
+- Door animation system added to Engine with separate update/render lifecycle
+- All 3 store entries verified working with correct brand colors
+
+**Files modified:** audio.js, engine.js, game.js
