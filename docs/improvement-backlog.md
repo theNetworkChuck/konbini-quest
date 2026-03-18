@@ -42,3 +42,44 @@
 - Spaced repetition is "the most replicable and robust finding from experimental psychology"
 - Pokemon's addictive loop: Collection + Progression + Reward anticipation + Physical exploration
 - Key konbini phrases foreigners struggle with: point card questions, payment method, bag/chopstick requests, heating food, age verification screen
+
+---
+
+## CHANGELOG
+
+### 2026-03-18 — #1 Spaced Repetition Review System ✅
+**Commit:** `c5642e3`
+
+**What was added:**
+- New "Review Sensei" NPC on the street (in the park area) wearing a maroon robe with grey hair
+- Complete spaced repetition phrase tracking system in npc.js
+- Every quiz answer (correct or wrong) is tracked with mastery levels and review intervals
+- Algorithm: correct answers increase review interval (1→2→4→8 levels), wrong answers reset to 1
+- Quick-fire review quiz format with shuffled answer positions
+- Pulsing golden book indicator above Sensei when reviews are available
+- Review stats tracking: total phrases, mastered, learning, due count
+- Japanese/English feedback during reviews (よくできた！/ もう一回！)
+- Star-rated review completion summary (★★★ perfect / ★★☆ great / ★☆☆ keep practicing)
+- Updated render_game_to_text with review state for testing
+
+**Files modified:** game.js, npc.js, engine.js, sprites.js
+
+### 2026-03-18 — #2 Listening Comprehension Mode ✅
+**Commit:** (pending)
+
+**What was added:**
+- New "Listening Mode" that activates when encountering previously-learned phrases
+- Audio-only challenge: clerk speaks Japanese via TTS but no text is shown on screen
+- Player must identify what the clerk said from audio alone, then select the correct response
+- Pulsing ear icon with animated sound waves in the dialogue box during listening mode
+- Press [B] to replay the audio as many times as needed
+- Press [A] to proceed to the answer choices
+- On correct answer: reveals the original Japanese text + romaji + English as reinforcement
+- On wrong answer: reveals what the clerk said, replays audio, then retries with text visible
+- Shuffled answer positions in listening quizzes to prevent position memorization
+- Level 12 (Master level) always uses listening mode for all clerk interactions
+- Integrates with spaced repetition: only phrases with mastery >= 1 trigger listening mode
+- Testing hook (window.forceListeningMode) for development verification
+- Added listeningMode state to render_game_to_text for testing
+
+**Files modified:** dialogue.js, game.js

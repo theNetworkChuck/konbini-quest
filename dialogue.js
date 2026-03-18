@@ -27,6 +27,13 @@ const Dialogue = (() => {
   let flashColor = null;
   let flashTimer = 0;
 
+  // Listening mode state
+  let listeningMode = false;
+  let listeningText = '';
+  let listeningCallback = null;
+  let listenAgainCallback = null;
+  let listenPulse = 0;
+
   function isActive() { return active || choiceActive; }
 
   // Start a dialogue sequence
@@ -41,6 +48,25 @@ const Dialogue = (() => {
     waitingForInput = false;
     onComplete = callback || null;
     bounceTime = 0;
+    listeningMode = false;
+  }
+
+  // Start a listening comprehension dialogue (audio only, no text shown)
+  function showListening(speakerName, promptText, onDone, onListenAgain) {
+    active = true;
+    speaker = speakerName || 'Clerk';
+    listeningMode = true;
+    listeningText = promptText || 'What did the clerk say?';
+    listeningCallback = onDone || null;
+    listenAgainCallback = onListenAgain || null;
+    listenPulse = 0;
+    lines = [listeningText];
+    currentLine = 0;
+    charIndex = listeningText.length; // show full text immediately
+    waitingForInput = true;
+    speedUp = false;
+    bounceTime = 0;
+    onComplete = null;
   }
 
   // Show choice menu
@@ -73,6 +99,14 @@ const Dialogue = (() => {
 
     if (!active) return;
 
+    if (listeningMode) {
+      // A button in listening mode proceeds to quiz
+      listeningMode = false;
+      active = false;
+      if (listeningCallback) listeningCallback();
+      return;
+    }
+
     if (waitingForInput) {
       // Advance to next line
       currentLine++;
@@ -93,6 +127,11 @@ const Dialogue = (() => {
 
   // Handle B button
   function pressB() {
+    if (listeningMode && listenAgainCallback) {
+      // B button replays audio in listening mode
+      listenAgainCallback();
+      return;
+    }
     // B can also speed up text
     if (active && !waitingForInput) {
       speedUp = true;
@@ -114,6 +153,7 @@ const Dialogue = (() => {
   // Update (called each frame)
   function update(dt) {
     bounceTime += dt;
+    listenPulse += dt;
 
     if (flashTimer > 0) {
       flashTimer -= dt * 1000;
@@ -188,17 +228,50 @@ const Dialogue = (() => {
       ctx.fillStyle = '#fff';
 
       // Word wrap
-      const maxWidth = CANVAS_W - 20;
+      const textOffsetX = listeningMode ? 24 : 0; // offset for ear icon
+      const maxWidth = CANVAS_W - 20 - textOffsetX;
       const lineHeight = isJapanese ? 14 : 11;
       const textLines = wrapText(ctx, displayText, maxWidth);
       const maxLines = 3;
 
       for (let i = 0; i < Math.min(textLines.length, maxLines); i++) {
-        ctx.fillText(textLines[i], 10, boxY + 14 + i * lineHeight);
+        ctx.fillText(textLines[i], 10 + textOffsetX, boxY + 14 + i * lineHeight);
+      }
+
+      // Listening mode: draw ear icon and prompt
+      if (listeningMode) {
+        // Pulsing ear icon (left side)
+        const earPulse = Math.sin(listenPulse * 3) * 0.15 + 0.85;
+        ctx.globalAlpha = earPulse;
+        // Ear shape (simple pixel art)
+        ctx.fillStyle = '#f39c12';
+        ctx.fillRect(12, boxY + 12, 2, 14);
+        ctx.fillRect(14, boxY + 8, 2, 4);
+        ctx.fillRect(14, boxY + 24, 2, 4);
+        ctx.fillRect(16, boxY + 6, 4, 2);
+        ctx.fillRect(16, boxY + 26, 4, 2);
+        ctx.fillRect(20, boxY + 8, 2, 18);
+        ctx.fillRect(16, boxY + 12, 2, 8);
+        // Sound waves
+        const waveAlpha = (Math.sin(listenPulse * 5) + 1) / 2 * 0.6 + 0.2;
+        ctx.globalAlpha = waveAlpha;
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(24, boxY + 14, 2, 2);
+        ctx.fillRect(26, boxY + 12, 2, 6);
+        ctx.fillRect(28, boxY + 10, 2, 10);
+        ctx.globalAlpha = 1;
+
+        // "Press B to hear again" hint
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#aaa';
+        ctx.fillText('[B] Listen again', 10, boxY + BOX_H - 4);
+
+        // "Press A to answer" hint
+        ctx.fillText('[A] Answer', CANVAS_W - 68, boxY + BOX_H - 4);
       }
 
       // Bouncing triangle indicator
-      if (waitingForInput) {
+      if (waitingForInput && !listeningMode) {
         const triY = boxY + BOX_H - 8 + Math.sin(bounceTime * 4) * 2;
         ctx.fillStyle = '#fff';
         ctx.beginPath();
@@ -282,6 +355,7 @@ const Dialogue = (() => {
   return {
     isActive,
     show,
+    showListening,
     showChoices,
     hideChoices,
     flash,
@@ -292,5 +366,6 @@ const Dialogue = (() => {
     render,
     get choiceActive() { return choiceActive; },
     get choiceIndex() { return choiceIndex; },
+    get listeningMode() { return listeningMode; },
   };
 })();

@@ -397,6 +397,17 @@
     runInteraction();
   }
 
+  // Check if a phrase should use listening comprehension mode
+  // Listening mode activates when:
+  // 1. The level is marked as Japanese-only (Master level), OR
+  // 2. The player has previously learned this phrase (mastery >= 1)
+  function shouldUseListeningMode(level, interactionIdx) {
+    if (level.isJapaneseOnly) return true;
+    const key = `${level.id}_${interactionIdx}`;
+    const tracked = NPCs.phraseTracker[key];
+    return tracked && tracked.mastery >= 1;
+  }
+
   function runInteraction() {
     const level = state.currentInteractionLevel;
     const idx = state.currentInteractionIdx;
@@ -408,22 +419,42 @@
     }
 
     const interaction = level.interactions[idx];
+    const useListening = interaction.clerkJp && shouldUseListeningMode(level, idx);
 
     // Determine what to show first
     if (interaction.clerkJp) {
       // Clerk speaks Japanese
       GameAudio.speakJapanese(interaction.clerkJp);
 
-      const lines = [];
-      lines.push(interaction.clerkJp);
-      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
-      if (interaction.clerkEn) lines.push(interaction.clerkEn);
-      if (interaction.question) lines.push(interaction.question);
-      if (interaction.tip) lines.push(interaction.tip);
+      if (useListening) {
+        // LISTENING COMPREHENSION MODE
+        // Play audio but don't show text -- player must identify from hearing
+        const prompt = interaction.question || 'Listen carefully... What did the clerk say?';
+        Dialogue.showListening(
+          'Clerk',
+          prompt,
+          () => {
+            // When player presses A, show the quiz with meaning-based options
+            showListeningQuiz(interaction);
+          },
+          () => {
+            // When player presses B, replay the audio
+            GameAudio.speakJapanese(interaction.clerkJp);
+          }
+        );
+      } else {
+        // Normal mode: show text + audio
+        const lines = [];
+        lines.push(interaction.clerkJp);
+        if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+        if (interaction.clerkEn) lines.push(interaction.clerkEn);
+        if (interaction.question) lines.push(interaction.question);
+        if (interaction.tip) lines.push(interaction.tip);
 
-      Dialogue.show('Clerk', lines, () => {
-        showQuiz(interaction);
-      });
+        Dialogue.show('Clerk', lines, () => {
+          showQuiz(interaction);
+        });
+      }
     } else if (interaction.playerPrompt) {
       // Player needs to initiate
       Dialogue.show('Guide', interaction.playerPrompt, () => {
@@ -434,6 +465,84 @@
         } else {
           showQuiz(interaction);
         }
+      });
+    }
+  }
+
+  // Listening mode quiz: same as normal quiz but with shuffled options
+  // and an extra "listen again" mechanic
+  function showListeningQuiz(interaction) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    // Shuffle options so memorized positions don't help
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleListeningAnswer(interaction, selected);
+    });
+  }
+
+  function handleListeningAnswer(interaction, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+
+      // Track for spaced repetition
+      if (state.currentInteractionLevel) {
+        NPCs.trackPhrase(
+          state.currentInteractionLevel.id,
+          state.currentInteractionIdx,
+          true
+        );
+      }
+
+      // Show the original text as a reveal after correct listening answer
+      const revealLines = [];
+      if (interaction.clerkJp) revealLines.push(interaction.clerkJp);
+      if (interaction.clerkRomaji) revealLines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) revealLines.push(interaction.clerkEn);
+      const explanation = interaction.correctExplanation || 'Correct!';
+      revealLines.push(explanation);
+
+      Dialogue.show('', revealLines, () => {
+        state.currentInteractionIdx++;
+        runInteraction();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+      state.interactionMistakes++;
+
+      // Track mistake for spaced repetition
+      if (state.currentInteractionLevel) {
+        NPCs.trackPhrase(
+          state.currentInteractionLevel.id,
+          state.currentInteractionIdx,
+          false
+        );
+      }
+
+      // Reveal what the clerk actually said, then retry
+      const revealLines = [];
+      revealLines.push('The clerk said:');
+      if (interaction.clerkJp) revealLines.push(interaction.clerkJp);
+      if (interaction.clerkEn) revealLines.push(interaction.clerkEn);
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      revealLines.push(explanation);
+
+      Dialogue.show('', revealLines, () => {
+        // Replay audio so they hear it again with text
+        GameAudio.speakJapanese(interaction.clerkJp);
+        // Retry with normal mode this time (no double listening)
+        showQuiz(interaction);
       });
     }
   }
@@ -592,12 +701,31 @@
         walking: state.player.walking,
       },
       dialogue: Dialogue.isActive(),
+      listeningMode: Dialogue.listeningMode,
       stars: NPCs.getTotalStars(),
       interacting: state.interacting,
       inReview: state.inReview,
       reviewStats: NPCs.getReviewStats(),
       reviewsAvailable: NPCs.hasReviewsAvailable(),
     });
+  };
+
+  // Testing hook: force next interaction to use listening mode
+  window.forceListeningMode = () => {
+    // Pre-seed the phraseTracker so listening mode triggers
+    // for all interactions of level 1 (7-Eleven Welcome)
+    for (let i = 0; i < 12; i++) {
+      for (let j = 0; j < 10; j++) {
+        const key = `${i + 1}_${j}`;
+        if (!NPCs.phraseTracker[key]) {
+          NPCs.phraseTracker[key] = {
+            levelId: i + 1, interactionIdx: j,
+            mastery: 2, interval: 2, wrongCount: 0,
+            lastReviewAt: 0, correctStreak: 2
+          };
+        }
+      }
+    }
   };
 
   window.teleportPlayer = (x, y, mapIdx) => {
