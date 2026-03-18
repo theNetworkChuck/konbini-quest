@@ -507,6 +507,221 @@ const Engine = (() => {
 
   function isDoorAnimating() { return doorAnim !== null; }
 
+  // ============ WEATHER SYSTEM ============
+  // Weather types: 'clear', 'cherry_blossoms', 'rain', 'night'
+  // Weather cycles automatically based on in-game time
+  const weather = {
+    type: 'clear',            // current weather type
+    particles: [],            // particle pool
+    cycleTimer: 0,            // time until next weather change
+    cycleDuration: 45,        // seconds per weather cycle
+    timeOfDay: 'day',         // 'day', 'dusk', 'night', 'dawn'
+    todTimer: 0,              // time-of-day cycle timer
+    todCycleDuration: 120,    // full day/night cycle in seconds
+    tintAlpha: 0,             // current tint overlay alpha (smoothed)
+    tintTargetAlpha: 0,
+    rainSoundPlaying: false,
+  };
+
+  const WEATHER_TYPES = ['clear', 'cherry_blossoms', 'rain', 'clear', 'cherry_blossoms'];
+  let weatherIdx = 0;
+
+  function initWeather() {
+    weather.type = 'cherry_blossoms'; // start with petals for visual appeal
+    weather.cycleTimer = weather.cycleDuration;
+    weather.todTimer = 0;
+    spawnWeatherParticles();
+  }
+
+  function spawnWeatherParticles() {
+    weather.particles = [];
+    const count = weather.type === 'rain' ? 80 : weather.type === 'cherry_blossoms' ? 30 : 0;
+    for (let i = 0; i < count; i++) {
+      weather.particles.push(createParticle(true));
+    }
+  }
+
+  function createParticle(randomY) {
+    if (weather.type === 'cherry_blossoms') {
+      return {
+        x: Math.random() * (CANVAS_W + 40) - 20,
+        y: randomY ? Math.random() * CANVAS_H : -Math.random() * 20,
+        vx: -0.3 - Math.random() * 0.4,     // gentle drift left
+        vy: 0.4 + Math.random() * 0.3,       // slow fall
+        size: 2 + Math.random() * 2,          // 2-4px petals
+        swayPhase: Math.random() * Math.PI * 2,
+        swaySpeed: 1.5 + Math.random(),
+        swayAmp: 0.6 + Math.random() * 0.5,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 2,
+        alpha: 0.5 + Math.random() * 0.4,
+        // Pink palette for petals
+        color: [
+          '#FFB7C5', '#FF9CAD', '#FFDDE1', '#FFD1DC',
+          '#FFC0CB', '#FFE4E8', '#F8BBD0'
+        ][Math.floor(Math.random() * 7)],
+      };
+    } else if (weather.type === 'rain') {
+      return {
+        x: Math.random() * (CANVAS_W + 30) - 10,
+        y: randomY ? Math.random() * CANVAS_H : -Math.random() * 30,
+        vx: -1.2,                              // slight wind angle
+        vy: 4 + Math.random() * 2,             // fast fall
+        length: 4 + Math.random() * 4,          // rain streak length
+        alpha: 0.15 + Math.random() * 0.25,
+      };
+    }
+    return null;
+  }
+
+  function updateWeather(dt) {
+    // Weather cycle timer
+    weather.cycleTimer -= dt;
+    if (weather.cycleTimer <= 0) {
+      weatherIdx = (weatherIdx + 1) % WEATHER_TYPES.length;
+      weather.type = WEATHER_TYPES[weatherIdx];
+      weather.cycleTimer = weather.cycleDuration;
+      spawnWeatherParticles();
+    }
+
+    // Time of day cycle
+    weather.todTimer += dt;
+    if (weather.todTimer >= weather.todCycleDuration) {
+      weather.todTimer -= weather.todCycleDuration;
+    }
+    const todProgress = weather.todTimer / weather.todCycleDuration;
+    // 0.0-0.25 = day, 0.25-0.35 = dusk, 0.35-0.65 = night, 0.65-0.75 = dawn, 0.75-1.0 = day
+    if (todProgress < 0.25) weather.timeOfDay = 'day';
+    else if (todProgress < 0.35) weather.timeOfDay = 'dusk';
+    else if (todProgress < 0.65) weather.timeOfDay = 'night';
+    else if (todProgress < 0.75) weather.timeOfDay = 'dawn';
+    else weather.timeOfDay = 'day';
+
+    // Smooth tint alpha
+    let target = 0;
+    if (weather.timeOfDay === 'night') target = 0.3;
+    else if (weather.timeOfDay === 'dusk') target = 0.18;
+    else if (weather.timeOfDay === 'dawn') target = 0.12;
+    weather.tintTargetAlpha = target;
+    weather.tintAlpha += (weather.tintTargetAlpha - weather.tintAlpha) * dt * 1.5;
+
+    // Update particles
+    for (let i = weather.particles.length - 1; i >= 0; i--) {
+      const p = weather.particles[i];
+      if (!p) continue;
+
+      if (weather.type === 'cherry_blossoms') {
+        p.swayPhase += p.swaySpeed * dt;
+        p.x += p.vx * 60 * dt + Math.sin(p.swayPhase) * p.swayAmp;
+        p.y += p.vy * 60 * dt;
+        p.rotation += p.rotSpeed * dt;
+      } else if (weather.type === 'rain') {
+        p.x += p.vx * 60 * dt;
+        p.y += p.vy * 60 * dt;
+      }
+
+      // Recycle particles that go off-screen
+      if (p.y > CANVAS_H + 10 || p.x < -30 || p.x > CANVAS_W + 30) {
+        weather.particles[i] = createParticle(false);
+      }
+    }
+  }
+
+  function renderWeather(time) {
+    if (weather.particles.length === 0 && weather.tintAlpha < 0.01) return;
+
+    // Render particles
+    for (const p of weather.particles) {
+      if (!p) continue;
+
+      if (weather.type === 'cherry_blossoms') {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        // Draw petal shape: an ellipse-like shape using two arcs
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        // Main petal body (elliptical)
+        ctx.ellipse(0, 0, p.size * 0.6, p.size, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Smaller highlight for 3D effect
+        ctx.fillStyle = '#fff';
+        ctx.globalAlpha = p.alpha * 0.3;
+        ctx.beginPath();
+        ctx.ellipse(-p.size * 0.15, -p.size * 0.2, p.size * 0.25, p.size * 0.4, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (weather.type === 'rain') {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.strokeStyle = '#a8c8e8';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + p.vx * 0.3, p.y + p.length);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Rain splash effect on ground (small circles that appear at bottom)
+    if (weather.type === 'rain') {
+      ctx.save();
+      const splashCount = 6;
+      for (let i = 0; i < splashCount; i++) {
+        const splashPhase = (time * 3 + i * 1.7) % 1;
+        if (splashPhase > 0.6) continue; // only show part of the time
+        const sx = (Math.sin(time * 2.3 + i * 47) * 0.5 + 0.5) * CANVAS_W;
+        const sy = CANVAS_H - 4 - Math.random() * 8;
+        const radius = 1 + splashPhase * 2;
+        ctx.globalAlpha = (1 - splashPhase / 0.6) * 0.2;
+        ctx.strokeStyle = '#a8c8e8';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  function renderTimeOfDayTint() {
+    if (weather.tintAlpha < 0.01) return;
+
+    ctx.save();
+    if (weather.timeOfDay === 'night') {
+      // Deep blue night tint
+      ctx.fillStyle = `rgba(15, 20, 60, ${weather.tintAlpha})`;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    } else if (weather.timeOfDay === 'dusk') {
+      // Warm orange-purple dusk
+      ctx.fillStyle = `rgba(80, 30, 50, ${weather.tintAlpha})`;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    } else if (weather.timeOfDay === 'dawn') {
+      // Soft pink dawn
+      ctx.fillStyle = `rgba(80, 50, 60, ${weather.tintAlpha})`;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    }
+
+    // Night: add faint starfield dots
+    if (weather.timeOfDay === 'night' && weather.tintAlpha > 0.15) {
+      const starSeed = [12,45,78,103,156,189,210,34,67,99,134,178,201,23,56];
+      ctx.fillStyle = `rgba(255, 255, 255, ${Math.min(weather.tintAlpha * 0.8, 0.4)})`;
+      for (const s of starSeed) {
+        const sx = (s * 17 + 3) % CANVAS_W;
+        const sy = (s * 13 + 7) % (CANVAS_H * 0.3);
+        const twinkle = Math.sin(performance.now() / (300 + s * 7) + s) * 0.5 + 0.5;
+        ctx.globalAlpha = twinkle * Math.min(weather.tintAlpha * 1.5, 0.5);
+        ctx.fillRect(sx, sy, 1, 1);
+      }
+    }
+    ctx.restore();
+  }
+
+  function getWeatherType() { return weather.type; }
+  function getTimeOfDay() { return weather.timeOfDay; }
+
   // ============ TITLE SCREEN ============
   function renderTitle() {
     // Dark background
@@ -580,6 +795,9 @@ const Engine = (() => {
     startFadeOut, startFadeIn, updateFade, renderFade, isFading,
     // Sliding door animation
     startDoorAnimation, updateDoorAnimation, renderDoorAnimation, isDoorAnimating,
+    // Weather
+    initWeather, updateWeather, renderWeather, renderTimeOfDayTint,
+    getWeatherType, getTimeOfDay,
     // Title
     renderTitle,
   };

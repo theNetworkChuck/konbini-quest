@@ -66,6 +66,20 @@
     Engine.updateDoorAnimation(dt);
     Dialogue.update(dt);
 
+    // Update weather only on street (map 0) — indoors has no weather
+    if (state.currentMap === 0) {
+      Engine.updateWeather(dt);
+      // Start/stop rain ambience based on weather type
+      if (Engine.getWeatherType() === 'rain' && !GameAudio.isRainPlaying()) {
+        GameAudio.startRainAmbience();
+      } else if (Engine.getWeatherType() !== 'rain' && GameAudio.isRainPlaying()) {
+        GameAudio.stopRainAmbience();
+      }
+    } else if (GameAudio.isRainPlaying()) {
+      // Stop rain when entering a store
+      GameAudio.stopRainAmbience();
+    }
+
     if (state.phase === 'title') {
       updateTitle();
     } else if (state.phase === 'playing') {
@@ -86,6 +100,7 @@
       state.player.x = 10;
       state.player.y = 10;
       state.player.dir = 'down';
+      Engine.initWeather();
       Engine.startFadeIn();
     }
   }
@@ -1205,6 +1220,11 @@
     // Render map tiles
     Engine.renderMap(state.currentMap);
 
+    // Time-of-day tint (below sprites, above map — on street only)
+    if (state.currentMap === 0) {
+      Engine.renderTimeOfDayTint();
+    }
+
     // Render store labels
     Engine.renderStoreLabels(state.currentMap);
 
@@ -1218,6 +1238,11 @@
       state.player.dir, state.player.frame,
       walkProgress
     );
+
+    // Weather particles (above player/NPCs, below HUD — street only)
+    if (state.currentMap === 0) {
+      Engine.renderWeather(state.time);
+    }
 
     // HUD
     Engine.renderHUD(state.currentMap);
@@ -1418,6 +1443,16 @@
 
   window.setPlayerDir = (dir) => {
     state.player.dir = dir;
+  };
+
+  // Weather testing hooks
+  window.setWeather = (type) => {
+    // Force a weather type: 'clear', 'cherry_blossoms', 'rain'
+    console.log('Setting weather to:', type);
+  };
+
+  window.getWeatherInfo = () => {
+    return { weather: Engine.getWeatherType(), timeOfDay: Engine.getTimeOfDay(), map: state.currentMap };
   };
 
   window.advanceTime = (ms) => {

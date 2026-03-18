@@ -225,6 +225,63 @@ const GameAudio = (() => {
     else playRewardCommon();
   }
 
+  // Ambient rain loop (white noise filtered through bandpass)
+  let rainGain = null;
+  let rainNodes = []; // track oscillators for cleanup
+  let rainActive = false;
+
+  function startRainAmbience() {
+    if (!ctx || muted || rainActive) return;
+    resume();
+    rainActive = true;
+    rainGain = ctx.createGain();
+    rainGain.gain.value = 0;
+    rainGain.connect(masterGain);
+
+    // Create multiple filtered noise sources for rain texture
+    // We use detuned oscillators with noise-like characteristics
+    const freqs = [200, 400, 800, 1600, 3200];
+    const vols = [0.015, 0.012, 0.008, 0.006, 0.004];
+    freqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const bandGain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      osc.type = 'sawtooth';
+      osc.frequency.value = freq + Math.random() * 50;
+      filter.type = 'bandpass';
+      filter.frequency.value = freq;
+      filter.Q.value = 0.5;
+      bandGain.gain.value = vols[i];
+      osc.connect(filter);
+      filter.connect(bandGain);
+      bandGain.connect(rainGain);
+      osc.start();
+      rainNodes.push({ osc, filter, bandGain });
+    });
+
+    // Fade in
+    rainGain.gain.linearRampToValueAtTime(0.6, ctx.currentTime + 2);
+  }
+
+  function stopRainAmbience() {
+    if (!ctx || !rainActive) return;
+    rainActive = false;
+    if (rainGain) {
+      rainGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5);
+    }
+    // Clean up nodes after fade
+    const nodesToClean = [...rainNodes];
+    rainNodes = [];
+    setTimeout(() => {
+      nodesToClean.forEach(n => {
+        try { n.osc.stop(); } catch(e) {}
+      });
+      rainGain = null;
+    }, 2000);
+  }
+
+  function isRainPlaying() { return rainActive; }
+
   // TTS
   function speakJapanese(text) {
     if (muted || !text) return;
@@ -251,5 +308,6 @@ const GameAudio = (() => {
     playCursor, playFootstep, playDoor, playAlert,
     speakJapanese, playRewardSound,
     playSlidingDoor, playSlidingDoorClose,
+    startRainAmbience, stopRainAmbience, isRainPlaying,
   };
 })();
