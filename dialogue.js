@@ -34,6 +34,9 @@ const Dialogue = (() => {
   let listenAgainCallback = null;
   let listenPulse = 0;
 
+  // Kana assist peek hint
+  let kanaPeekHint = false;
+
   function isActive() { return active || choiceActive; }
 
   // Start a dialogue sequence
@@ -307,7 +310,7 @@ const Dialogue = (() => {
         if (i === choiceIndex) {
           ctx.fillStyle = '#f1c40f';
           ctx.font = '7px "Press Start 2P"';
-          ctx.fillText('▶', choiceX + 4, y);
+          ctx.fillText('\u25b6', choiceX + 4, y);
         }
 
         // Check if Japanese
@@ -315,16 +318,23 @@ const Dialogue = (() => {
         if (isJp) {
           ctx.font = '9px "M PLUS Rounded 1c"';
           if (typeof optText === 'string' && optText.length > 12) {
-            optText = optText.substring(0, 11) + '…';
+            optText = optText.substring(0, 11) + '\u2026';
           }
         } else {
           ctx.font = '6px "Press Start 2P"';
           if (typeof optText === 'string' && optText.length > 15) {
-            optText = optText.substring(0, 14) + '…';
+            optText = optText.substring(0, 14) + '\u2026';
           }
         }
         ctx.fillStyle = i === choiceIndex ? '#f1c40f' : '#fff';
         ctx.fillText(optText, choiceX + 15, y);
+      }
+
+      // Show [B] Peek hint for kana_assist mode
+      if (typeof LEVEL_DISPLAY_MODES !== 'undefined' && kanaPeekHint) {
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#f39c12';
+        ctx.fillText('[B] Romaji', choiceX + 4, choiceY + choiceH + 8);
       }
     }
   }
@@ -367,5 +377,7 @@ const Dialogue = (() => {
     get choiceActive() { return choiceActive; },
     get choiceIndex() { return choiceIndex; },
     get listeningMode() { return listeningMode; },
+    set kanaPeekHint(val) { kanaPeekHint = val; },
+    get kanaPeekHint() { return kanaPeekHint; },
   };
 })();

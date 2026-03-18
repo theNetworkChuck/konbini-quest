@@ -31,6 +31,10 @@
     reviewIdx: 0,
     reviewCorrect: 0,
     reviewTotal: 0,
+    // Romaji peek state (kana_assist mode)
+    romajiPeekActive: false,
+    romajiPeekData: null, // stores romaji text for current choices
+    currentDisplayMode: 'romaji', // current level's display mode
   };
 
   let audioInitialized = false;
@@ -126,7 +130,13 @@
       Dialogue.pressA();
     }
     if (Engine.inputB()) {
-      Dialogue.pressB();
+      // In kana_assist mode during quiz, B toggles romaji peek
+      if (state.currentDisplayMode === 'kana_assist' && Dialogue.choiceActive && state.romajiPeekData) {
+        state.romajiPeekActive = !state.romajiPeekActive;
+        GameAudio.playCursor();
+      } else {
+        Dialogue.pressB();
+      }
     }
     // D-pad for choice menu
     if (Dialogue.choiceActive) {
@@ -377,6 +387,9 @@
     });
   }
 
+  // Track which display mode transitions the player has seen
+  const seenModeTransitions = {};
+
   function interactWithClerk(npc) {
     const store = npc.store;
     const level = NPCs.getCurrentLevel(store);
@@ -394,7 +407,36 @@
     state.currentInteractionIdx = 0;
     state.interactionMistakes = 0;
 
-    runInteraction();
+    const displayMode = getDisplayMode(level);
+    state.currentDisplayMode = displayMode;
+
+    // Show a one-time transition notice when entering a new writing mode
+    if (!seenModeTransitions[displayMode] && displayMode !== 'romaji') {
+      seenModeTransitions[displayMode] = true;
+      if (displayMode === 'kana_assist') {
+        Dialogue.show('Guide', [
+          '\u30ec\u30d9\u30eb\u30a2\u30c3\u30d7\uff01 Level Up!',
+          'Romaji training wheels are coming off!',
+          'Text now shows in kana/kanji. Press [B] during quizzes to peek at romaji.',
+          'Your reading skills are growing! \u304c\u3093\u3070\u3063\u3066\uff01'
+        ], () => {
+          runInteraction();
+        });
+      } else if (displayMode === 'kana_only') {
+        Dialogue.show('Guide', [
+          '\u4e0a\u7d1a\u8005\uff01 Advanced Mode!',
+          'No more romaji or English hints.',
+          'Read the Japanese text directly. You\'ve earned this!',
+          '\u65e5\u672c\u8a9e\u3060\u3051\u3067\u304c\u3093\u3070\u308d\u3046\uff01'
+        ], () => {
+          runInteraction();
+        });
+      } else {
+        runInteraction();
+      }
+    } else {
+      runInteraction();
+    }
   }
 
   // Check if a phrase should use listening comprehension mode
@@ -406,6 +448,32 @@
     const key = `${level.id}_${interactionIdx}`;
     const tracked = NPCs.phraseTracker[key];
     return tracked && tracked.mastery >= 1;
+  }
+
+  // Get display mode for current level
+  function getDisplayMode(level) {
+    if (!level) return 'romaji';
+    return LEVEL_DISPLAY_MODES[level.id] || 'romaji';
+  }
+
+  // Format clerk dialogue lines based on display mode
+  function formatClerkLines(interaction, displayMode) {
+    const lines = [];
+    lines.push(interaction.clerkJp);
+
+    if (displayMode === 'romaji') {
+      // Beginner: show romaji + English + tips
+      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+    } else if (displayMode === 'kana_assist') {
+      // Intermediate: show English but skip romaji (player can peek with B)
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+    }
+    // kana_only: just the Japanese text, no romaji, no English
+
+    if (interaction.question) lines.push(interaction.question);
+    if (displayMode !== 'kana_only' && interaction.tip) lines.push(interaction.tip);
+    return lines;
   }
 
   function runInteraction() {
@@ -420,6 +488,10 @@
 
     const interaction = level.interactions[idx];
     const useListening = interaction.clerkJp && shouldUseListeningMode(level, idx);
+    const displayMode = getDisplayMode(level);
+    state.currentDisplayMode = displayMode;
+    state.romajiPeekActive = false;
+    state.romajiPeekData = null;
 
     // Determine what to show first
     if (interaction.clerkJp) {
@@ -443,13 +515,8 @@
           }
         );
       } else {
-        // Normal mode: show text + audio
-        const lines = [];
-        lines.push(interaction.clerkJp);
-        if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
-        if (interaction.clerkEn) lines.push(interaction.clerkEn);
-        if (interaction.question) lines.push(interaction.question);
-        if (interaction.tip) lines.push(interaction.tip);
+        // Normal mode: show text + audio, filtered by display mode
+        const lines = formatClerkLines(interaction, displayMode);
 
         Dialogue.show('Clerk', lines, () => {
           showQuiz(interaction);
@@ -458,7 +525,7 @@
     } else if (interaction.playerPrompt) {
       // Player needs to initiate
       Dialogue.show('Guide', interaction.playerPrompt, () => {
-        if (interaction.tip) {
+        if (displayMode !== 'kana_only' && interaction.tip) {
           Dialogue.show('Tip', interaction.tip, () => {
             showQuiz(interaction);
           });
@@ -548,17 +615,42 @@
   }
 
   function showQuiz(interaction) {
-    const options = interaction.options.map(o => ({
-      text: o.text || o.textJp || '',
-      correct: o.correct,
-      romaji: o.romaji,
-      en: o.en,
-    }));
+    const displayMode = state.currentDisplayMode;
+    const options = interaction.options.map(o => {
+      const opt = {
+        text: o.text || o.textJp || '',
+        correct: o.correct,
+        romaji: o.romaji,
+        en: o.en,
+      };
+
+      // In kana_assist mode: if the text is already Japanese, keep it.
+      // If it's English-only (like '[Stay Silent]'), keep it.
+      // Store romaji for peek functionality but don't show it inline.
+      // In kana_only mode: remove romaji and English entirely.
+      if (displayMode === 'kana_only') {
+        opt.romaji = undefined;
+        opt.en = undefined;
+      }
+      return opt;
+    });
+
+    // Store romaji peek data for kana_assist mode
+    if (displayMode === 'kana_assist') {
+      state.romajiPeekData = interaction.options.map(o => o.romaji || null);
+      state.romajiPeekActive = false;
+      Dialogue.kanaPeekHint = true;
+    } else {
+      Dialogue.kanaPeekHint = false;
+    }
 
     // Show the question context if available
     const contextLine = interaction.question || 'Choose your response:';
     Dialogue.show('', contextLine, () => {
       Dialogue.showChoices(options, (selectedIdx) => {
+        state.romajiPeekActive = false;
+        state.romajiPeekData = null;
+        Dialogue.kanaPeekHint = false;
         const selected = options[selectedIdx];
         handleAnswer(interaction, selected);
       });
@@ -643,6 +735,87 @@
     });
   }
 
+  // ============ WRITING MODE DISPLAY ============
+  function renderWritingModeBadge(ctx) {
+    const mode = state.currentDisplayMode;
+    const CANVAS_W = Engine.CANVAS_W;
+
+    // Badge in top-left corner
+    let label, color;
+    if (mode === 'romaji') {
+      label = 'Aa';
+      color = '#3498db'; // blue
+    } else if (mode === 'kana_assist') {
+      label = '\u3042a';
+      color = '#f39c12'; // orange
+    } else {
+      label = '\u3042';
+      color = '#e74c3c'; // red
+    }
+
+    const badgeW = 24;
+    const badgeH = 12;
+    const badgeX = 2;
+    const badgeY = 2;
+
+    ctx.fillStyle = 'rgba(26,26,46,0.85)';
+    ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(badgeX, badgeY, badgeW, badgeH);
+
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.fillText(label, badgeX + badgeW / 2, badgeY + 9);
+    ctx.textAlign = 'left';
+  }
+
+  function renderRomajiPeek(ctx) {
+    // Draw a small romaji hint box above the choice menu
+    const CANVAS_W = Engine.CANVAS_W;
+    const CANVAS_H = Engine.CANVAS_H;
+    const BOX_H = 56;
+
+    // Position: small box at top-left of screen
+    const peekX = 4;
+    const peekY = 16;
+    const peekW = 120;
+    const lineH = 10;
+
+    // Filter to only entries that have romaji
+    const romajiLines = state.romajiPeekData.filter(r => r != null);
+    if (romajiLines.length === 0) return;
+
+    const peekH = romajiLines.length * lineH + 10;
+
+    // Background
+    ctx.fillStyle = 'rgba(26,26,46,0.92)';
+    ctx.fillRect(peekX, peekY, peekW, peekH);
+    ctx.strokeStyle = '#f39c12';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(peekX, peekY, peekW, peekH);
+
+    // Header
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#f39c12';
+    ctx.fillText('[B] Romaji Peek', peekX + 4, peekY + 8);
+
+    // Romaji lines
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#ccc';
+    let idx = 0;
+    for (let i = 0; i < state.romajiPeekData.length; i++) {
+      if (state.romajiPeekData[i]) {
+        const text = state.romajiPeekData[i].length > 18
+          ? state.romajiPeekData[i].substring(0, 17) + '\u2026'
+          : state.romajiPeekData[i];
+        ctx.fillText(text, peekX + 4, peekY + 18 + idx * lineH);
+        idx++;
+      }
+    }
+  }
+
   // ============ RENDER ============
   function render() {
     const ctx = Engine.ctx;
@@ -681,8 +854,18 @@
     // HUD
     Engine.renderHUD(state.currentMap);
 
+    // Writing mode badge (only during store interactions)
+    if (state.interacting && state.currentInteractionLevel) {
+      renderWritingModeBadge(ctx);
+    }
+
     // Dialogue
     Dialogue.render(ctx);
+
+    // Romaji peek overlay (kana_assist mode)
+    if (state.romajiPeekActive && state.romajiPeekData && Dialogue.choiceActive) {
+      renderRomajiPeek(ctx);
+    }
 
     // Fade overlay (always on top)
     Engine.renderFade();
@@ -702,6 +885,8 @@
       },
       dialogue: Dialogue.isActive(),
       listeningMode: Dialogue.listeningMode,
+      displayMode: state.currentDisplayMode,
+      romajiPeekActive: state.romajiPeekActive,
       stars: NPCs.getTotalStars(),
       interacting: state.interacting,
       inReview: state.inReview,
@@ -726,6 +911,19 @@
         }
       }
     }
+  };
+
+  // Testing hook: override display mode
+  window.setDisplayMode = (mode) => {
+    state.currentDisplayMode = mode;
+  };
+
+  // Testing hook: complete levels up to N to unlock higher levels
+  window.unlockToLevel = (storeIdx, count) => {
+    const stores = ['7-Eleven', 'Lawson', 'FamilyMart'];
+    const store = stores[storeIdx] || '7-Eleven';
+    const p = NPCs.progress[store];
+    if (p) p.current = count;
   };
 
   window.teleportPlayer = (x, y, mapIdx) => {

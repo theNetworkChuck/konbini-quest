@@ -1,4 +1,15 @@
 /* Konbini Quest - All 12 Levels Data */
+
+// Writing system display modes per level:
+// 'romaji'      — Levels 1-4: Show romaji with kana in parentheses for exposure
+// 'kana_assist' — Levels 5-8: Show kana primarily, [B] peeks at romaji
+// 'kana_only'   — Levels 9-12: Kana/kanji only, no romaji at all
+const LEVEL_DISPLAY_MODES = {
+  1: 'romaji', 2: 'romaji', 3: 'romaji', 4: 'romaji',
+  5: 'kana_assist', 6: 'kana_assist', 7: 'kana_assist', 8: 'kana_assist',
+  9: 'kana_only', 10: 'kana_only', 11: 'kana_only', 12: 'kana_only'
+};
+
 const LEVELS = [
   // LEVEL 1: "Welcome!" - The Greeting (7-Eleven)
   {
