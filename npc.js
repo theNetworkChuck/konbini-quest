@@ -263,6 +263,103 @@ const NPCs = (() => {
     return canStartChallenge() && Date.now() >= challengeState.cooldownUntil;
   }
 
+  // ============ VARIABLE REWARDS SYSTEM ============
+  // Bonus phrases: rare collectible phrases not in the main curriculum
+  // Three tiers: common (60%), rare (30%), ultra_rare (10%)
+  // Based on Nir Eyal's variable ratio reinforcement schedule
+  const BONUS_PHRASES = [
+    // Common tier - useful everyday phrases
+    { id: 'bp1', jp: 'すみません', romaji: 'Sumimasen', en: 'Excuse me', tier: 'common', category: 'basics' },
+    { id: 'bp2', jp: 'いくらですか？', romaji: 'Ikura desu ka?', en: 'How much is it?', tier: 'common', category: 'shopping' },
+    { id: 'bp3', jp: 'これをください', romaji: 'Kore o kudasai', en: 'This one, please', tier: 'common', category: 'shopping' },
+    { id: 'bp4', jp: 'ちょっと待ってください', romaji: 'Chotto matte kudasai', en: 'Please wait a moment', tier: 'common', category: 'basics' },
+    { id: 'bp5', jp: '大丈夫', romaji: 'Daijoubu', en: 'It\'s okay / I\'m fine', tier: 'common', category: 'basics' },
+    { id: 'bp6', jp: '袋は別々でお願いします', romaji: 'Fukuro wa betsubetsu de onegaishimasu', en: 'Separate bags, please', tier: 'common', category: 'konbini' },
+    { id: 'bp7', jp: 'ストローをください', romaji: 'Sutoroo o kudasai', en: 'A straw, please', tier: 'common', category: 'konbini' },
+    { id: 'bp8', jp: 'おしぼりください', romaji: 'Oshibori kudasai', en: 'A wet towel, please', tier: 'common', category: 'konbini' },
+    // Rare tier - situational konbini phrases
+    { id: 'bp9', jp: 'トイレはどこですか？', romaji: 'Toire wa doko desu ka?', en: 'Where is the restroom?', tier: 'rare', category: 'konbini' },
+    { id: 'bp10', jp: 'これは辛いですか？', romaji: 'Kore wa karai desu ka?', en: 'Is this spicy?', tier: 'rare', category: 'food' },
+    { id: 'bp11', jp: 'おすすめは何ですか？', romaji: 'Osusume wa nan desu ka?', en: 'What do you recommend?', tier: 'rare', category: 'food' },
+    { id: 'bp12', jp: 'チャージお願いします', romaji: 'Chaaji onegaishimasu', en: 'Please charge (my IC card)', tier: 'rare', category: 'payment' },
+    { id: 'bp13', jp: '温かいのと冷たいの、どちらがいいですか？', romaji: 'Atatakai no to tsumetai no, dochira ga ii desu ka?', en: 'Warm or cold, which is better?', tier: 'rare', category: 'food' },
+    { id: 'bp14', jp: '切手はありますか？', romaji: 'Kitte wa arimasu ka?', en: 'Do you have stamps?', tier: 'rare', category: 'konbini' },
+    // Ultra rare tier - advanced / culturally deep phrases
+    { id: 'bp15', jp: 'お手洗いお借りしてもいいですか？', romaji: 'Otearai okari shite mo ii desu ka?', en: 'May I borrow the restroom? (very polite)', tier: 'ultra_rare', category: 'keigo' },
+    { id: 'bp16', jp: 'お先にどうぞ', romaji: 'Osaki ni douzo', en: 'After you (letting someone go first)', tier: 'ultra_rare', category: 'manners' },
+    { id: 'bp17', jp: 'お釣りは結構です', romaji: 'Otsuri wa kekkou desu', en: 'Keep the change (very rare usage)', tier: 'ultra_rare', category: 'payment' },
+    { id: 'bp18', jp: '申し訳ございません', romaji: 'Moushiwake gozaimasen', en: 'I\'m terribly sorry (highest politeness)', tier: 'ultra_rare', category: 'keigo' },
+    { id: 'bp19', jp: 'ご馳走様でした', romaji: 'Gochisousama deshita', en: 'Thanks for the meal (after eating)', tier: 'ultra_rare', category: 'manners' },
+    { id: 'bp20', jp: 'いただきます', romaji: 'Itadakimasu', en: 'I humbly receive (before eating)', tier: 'ultra_rare', category: 'manners' },
+  ];
+
+  // Collected bonus phrases (in-memory)
+  const collectedPhrases = {}; // keyed by id
+  let totalRewardsGiven = 0;
+
+  // Tier colors and labels
+  const TIER_INFO = {
+    common:     { label: 'COMMON',     labelJp: '普通',   color: '#cd7f32', chance: 0.60 },
+    rare:       { label: 'RARE',       labelJp: 'レア',   color: '#C0C0C0', chance: 0.30 },
+    ultra_rare: { label: 'ULTRA RARE', labelJp: '超レア', color: '#FFD700', chance: 0.10 },
+  };
+
+  // Roll for a variable reward after a correct answer
+  // Returns null (no reward) or a bonus phrase object
+  // Base chance: ~25% per correct answer, increases slightly with streak
+  function rollVariableReward(streakBonus) {
+    const baseChance = 0.25;
+    const bonus = Math.min((streakBonus || 0) * 0.03, 0.15);
+    if (Math.random() > baseChance + bonus) return null;
+
+    // Pick a tier using weighted random
+    const roll = Math.random();
+    let tier;
+    if (roll < TIER_INFO.ultra_rare.chance) {
+      tier = 'ultra_rare';
+    } else if (roll < TIER_INFO.ultra_rare.chance + TIER_INFO.rare.chance) {
+      tier = 'rare';
+    } else {
+      tier = 'common';
+    }
+
+    // Pick a random phrase from that tier, preferring uncollected
+    const tierPhrases = BONUS_PHRASES.filter(p => p.tier === tier);
+    const uncollected = tierPhrases.filter(p => !collectedPhrases[p.id]);
+    const pool = uncollected.length > 0 ? uncollected : tierPhrases;
+    const phrase = pool[Math.floor(Math.random() * pool.length)];
+
+    // Mark as collected
+    if (!collectedPhrases[phrase.id]) {
+      collectedPhrases[phrase.id] = { ...phrase, collectedAt: Date.now(), isNew: true };
+    }
+    totalRewardsGiven++;
+
+    return { ...phrase, tierInfo: TIER_INFO[tier] };
+  }
+
+  function getCollectedPhrases() {
+    return Object.values(collectedPhrases);
+  }
+
+  function getCollectedCount() {
+    return Object.keys(collectedPhrases).length;
+  }
+
+  function getTotalBonusPhrases() {
+    return BONUS_PHRASES.length;
+  }
+
+  function markPhraseSeen(phraseId) {
+    if (collectedPhrases[phraseId]) {
+      collectedPhrases[phraseId].isNew = false;
+    }
+  }
+
+  function hasNewPhrases() {
+    return Object.values(collectedPhrases).some(p => p.isNew);
+  }
+
   // ============ STAMP CARD COLLECTION SYSTEM ============
   // Each store has a stamp card with slots for each level
   // Stamps have tiers: empty(0), bronze(1)=completed, silver(2)=few mistakes, gold(3)=perfect
@@ -456,5 +553,14 @@ const NPCs = (() => {
     getTotalStamps,
     getStampTierName,
     checkNewStamp,
+    // Variable rewards
+    BONUS_PHRASES,
+    TIER_INFO,
+    rollVariableReward,
+    getCollectedPhrases,
+    getCollectedCount,
+    getTotalBonusPhrases,
+    markPhraseSeen,
+    hasNewPhrases,
   };
 })();

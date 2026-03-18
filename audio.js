@@ -151,6 +151,49 @@ const GameAudio = (() => {
     playNote(1600, t + 0.05, 0.12, 'square', 0.15);
   }
 
+  // Reward drop sound (common tier - simple chime)
+  function playRewardCommon() {
+    if (!ctx) return; resume();
+    let t = ctx.currentTime + 0.02;
+    playNote(880, t, 0.12, 'sine', 0.2);
+    playNote(1174.7, t + 0.1, 0.15, 'sine', 0.2);
+    playNote(1396.9, t + 0.2, 0.3, 'sine', 0.18);
+  }
+
+  // Reward drop sound (rare tier - ascending sparkle)
+  function playRewardRare() {
+    if (!ctx) return; resume();
+    let t = ctx.currentTime + 0.02;
+    playNote(659.25, t, 0.1, 'sine', 0.18);
+    playNote(880, t + 0.08, 0.1, 'sine', 0.2);
+    playNote(1174.7, t + 0.16, 0.1, 'sine', 0.22);
+    playNote(1396.9, t + 0.24, 0.12, 'sine', 0.22);
+    playNote(1760, t + 0.34, 0.4, 'sine', 0.25);
+  }
+
+  // Reward drop sound (ultra rare - dramatic fanfare)
+  function playRewardUltraRare() {
+    if (!ctx) return; resume();
+    let t = ctx.currentTime + 0.02;
+    // Dramatic pause then ascending fanfare
+    playNote(523.25, t, 0.15, 'square', 0.12);
+    playNote(659.25, t + 0.12, 0.15, 'square', 0.14);
+    playNote(783.99, t + 0.24, 0.15, 'square', 0.16);
+    playNote(1046.5, t + 0.38, 0.12, 'sine', 0.2);
+    playNote(1318.5, t + 0.48, 0.12, 'sine', 0.22);
+    playNote(1568, t + 0.58, 0.15, 'sine', 0.22);
+    playNote(2093, t + 0.72, 0.5, 'sine', 0.25);
+    // Sparkle overtone
+    playNote(2637, t + 0.85, 0.3, 'sine', 0.1);
+    playNote(3136, t + 0.95, 0.3, 'sine', 0.08);
+  }
+
+  function playRewardSound(tier) {
+    if (tier === 'ultra_rare') playRewardUltraRare();
+    else if (tier === 'rare') playRewardRare();
+    else playRewardCommon();
+  }
+
   // TTS
   function speakJapanese(text) {
     if (muted || !text) return;
@@ -175,6 +218,6 @@ const GameAudio = (() => {
     playStoreChime, playCorrect, playWrong,
     playLevelComplete, playStar, playSelect,
     playCursor, playFootstep, playDoor, playAlert,
-    speakJapanese
+    speakJapanese, playRewardSound,
   };
 })();

@@ -116,6 +116,10 @@ const Engine = (() => {
     return wasPressed('x') || wasPressed('escape') || mobileJust.b;
   }
 
+  function inputQ() {
+    return wasPressed('q');
+  }
+
   // ============ CAMERA ============
   let camX = 0, camY = 0;
 
@@ -312,6 +316,25 @@ const Engine = (() => {
     // Count text
     ctx.fillStyle = '#D4AF37';
     ctx.fillText(stampTotal + '/' + stampMax, CANVAS_W - stampW + 16, hudRightY + 9);
+    hudRightY += 14;
+
+    // Phrase book indicator (top right, below stamps)
+    const phraseCount = NPCs.getCollectedCount();
+    const phraseTotal = NPCs.getTotalBonusPhrases();
+    if (phraseCount > 0 || mapIdx === 0) {
+      const phraseW = 48;
+      ctx.fillStyle = 'rgba(26,26,46,0.85)';
+      ctx.fillRect(CANVAS_W - phraseW - 2, hudRightY, phraseW, 12);
+      const hasNew = NPCs.hasNewPhrases();
+      ctx.strokeStyle = hasNew ? '#FFD700' : '#8B4513';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(CANVAS_W - phraseW - 2, hudRightY, phraseW, 12);
+      // Phrase book icon
+      Sprites.drawPhraseBookIcon(ctx, CANVAS_W - phraseW, hudRightY + 1, phraseCount, phraseTotal);
+      // Count text
+      ctx.fillStyle = hasNew ? '#FFD700' : '#D2691E';
+      ctx.fillText(phraseCount + '/' + phraseTotal, CANVAS_W - phraseW + 16, hudRightY + 9);
+    }
   }
 
   // ============ FADE SYSTEM ============

@@ -38,6 +38,9 @@
     // Stamp card overlay
     stampCardOpen: false,
     stampNotification: null, // {text, timer} for new stamp earned
+    // Variable rewards
+    rewardNotification: null, // {reward, timer} for bonus phrase drops
+    phraseBookOpen: false,
   };
 
   let audioInitialized = false;
@@ -97,6 +100,25 @@
       }
     }
 
+    // Update reward notification timer
+    if (state.rewardNotification) {
+      state.rewardNotification.timer -= dt;
+      if (state.rewardNotification.timer <= 0) {
+        state.rewardNotification = null;
+      }
+    }
+
+    // Handle phrase book overlay
+    if (state.phraseBookOpen) {
+      if (Engine.inputB()) {
+        // Mark all phrases as seen when closing
+        NPCs.getCollectedPhrases().forEach(p => NPCs.markPhraseSeen(p.id));
+        state.phraseBookOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
     // Handle stamp card overlay
     if (state.stampCardOpen) {
       if (Engine.inputB() || Engine.wasPressed('tab')) {
@@ -109,6 +131,13 @@
     // Open stamp card with Tab key (on street map only)
     if (Engine.wasPressed('tab') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
       state.stampCardOpen = true;
+      GameAudio.playSelect();
+      return;
+    }
+
+    // Open phrase book with Q key (on street map only)
+    if (Engine.wasPressed('q') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
+      state.phraseBookOpen = true;
       GameAudio.playSelect();
       return;
     }
@@ -560,6 +589,9 @@
       challengeGameState.challengeCorrect++;
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
 
+      // Roll for variable reward (bonus phrase drop)
+      tryVariableReward();
+
       const encouragements = [
         '正解！ Correct!', 'いいね！ Nice!',
         'すごい！ Amazing!', 'バッチリ！ Perfect!'
@@ -631,6 +663,23 @@
       challengeGameState.inChallenge = false;
       challengeGameState.challengePhrases = [];
     });
+  }
+
+  // ============ VARIABLE REWARD TRIGGER ============
+  // Called after any correct answer to roll for a bonus phrase reward
+  function tryVariableReward() {
+    const chalState = NPCs.getChallengeState();
+    const reward = NPCs.rollVariableReward(chalState.streak);
+    if (reward) {
+      // Show reward notification
+      state.rewardNotification = { reward, timer: 4.0 };
+      // Play tier-appropriate sound
+      GameAudio.playRewardSound(reward.tier);
+      // Speak the Japanese phrase after a short delay
+      setTimeout(() => {
+        GameAudio.speakJapanese(reward.jp);
+      }, 800);
+    }
   }
 
   // Track which display mode transitions the player has seen
@@ -817,6 +866,9 @@
         );
       }
 
+      // Roll for variable reward (bonus phrase drop)
+      tryVariableReward();
+
       // Show the original text as a reveal after correct listening answer
       const revealLines = [];
       if (interaction.clerkJp) revealLines.push(interaction.clerkJp);
@@ -919,6 +971,9 @@
           true
         );
       }
+
+      // Roll for variable reward (bonus phrase drop)
+      tryVariableReward();
 
       const explanation = interaction.correctExplanation || 'Correct!';
       Dialogue.show('', explanation, () => {
@@ -1146,6 +1201,25 @@
       renderStampNotification(ctx);
     }
 
+    // Variable reward banner (bonus phrase drop)
+    if (state.rewardNotification) {
+      Sprites.drawRewardBanner(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        state.rewardNotification.reward,
+        state.rewardNotification.timer
+      );
+    }
+
+    // Phrase book overlay
+    if (state.phraseBookOpen) {
+      Sprites.drawPhraseBookOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        NPCs.getCollectedPhrases(),
+        NPCs.getTotalBonusPhrases(),
+        state.time
+      );
+    }
+
     // Fade overlay (always on top)
     Engine.renderFade();
   }
@@ -1219,6 +1293,11 @@
       stampCardOpen: state.stampCardOpen,
       stampCards: NPCs.getAllStampCards(),
       totalStamps: NPCs.getTotalStamps(),
+      // Variable rewards
+      phraseBookOpen: state.phraseBookOpen,
+      rewardActive: !!state.rewardNotification,
+      collectedPhrases: NPCs.getCollectedCount(),
+      totalBonusPhrases: NPCs.getTotalBonusPhrases(),
     });
   };
 
@@ -1230,6 +1309,23 @@
   // Testing hook: award a test stamp
   window.awardTestStamp = (store, levelIdx, tier) => {
     NPCs.awardStamp(store || '7-Eleven', levelIdx || 0, tier || 3);
+  };
+
+  // Testing hook: force a variable reward drop
+  window.forceReward = (tier) => {
+    const tiers = { common: 'common', rare: 'rare', ultra_rare: 'ultra_rare' };
+    const t = tiers[tier] || 'rare';
+    const phrases = NPCs.BONUS_PHRASES.filter(p => p.tier === t);
+    const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+    const reward = { ...phrase, tierInfo: NPCs.TIER_INFO[t] };
+    state.rewardNotification = { reward, timer: 4.0 };
+    GameAudio.playRewardSound(t);
+    setTimeout(() => GameAudio.speakJapanese(reward.jp), 800);
+  };
+
+  // Testing hook: open/close phrase book
+  window.togglePhraseBook = () => {
+    state.phraseBookOpen = !state.phraseBookOpen;
   };
 
   // Testing hook: force next interaction to use listening mode

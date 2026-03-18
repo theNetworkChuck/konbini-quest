@@ -1110,6 +1110,251 @@ const Sprites = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ VARIABLE REWARD RENDERING ============
+
+  // Reward drop banner - shows when a bonus phrase is found
+  function drawRewardBanner(ctx, canvasW, canvasH, reward, timer) {
+    if (!reward) return;
+
+    const tierColor = reward.tierInfo.color;
+    const tier = reward.tier;
+
+    // Animation: slide down from top, hold, fade out
+    let alpha = 1;
+    let slideY = 0;
+    if (timer > 3.5) {
+      // Slide in (0-0.5s)
+      const t = (4.0 - timer) * 2;
+      slideY = -30 + t * 30;
+      alpha = t;
+    } else if (timer < 0.8) {
+      // Fade out
+      alpha = timer / 0.8;
+    } else {
+      slideY = 0;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+    // Banner dimensions
+    const bannerW = 220;
+    const bannerH = tier === 'ultra_rare' ? 56 : 50;
+    const bannerX = (canvasW - bannerW) / 2;
+    const bannerY = 30 + slideY;
+
+    // Glow effect for rare/ultra_rare
+    if (tier !== 'common') {
+      const glowSize = 4 + Math.sin(timer * 6) * 2;
+      ctx.fillStyle = tierColor + '33';
+      ctx.fillRect(bannerX - glowSize, bannerY - glowSize, bannerW + glowSize * 2, bannerH + glowSize * 2);
+    }
+
+    // Background
+    ctx.fillStyle = 'rgba(10,10,30,0.95)';
+    ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+
+    // Border with tier color
+    ctx.strokeStyle = tierColor;
+    ctx.lineWidth = tier === 'ultra_rare' ? 2 : 1;
+    ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+    if (tier === 'ultra_rare') {
+      ctx.strokeStyle = tierColor + '88';
+      ctx.strokeRect(bannerX - 1, bannerY - 1, bannerW + 2, bannerH + 2);
+    }
+
+    // Tier label header
+    ctx.font = '5px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = tierColor;
+    const tierLabel = `-- ${reward.tierInfo.labelJp} ${reward.tierInfo.label} --`;
+    ctx.fillText(tierLabel, canvasW / 2, bannerY + 9);
+
+    // "BONUS PHRASE!" header
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('BONUS PHRASE FOUND!', canvasW / 2, bannerY + 19);
+
+    // Japanese phrase
+    ctx.font = '10px "M PLUS Rounded 1c"';
+    ctx.fillStyle = tierColor;
+    const jpText = reward.jp.length > 20 ? reward.jp.substring(0, 19) + '...' : reward.jp;
+    ctx.fillText(jpText, canvasW / 2, bannerY + 32);
+
+    // Romaji + English
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#aaa';
+    const subText = `${reward.romaji} = ${reward.en}`;
+    const trimmed = subText.length > 38 ? subText.substring(0, 37) + '...' : subText;
+    ctx.fillText(trimmed, canvasW / 2, bannerY + 42);
+
+    // Sparkle particles for rare/ultra_rare
+    if (tier !== 'common') {
+      const sparkleCount = tier === 'ultra_rare' ? 8 : 4;
+      for (let i = 0; i < sparkleCount; i++) {
+        const angle = (timer * 2 + i * (Math.PI * 2 / sparkleCount)) % (Math.PI * 2);
+        const radius = 12 + Math.sin(timer * 3 + i) * 4;
+        const sx = canvasW / 2 + Math.cos(angle) * (bannerW / 2 + radius);
+        const sy = bannerY + bannerH / 2 + Math.sin(angle) * radius;
+        const sparkleAlpha = 0.3 + Math.sin(timer * 5 + i * 1.5) * 0.3;
+        ctx.globalAlpha = alpha * sparkleAlpha;
+        ctx.fillStyle = tierColor;
+        const size = tier === 'ultra_rare' ? 2 : 1;
+        ctx.fillRect(sx - size / 2, sy - size / 2, size, size);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // Phrase book icon for HUD
+  function drawPhraseBookIcon(ctx, x, y, count, total) {
+    // Small book icon
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(x, y + 1, 10, 8);
+    ctx.fillStyle = '#D2691E';
+    ctx.fillRect(x + 1, y + 2, 8, 6);
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(x + 4, y + 2, 1, 6); // spine
+    // Star on cover
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(x + 6, y + 4, 2, 2);
+  }
+
+  // Phrase book overlay - full screen collection viewer
+  function drawPhraseBookOverlay(ctx, canvasW, canvasH, collected, total, time) {
+    // Darken background
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Card dimensions
+    const cardW = canvasW - 20;
+    const cardH = canvasH - 20;
+    const cardX = 10;
+    const cardY = 10;
+
+    // Card background
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+    // Title
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'center';
+    ctx.fillText('BONUS PHRASE BOOK', canvasW / 2, cardY + 14);
+
+    // Subtitle
+    ctx.font = '9px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('\u30DC\u30FC\u30CA\u30B9\u30D5\u30EC\u30FC\u30BA\u30D6\u30C3\u30AF', canvasW / 2, cardY + 24);
+
+    // Count
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#888';
+    ctx.fillText(`${collected.length}/${total} collected`, canvasW / 2, cardY + 32);
+
+    ctx.textAlign = 'left';
+
+    // Phrase list (scrollable area)
+    const listY = cardY + 38;
+    const lineH = 20;
+    const maxVisible = 9;
+
+    if (collected.length === 0) {
+      ctx.font = '6px "Press Start 2P"';
+      ctx.fillStyle = '#555';
+      ctx.textAlign = 'center';
+      ctx.fillText('No phrases collected yet!', canvasW / 2, listY + 30);
+      ctx.fillText('Answer questions correctly', canvasW / 2, listY + 42);
+      ctx.fillText('for a chance to find them.', canvasW / 2, listY + 54);
+      ctx.textAlign = 'left';
+    } else {
+      // Sort by tier: ultra_rare first, then rare, then common
+      const tierOrder = { ultra_rare: 0, rare: 1, common: 2 };
+      const sorted = [...collected].sort((a, b) => tierOrder[a.tier] - tierOrder[b.tier]);
+
+      for (let i = 0; i < Math.min(sorted.length, maxVisible); i++) {
+        const phrase = sorted[i];
+        const py = listY + i * lineH;
+        const tierInfo = NPCs.TIER_INFO[phrase.tier];
+
+        // Tier dot
+        ctx.fillStyle = tierInfo.color;
+        ctx.fillRect(cardX + 6, py + 3, 4, 4);
+
+        // New indicator (pulsing)
+        if (phrase.isNew) {
+          const newAlpha = 0.5 + Math.sin(time * 4) * 0.5;
+          ctx.save();
+          ctx.globalAlpha = newAlpha;
+          ctx.fillStyle = '#ff0';
+          ctx.font = '4px "Press Start 2P"';
+          ctx.fillText('NEW', cardX + 6, py + 1);
+          ctx.restore();
+        }
+
+        // Japanese text
+        ctx.font = '8px "M PLUS Rounded 1c"';
+        ctx.fillStyle = '#fff';
+        const jpDisplay = phrase.jp.length > 16 ? phrase.jp.substring(0, 15) + '...' : phrase.jp;
+        ctx.fillText(jpDisplay, cardX + 14, py + 8);
+
+        // Romaji + English
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#888';
+        const subDisplay = `${phrase.romaji} = ${phrase.en}`;
+        const trimSub = subDisplay.length > 34 ? subDisplay.substring(0, 33) + '...' : subDisplay;
+        ctx.fillText(trimSub, cardX + 14, py + 16);
+      }
+
+      if (sorted.length > maxVisible) {
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText(`+ ${sorted.length - maxVisible} more...`, canvasW / 2, listY + maxVisible * lineH + 4);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    // Legend at bottom
+    const legendY = cardY + cardH - 26;
+    ctx.font = '4px "Press Start 2P"';
+    const tiers = ['common', 'rare', 'ultra_rare'];
+    const labels = ['COMMON', 'RARE', 'ULTRA RARE'];
+    let lx = cardX + 20;
+    for (let i = 0; i < tiers.length; i++) {
+      const tInfo = NPCs.TIER_INFO[tiers[i]];
+      ctx.fillStyle = tInfo.color;
+      ctx.fillRect(lx, legendY, 4, 4);
+      ctx.fillText(labels[i], lx + 6, legendY + 4);
+      lx += labels[i].length * 4 + 18;
+    }
+
+    // Progress bar
+    const barX = cardX + 20;
+    const barY = cardY + cardH - 16;
+    const barW = cardW - 40;
+    const barH = 4;
+    const pct = total > 0 ? collected.length / total : 0;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(barX, barY, barW * pct, barH);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    // Close hint
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#888';
+    ctx.textAlign = 'center';
+    ctx.fillText('[B] Close', canvasW / 2, cardY + cardH - 4);
+    ctx.textAlign = 'left';
+  }
+
   return {
     T,
     drawPlayer,
@@ -1129,5 +1374,9 @@ const Sprites = (() => {
     drawMasterStamp,
     drawStampBookIcon,
     drawStampCardOverlay,
+    // Variable rewards
+    drawRewardBanner,
+    drawPhraseBookIcon,
+    drawPhraseBookOverlay,
   };
 })();
