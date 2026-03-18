@@ -213,8 +213,22 @@ const Engine = (() => {
     const npcs = NPCs.getNPCsOnMap(mapIdx);
 
     for (const npc of npcs) {
-      const sx = npc.x * T - camX;
-      const sy = npc.y * T - camY;
+      // Get NPC walk state for smooth interpolation
+      const npcIdx = NPCs.getNPCIndex(npc);
+      const ws = NPCs.getNPCWalkState(npcIdx);
+
+      let sx, sy;
+      if (ws && ws.walking) {
+        // Interpolate position during walk
+        const t = ws.walkFrame;
+        const interpX = ws.prevX + (npc.x - ws.prevX) * t;
+        const interpY = ws.prevY + (npc.y - ws.prevY) * t;
+        sx = interpX * T - camX;
+        sy = interpY * T - camY;
+      } else {
+        sx = npc.x * T - camX;
+        sy = npc.y * T - camY;
+      }
 
       // Skip if off-screen
       if (sx < -T || sx > CANVAS_W + T || sy < -T || sy > CANVAS_H + T) continue;
@@ -232,7 +246,10 @@ const Engine = (() => {
           Sprites.drawSpeechBubble(ctx, sx, sy);
         }
       } else {
-        Sprites.drawNPC(ctx, sx, sy, npc.type);
+        // Draw NPC with walk animation frame
+        const animFrame = (ws && ws.walking) ? ws.animFrame : 0;
+        const npcDir = (ws ? ws.dir : npc.dir) || 'down';
+        Sprites.drawNPC(ctx, sx, sy, npc.type, npcDir, animFrame);
 
         // Show review bubble above sensei when reviews available
         if (npc.isSensei && NPCs.hasReviewsAvailable()) {

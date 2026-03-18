@@ -101,12 +101,18 @@
       state.player.y = 10;
       state.player.dir = 'down';
       Engine.initWeather();
+      NPCs.initNPCWalking();
       Engine.startFadeIn();
     }
   }
 
   function updatePlaying(dt) {
     if (Engine.isFading() || Engine.isDoorAnimating()) return;
+
+    // Update NPC walk cycles (street map only)
+    if (state.currentMap === 0) {
+      NPCs.updateNPCWalking(state.player.x, state.player.y, Dialogue.isActive());
+    }
 
     // Update stamp notification timer
     if (state.stampNotification) {

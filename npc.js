@@ -427,6 +427,142 @@ const NPCs = (() => {
     return 0;
   }
 
+  // ============ NPC WALK CYCLE SYSTEM ============
+  // Only street NPCs without special roles wander (not sensei/challenger/clerks)
+  const WANDER_TYPES = new Set(['oldman', 'schoolgirl', 'businessman']);
+  const WALK_SPEED = 12; // frames per tile move (~200ms at 60fps)
+  const PAUSE_MIN = 90;  // min pause frames (~1.5s)
+  const PAUSE_MAX = 240; // max pause frames (~4s)
+  const DIRECTIONS = ['up', 'down', 'left', 'right'];
+  const DIR_DX = { up: 0, down: 0, left: -1, right: 1 };
+  const DIR_DY = { up: -1, down: 1, left: 0, right: 0 };
+
+  // Walk state per NPC (keyed by index in npcDefs)
+  const npcWalkState = {};
+
+  function initNPCWalking() {
+    for (let i = 0; i < npcDefs.length; i++) {
+      const npc = npcDefs[i];
+      if (npc.map === 0 && WANDER_TYPES.has(npc.type)) {
+        npcWalkState[i] = {
+          homeX: npc.x,
+          homeY: npc.y,
+          walking: false,
+          walkTimer: 0,
+          walkFrame: 0, // 0 to 1 interpolation
+          pauseTimer: Math.floor(Math.random() * PAUSE_MAX) + 30, // stagger starts
+          dir: npc.dir || 'down',
+          animFrame: 0,
+          prevX: npc.x,
+          prevY: npc.y,
+        };
+      }
+    }
+  }
+
+  // Check if tile is walkable for NPC (must be walkable, not occupied by player or another NPC)
+  function isNPCWalkable(mapIdx, x, y, playerX, playerY, npcIdx) {
+    // Out of bounds
+    const map = Maps.allMaps[mapIdx];
+    if (!map || x < 0 || y < 0 || x >= map.width || y >= map.height) return false;
+    // Map collision
+    if (!Maps.isWalkable(mapIdx, x, y)) return false;
+    // Player collision
+    if (x === playerX && y === playerY) return false;
+    // Other NPC collision (check tile positions)
+    for (let i = 0; i < npcDefs.length; i++) {
+      if (i === npcIdx) continue;
+      const other = npcDefs[i];
+      if (other.map === mapIdx && other.x === x && other.y === y) return false;
+    }
+    // Stay within 3 tiles of home (leash distance)
+    const ws = npcWalkState[npcIdx];
+    if (ws) {
+      const dist = Math.abs(x - ws.homeX) + Math.abs(y - ws.homeY);
+      if (dist > 3) return false;
+    }
+    return true;
+  }
+
+  function updateNPCWalking(playerX, playerY, dialogueActive) {
+    for (let i = 0; i < npcDefs.length; i++) {
+      const ws = npcWalkState[i];
+      if (!ws) continue;
+      const npc = npcDefs[i];
+
+      // Don't move while dialogue is active
+      if (dialogueActive) {
+        if (ws.walking) {
+          // Snap to destination
+          ws.walking = false;
+          ws.walkTimer = 0;
+          ws.walkFrame = 0;
+        }
+        continue;
+      }
+
+      if (ws.walking) {
+        // Currently walking -- advance timer
+        ws.walkTimer++;
+        ws.walkFrame = Math.min(ws.walkTimer / WALK_SPEED, 1);
+        // Toggle anim frame mid-walk
+        ws.animFrame = ws.walkTimer < WALK_SPEED / 2 ? 0 : 1;
+
+        if (ws.walkTimer >= WALK_SPEED) {
+          // Walk complete
+          ws.walking = false;
+          ws.walkTimer = 0;
+          ws.walkFrame = 0;
+          ws.animFrame = 0;
+          // Set new pause timer
+          ws.pauseTimer = PAUSE_MIN + Math.floor(Math.random() * (PAUSE_MAX - PAUSE_MIN));
+        }
+      } else {
+        // Pausing -- countdown
+        ws.pauseTimer--;
+        if (ws.pauseTimer <= 0) {
+          // Try to pick a random direction to walk
+          const shuffled = [...DIRECTIONS].sort(() => Math.random() - 0.5);
+          let moved = false;
+          for (const dir of shuffled) {
+            const nx = npc.x + DIR_DX[dir];
+            const ny = npc.y + DIR_DY[dir];
+            if (isNPCWalkable(0, nx, ny, playerX, playerY, i)) {
+              // Start walking
+              ws.prevX = npc.x;
+              ws.prevY = npc.y;
+              ws.dir = dir;
+              npc.dir = dir;
+              npc.x = nx;
+              npc.y = ny;
+              ws.walking = true;
+              ws.walkTimer = 0;
+              ws.walkFrame = 0;
+              moved = true;
+              break;
+            }
+          }
+          if (!moved) {
+            // Couldn't move, just turn to face a random direction
+            const randomDir = DIRECTIONS[Math.floor(Math.random() * 4)];
+            ws.dir = randomDir;
+            npc.dir = randomDir;
+            ws.pauseTimer = PAUSE_MIN + Math.floor(Math.random() * (PAUSE_MAX - PAUSE_MIN));
+          }
+        }
+      }
+    }
+  }
+
+  function getNPCWalkState(npcIdx) {
+    return npcWalkState[npcIdx] || null;
+  }
+
+  // Get the NPC index in npcDefs for a given NPC object
+  function getNPCIndex(npc) {
+    return npcDefs.indexOf(npc);
+  }
+
   // Street NPC dialogue index
   const streetNPCState = {};
 
@@ -562,5 +698,10 @@ const NPCs = (() => {
     getTotalBonusPhrases,
     markPhraseSeen,
     hasNewPhrases,
+    // NPC walk cycles
+    initNPCWalking,
+    updateNPCWalking,
+    getNPCWalkState,
+    getNPCIndex,
   };
 })();

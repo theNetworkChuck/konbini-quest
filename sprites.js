@@ -414,17 +414,77 @@ const Sprites = (() => {
     'Y': '#f1c40f', 'W': '#fff', // yellow outfit, white shoes
   };
 
+  // Walk frame 1 variants -- shift feet to simulate walking
+  // Old man walk frame 1 (legs swapped)
+  const npcOldManWalk = `
+...WWWWWW...
+..WWWWWWWW..
+..WWWWWWWW..
+..SSEESSE..
+..SSSSSSSS..
+...SSSSSS...
+..88888888..
+..88888888..
+..88888888..
+...888888...
+..66666666..
+..66.66.66..
+..66.66.66..
+..66..66....
+..33..33....
+...33.33....`;
+
+  // School girl walk frame 1
+  const npcSchoolGirlWalk = `
+....1111....
+...111111...
+...111111...
+..SSEESSE..
+..SSSSSSSS..
+...SSSSSS...
+..NNNNNNNN..
+..NWNNNNWN..
+..NNNNNNNN..
+...NNNNNN...
+..22222222..
+..22.22.22..
+..22.22.22..
+....22..22..
+....WW..WW..
+...WW..WW...`;
+
+  // Business man walk frame 1
+  const npcBusinessManWalk = `
+....1111....
+...111111...
+...111111...
+..SSEESSE..
+..SSSSSSSS..
+...SSSSSS...
+..44444444..
+..44R44444..
+..44444444..
+...444444...
+..44444444..
+..44.44.44..
+..44.44.44..
+..44..44....
+..33..33....
+...33.33....`;
+
   const npcSprites = {
-    oldman: { map: npcOldMan, palette: npcOldManPalette },
-    schoolgirl: { map: npcSchoolGirl, palette: npcSchoolGirlPalette },
-    businessman: { map: npcBusinessMan, palette: npcBusinessManPalette },
-    sensei: { map: npcSensei, palette: npcSenseiPalette },
-    challenger: { map: npcChallenger, palette: npcChallengerPalette },
+    oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
+    schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
+    businessman: { frames: [npcBusinessMan, npcBusinessManWalk], palette: npcBusinessManPalette },
+    sensei:      { frames: [npcSensei], palette: npcSenseiPalette },
+    challenger:  { frames: [npcChallenger], palette: npcChallengerPalette },
   };
 
-  function drawNPC(ctx, x, y, type) {
+  function drawNPC(ctx, x, y, type, dir, animFrame) {
     const sprite = npcSprites[type];
-    if (sprite) drawPixelMap(ctx, x, y, sprite.map, sprite.palette);
+    if (!sprite) return;
+    const frameIdx = (animFrame && sprite.frames.length > 1) ? animFrame % sprite.frames.length : 0;
+    drawPixelMap(ctx, x, y, sprite.frames[frameIdx], sprite.palette);
   }
 
   // ============ TILE DRAWING ============
