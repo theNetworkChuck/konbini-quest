@@ -5,7 +5,7 @@
 ### Batch 1: Core Learning Effectiveness
 1. **Spaced Repetition Review System** - After completing a level, previously learned phrases reappear in later levels as quick-fire reviews. Track which phrases the player struggles with and surface them more often. This is THE #1 evidence-based technique for language retention.
 2. **Listening Comprehension Mode** - Clerk speaks Japanese audio ONLY (no text), player must choose the correct meaning. Forces real ear training instead of just reading.
-3. **Romaji → Kana Transition** - Early levels show romaji, later levels show only hiragana/katakana. Gradually removes the crutch.
+3. ~~**Romaji → Kana Transition**~~ ✅ - Early levels show romaji, later levels show only hiragana/katakana. Gradually removes the crutch.
 
 ### Batch 2: Addictive Game Mechanics
 4. **Daily Challenge / Streak System** - A special NPC on the street offers a daily challenge. Visual streak counter on the HUD. Creates the "Hooked" cycle (trigger → action → variable reward → investment).
@@ -83,3 +83,26 @@
 - Added listeningMode state to render_game_to_text for testing
 
 **Files modified:** dialogue.js, game.js
+
+### 2026-03-18 — #3 Romaji → Kana Transition ✅
+**Commit:** `8751bcd`
+
+**What was added:**
+- Progressive writing system transition across three modes:
+  - **Romaji mode** (Levels 1-4): Full Japanese + romaji + English for beginners
+  - **Kana Assist mode** (Levels 5-8): Japanese + English only; romaji removed from dialogue; press [B] during quizzes to peek at romaji readings
+  - **Kana Only mode** (Levels 9-12): Japanese text only, no romaji or English hints
+- Color-coded HUD badge in top-left corner shows current writing mode:
+  - Blue "Aa" = Romaji mode
+  - Orange "あa" = Kana Assist mode
+  - Red "あ" = Kana Only mode
+- One-time transition notifications when entering a new writing mode for the first time:
+  - "レベルアップ！" for kana_assist explaining [B] peek
+  - "上級者！" for kana_only encouraging Japanese-only reading
+- Romaji peek overlay: press [B] during kana_assist quiz to show all option readings in an orange popup
+- "[B] Romaji" hint displayed below quiz choices in kana_assist mode
+- Tips suppressed in kana_only mode (player should be advanced enough)
+- Based on language learning research: dropping romaji early is the #1 recommendation from Japanese learning communities
+- Testing hooks: window.setDisplayMode(), window.unlockToLevel()
+
+**Files modified:** levels.js, game.js, dialogue.js
