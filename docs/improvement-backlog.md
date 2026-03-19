@@ -19,7 +19,7 @@
 
 ### ⭐ HIGH PRIORITY — User Requested
 10. ~~**ElevenLabs Real Japanese Voices**~~ -- Replace the Web Speech API TTS with real Japanese voices from ElevenLabs. Use the REST API (`POST https://api.elevenlabs.io/v1/text-to-speech/:voice_id`) with `xi-api-key` header and `eleven_multilingual_v2` model. The `speakJapanese(text)` function in `audio.js` currently uses `window.speechSynthesis` — replace it with a fetch call to ElevenLabs that returns audio, then play it via Web Audio API or `Audio()` element. Cache audio blobs in memory to avoid re-fetching the same phrases. Select a natural-sounding Japanese female voice (research available voice IDs). API Key: `sk_fdc4e35db2ff37ef0b2286d05c744a2e15e753be1c1778e4`.
-11. **HD Graphics Upgrade** - Significantly improve sprite quality across the game. Current sprites use small pixel maps (e.g., 16x16). Upgrade to larger, more detailed pixel art with richer color palettes. Focus on: player character (more expressive, more animation frames), store exteriors (more architectural detail, signage), store interiors (shelving detail, products on display), NPC designs (more distinct, more personality). Maintain the kawaii 8-bit Pokemon aesthetic but push quality higher — think Game Boy Color level detail vs original Game Boy.
+11. ~~**HD Graphics Upgrade**~~ ✅ - Significantly improve sprite quality across the game. Current sprites use small pixel maps (e.g., 16x16). Upgrade to larger, more detailed pixel art with richer color palettes. Focus on: player character (more expressive, more animation frames), store exteriors (more architectural detail, signage), store interiors (shelving detail, products on display), NPC designs (more distinct, more personality). Maintain the kawaii 8-bit Pokemon aesthetic but push quality higher — think Game Boy Color level detail vs original Game Boy.
 
 ### Batch 3b: Visual Polish (continued)
 12. **Particle Effects** - Stars burst when completing levels, sparkles on correct answers.
@@ -279,3 +279,31 @@
 - **Skips [何も言わない]:** The "Stay Silent" option is intentionally not spoken when highlighted or selected.
 
 **Files modified:** audio.js, dialogue.js, game.js
+
+### 2026-03-19 -- #11 HD Graphics Upgrade
+**Commit:** `4f4aa9f`
+
+**What was changed:**
+- **Player character:** Expanded color palette from 9 to 20 colors with shadow/highlight variants for every element. Added mouth expression, blush marks on cheeks, 3-tone hair gradient (dark/mid/highlight), backpack depth shading, and shoe highlights. All 8 frames (4 directions × 2 walk frames) upgraded.
+- **Clerk NPC:** Added hair highlights, skin shadow tones, mouth detail, blush, and shadow variants for all store-branded uniforms (7-Eleven red, Lawson blue, FamilyMart green). Each store's clerk has dark/light uniform tones.
+- **Old Man NPC:** Silver-white hair with highlights, warmer skin shadow tones, coat with button highlight detail, mouth expression.
+- **Schoolgirl NPC:** Hair highlight tones, red bow tie on navy uniform, blush marks, pink mouth, white knee socks.
+- **Businessman NPC:** Hair highlights, white shirt collar visible under suit, red tie detail, skin shading.
+- **Sensei NPC:** Silver hair with bright highlights, gold robe accents, maroon robe with dark shadow variant, wooden sandal detail.
+- **Challenger NPC:** Yellow outfit with shadow variant, white accent details on outfit, red headband with dark/light tones.
+- **Store awnings:** Scalloped fringe bottom edges with alternating color detail, dark top edge shadow, lighter fringe.
+- **Store doors:** Glass pane reflections (blue highlight), door divider bar, gold handles with highlight, darker mat with edge detail.
+- **Store windows:** Gradient glass reflections (top-left highlight), window sill detail, frame shadow.
+- **Trees:** Multi-layer canopy with 4 green shades (dark depth, mid, light, dapple highlights), bark grain on trunk, shadow at base.
+- **Cherry blossoms:** 4 pink tones in canopy, individual petal highlights in white/pink, dark depth areas, improved trunk.
+- **Grass:** Multi-shade texture with tiny wildflowers (yellow and pink dots).
+- **Sidewalks:** Crack/wear marks, edge highlights on top of tiles, subtle aging detail.
+- **Roads:** Deterministic asphalt texture (no more random), center line with glow effect.
+- **Vending machines:** Drink variety with individual highlights, coin slot with gold accent, better panel depth.
+- **Benches:** Wood grain on seat and back, leg shadows, improved ground shadow.
+- **Street lamps:** Gradient pole, lamp housing detail, warm light glow on ground.
+- **Fences:** Wood grain on horizontal bars, post caps, bark-colored posts.
+- **Signs:** Beveled edge effect, decorative red accent dot.
+- **Store interiors:** Floor tiles with subtle shine, wall panel lines, shelf product label highlights, counter with register keypad dots, hot food display with warm glow and price labels.
+
+**Files modified:** sprites.js
