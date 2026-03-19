@@ -265,3 +265,17 @@
 - Voice status included in render_game_to_text for automated testing
 
 **Files modified:** audio.js, game.js
+
+### 2026-03-19 -- #10 Hotfix: Comprehensive ElevenLabs Voice Coverage
+**Commit:** `681f7c8`
+
+**What was changed:**
+- **Async-first voice:** speakJapanese() now fetches from ElevenLabs immediately and plays when ready (no more fallback-first delay). Only falls back to Web Speech if ElevenLabs fetch fails.
+- **Answer options speak on cursor move:** When navigating quiz answer choices with up/down, the highlighted Japanese option is spoken aloud via ElevenLabs. First option speaks automatically when quiz menu appears (200ms delay).
+- **Correct answer voice playback:** All 4 quiz handlers (main, review sensei, challenge master, listening mode) now speak the player's selected Japanese response 500ms after the correct-answer sound effect.
+- **Level phrase preloading:** When entering a store level, all Japanese phrases (clerk lines + every answer option) are extracted and preloaded via fetchVoiceAudio() with 800ms stagger. This means voices are cached before the player encounters them.
+- **Expanded common phrases:** preloadCommonPhrases() now covers 17 phrases (up from 9), including common player responses like ありがとうございます, はい、お願いします, 大丈夫です, etc.
+- **New helpers:** stopCurrentVoice() extracted and exported, fetchAndPlay() async function for fetch+play in one step.
+- **Skips [何も言わない]:** The "Stay Silent" option is intentionally not spoken when highlighted or selected.
+
+**Files modified:** audio.js, dialogue.js, game.js
