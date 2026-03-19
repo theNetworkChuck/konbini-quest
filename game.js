@@ -64,6 +64,7 @@
   function update(dt) {
     Engine.updateFade(dt);
     Engine.updateDoorAnimation(dt);
+    Engine.updateParticles(dt);
     Dialogue.update(dt);
 
     // Update weather only on street (map 0) — indoors has no weather
@@ -471,6 +472,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      Engine.spawnSparkles();
       state.reviewCorrect++;
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
 
@@ -506,6 +508,7 @@
     const pct = Math.round(correct / total * 100);
 
     GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
 
     let rating;
     if (pct === 100) rating = '完璧！ Perfect! ★★★';
@@ -661,6 +664,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      Engine.spawnSparkles();
       challengeGameState.challengeCorrect++;
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
 
@@ -712,6 +716,7 @@
     const chalState = NPCs.getChallengeState();
 
     GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
 
     let resultLines;
     if (passed) {
@@ -966,6 +971,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      Engine.spawnSparkles();
 
       // Speak the player's correct Japanese response
       const responseText = selected.text || '';
@@ -1078,6 +1084,7 @@
       // Correct!
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      Engine.spawnSparkles();
 
       // Speak the player's correct Japanese response aloud
       const responseText = selected.text || '';
@@ -1154,6 +1161,7 @@
 
     GameAudio.playLevelComplete();
     GameAudio.playStar();
+    Engine.spawnStarBurst();
 
     const starText = '\u2605'.repeat(stars) + '\u2606'.repeat(3 - stars);
 
@@ -1351,6 +1359,9 @@
         state.time
       );
     }
+
+    // Particle effects (sparkles + star bursts — above dialogue/overlays)
+    Engine.renderParticles(state.time);
 
     // Sliding door animation overlay (above scene, below fade)
     Engine.renderDoorAnimation();

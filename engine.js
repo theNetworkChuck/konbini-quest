@@ -739,6 +739,149 @@ const Engine = (() => {
   function getWeatherType() { return weather.type; }
   function getTimeOfDay() { return weather.timeOfDay; }
 
+  // ============ PARTICLE EFFECTS (Correct Answers + Level Complete) ============
+  const particles = [];
+
+  // Colors for sparkle particles (kawaii palette)
+  const SPARKLE_COLORS = ['#2ecc71', '#f1c40f', '#1abc9c', '#fff', '#a8e6cf', '#55efc4'];
+  // Colors for star burst particles (gold/celebratory palette)
+  const STAR_COLORS = ['#f1c40f', '#f39c12', '#FFD700', '#fff', '#FFEAA7', '#e74c3c', '#e056fd'];
+
+  /**
+   * Spawn sparkle particles at a position (for correct answers).
+   * Creates small 1-3px squares that pop outward and fade.
+   * @param {number} cx - center X in canvas coords (default: center of dialogue area)
+   * @param {number} cy - center Y in canvas coords (default: middle of screen)
+   * @param {number} count - number of particles (default 12)
+   */
+  function spawnSparkles(cx, cy, count) {
+    if (cx === undefined) cx = CANVAS_W / 2;
+    if (cy === undefined) cy = CANVAS_H / 2 - 20;
+    if (count === undefined) count = 12;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i + (Math.random() - 0.5) * 0.6;
+      const speed = 30 + Math.random() * 50;
+      particles.push({
+        type: 'sparkle',
+        x: cx + (Math.random() - 0.5) * 6,
+        y: cy + (Math.random() - 0.5) * 6,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 15, // slight upward bias
+        size: 1 + Math.floor(Math.random() * 2.5), // 1-3px pixel squares
+        life: 0.5 + Math.random() * 0.4,  // 0.5-0.9 seconds
+        maxLife: 0,
+        color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
+        gravity: 40,
+        twinkleSpeed: 8 + Math.random() * 6,
+      });
+      particles[particles.length - 1].maxLife = particles[particles.length - 1].life;
+    }
+  }
+
+  /**
+   * Spawn star burst particles (for level completion).
+   * Creates a dramatic burst of star-shaped particles + trailing sparkles.
+   * @param {number} cx - center X in canvas coords
+   * @param {number} cy - center Y in canvas coords
+   */
+  function spawnStarBurst(cx, cy) {
+    if (cx === undefined) cx = CANVAS_W / 2;
+    if (cy === undefined) cy = CANVAS_H / 2 - 30;
+    // Main star burst: 20 particles explode outward
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 / 20) * i + (Math.random() - 0.5) * 0.3;
+      const speed = 50 + Math.random() * 70;
+      particles.push({
+        type: 'star',
+        x: cx,
+        y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 20,
+        size: 2 + Math.floor(Math.random() * 2), // 2-3px
+        life: 0.8 + Math.random() * 0.5,
+        maxLife: 0,
+        color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
+        gravity: 30,
+        twinkleSpeed: 6 + Math.random() * 4,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 10,
+      });
+      particles[particles.length - 1].maxLife = particles[particles.length - 1].life;
+    }
+    // Additional trailing sparkle ring (delayed feel via higher initial life)
+    for (let i = 0; i < 12; i++) {
+      const angle = (Math.PI * 2 / 12) * i;
+      const speed = 20 + Math.random() * 30;
+      particles.push({
+        type: 'sparkle',
+        x: cx + Math.cos(angle) * 4,
+        y: cy + Math.sin(angle) * 4,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 10,
+        size: 1 + Math.floor(Math.random() * 2),
+        life: 0.6 + Math.random() * 0.3,
+        maxLife: 0,
+        color: SPARKLE_COLORS[Math.floor(Math.random() * SPARKLE_COLORS.length)],
+        gravity: 50,
+        twinkleSpeed: 10 + Math.random() * 6,
+      });
+      particles[particles.length - 1].maxLife = particles[particles.length - 1].life;
+    }
+  }
+
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += p.gravity * dt; // gravity pulls down
+      // Slow down over time (drag)
+      p.vx *= (1 - dt * 1.5);
+      if (p.rotation !== undefined) {
+        p.rotation += p.rotSpeed * dt;
+      }
+    }
+  }
+
+  function renderParticles(time) {
+    if (particles.length === 0) return;
+    ctx.save();
+    for (const p of particles) {
+      const lifeRatio = p.life / p.maxLife; // 1 at spawn, 0 at death
+      // Twinkle: oscillate alpha for sparkle effect
+      const twinkle = Math.sin(time * p.twinkleSpeed) * 0.3 + 0.7;
+      // Fade out in last 30% of life
+      const fadeOut = lifeRatio < 0.3 ? lifeRatio / 0.3 : 1;
+      ctx.globalAlpha = twinkle * fadeOut;
+      ctx.fillStyle = p.color;
+
+      if (p.type === 'star') {
+        // Draw a 4-pointed star shape (pixel-style)
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation || 0);
+        const s = p.size;
+        // Center square
+        ctx.fillRect(-s / 2, -s / 2, s, s);
+        // Cross arms (1px extending each direction)
+        ctx.fillRect(-s / 2, -s / 2 - 1, s, 1); // top
+        ctx.fillRect(-s / 2, s / 2, s, 1);       // bottom
+        ctx.fillRect(-s / 2 - 1, -s / 2, 1, s);  // left
+        ctx.fillRect(s / 2, -s / 2, 1, s);        // right
+        ctx.restore();
+      } else {
+        // Simple pixel square for sparkles
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+      }
+    }
+    ctx.restore();
+  }
+
   // ============ TITLE SCREEN ============
   function renderTitle() {
     // Dark background
@@ -815,6 +958,8 @@ const Engine = (() => {
     // Weather
     initWeather, updateWeather, renderWeather, renderTimeOfDayTint,
     getWeatherType, getTimeOfDay,
+    // Particle effects
+    spawnSparkles, spawnStarBurst, updateParticles, renderParticles,
     // Title
     renderTitle,
   };
