@@ -1,4 +1,5 @@
-/* Konbini Quest v2 - Programmatic Sprite System (16x16 pixel art) */
+/* Konbini Quest v2 - HD Programmatic Sprite System (16x16 pixel art) */
+/* Improvement #11: HD Graphics Upgrade - GBC-quality pixel art */
 const Sprites = (() => {
   const T = 16; // tile size
   const spriteCache = {};
@@ -19,170 +20,181 @@ const Sprites = (() => {
     });
   }
 
-  // ============ PLAYER SPRITES ============
+  // ============ PLAYER SPRITES (HD) ============
+  // Expanded palette: added shadow tones, mouth, blush, backpack shadow, shoe highlight
   const playerPalette = {
-    'H': '#5c3a1e', // hair
+    'H': '#4a2e15', // hair dark
+    'h': '#6b4226', // hair mid
+    'i': '#8a5a35', // hair highlight
     'S': '#f5d0a9', // skin
-    'E': '#222',    // eyes
-    'W': '#fff',    // white
-    'T': '#e74c3c', // shirt
+    's': '#e0b88a', // skin shadow
+    'E': '#1a1a2e', // eyes
+    'W': '#fff',    // white/eye whites
+    'w': '#ddd',    // off-white
+    'M': '#d4685a', // mouth
+    'B': '#f0a0a0', // blush
+    'T': '#d9382c', // shirt main
+    't': '#b52d22', // shirt shadow
+    'R': '#e8504a', // shirt highlight
     'P': '#2c3e50', // pants
-    'B': '#d4a017', // backpack
+    'p': '#1e2d3a', // pants shadow
+    'K': '#d4a017', // backpack
+    'k': '#b8880f', // backpack shadow
     'O': '#1a5276', // shoes
-    'h': '#7a4a2a', // hair highlight
+    'o': '#244a65', // shoe highlight
   };
 
-  // Player facing down, frame 0
+  // Player facing down, frame 0 — HD version with shading, expression
   const playerDown0 = `
-....HHHH....
-...HhHHhH...
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
-..TTTTTTTT..
-..TBTTTTBT..
-..TTTTTTTT..
-...TTTTTT...
-..PPPPPPPP..
-..PP.PP.PP..
+..sWEsWEs..
+..sSBSSBSs..
+...ssMSss...
+..tTTRRTTt..
+..tTTTTTTt..
+..TKTTTTKT..
+...tTTTTt...
+..pPPPPPPp..
+..pP.PP.Pp..
 ..PP.PP.PP..
 ...PP..PP...
-...OO..OO...
+...Oo..oO...
 ...OO..OO...`;
 
   // Player facing down, frame 1 (left foot forward)
   const playerDown1 = `
-....HHHH....
-...HhHHhH...
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
-..TTTTTTTT..
-..TBTTTTBT..
-..TTTTTTTT..
-...TTTTTT...
-..PPPPPPPP..
-..PP.PP.PP..
+..sWEsWEs..
+..sSBSSBSs..
+...ssMSss...
+..tTTRRTTt..
+..tTTTTTTt..
+..TKTTTTKT..
+...tTTTTt...
+..pPPPPPPp..
+..pP.PP.Pp..
 ..PP.PP.PP..
 ..PP....PP..
-..OO....OO..
+..Oo....oO..
 ...OO..OO...`;
 
   // Player facing up, frame 0
   const playerUp0 = `
-....HHHH....
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
 ...HHHHHH...
-...HHHHHH...
-..SSSSSSSS..
-...SSSSSS...
-..TTTTTTTT..
-..TBTTTTBT..
-..BBTTTTBB..
-...BBBBBB...
-..PPPPPPPP..
-..PP.PP.PP..
+..sSSSSSs...
+...sSSSs....
+..tTTTTTTt..
+..tTTTTTTt..
+..kKTTTTKk..
+...kKKKKk...
+..pPPPPPPp..
+..pP.PP.Pp..
 ..PP.PP.PP..
 ...PP..PP...
-...OO..OO...
+...Oo..oO...
 ...OO..OO...`;
 
   // Player facing up, frame 1
   const playerUp1 = `
-....HHHH....
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
 ...HHHHHH...
-...HHHHHH...
-..SSSSSSSS..
-...SSSSSS...
-..TTTTTTTT..
-..TBTTTTBT..
-..BBTTTTBB..
-...BBBBBB...
-..PPPPPPPP..
-..PP.PP.PP..
+..sSSSSSs...
+...sSSSs....
+..tTTTTTTt..
+..tTTTTTTt..
+..kKTTTTKk..
+...kKKKKk...
+..pPPPPPPp..
+..pP.PP.Pp..
 ..PP.PP.PP..
 ..PP....PP..
-..OO....OO..
+..Oo....oO..
 ...OO..OO...`;
 
   // Player facing left, frame 0
   const playerLeft0 = `
-....HHHH....
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
-...HHHHHH...
-..SSESSS....
-..SSSSSS....
-...SSSS.....
-..TTTTTB....
-..TTTTBB....
-..TTTTTB....
-...TTTT.....
-..PPPPPP....
-..PP.PP.....
+..sWEsSs....
+..sSSSss....
+...sMss.....
+..tTTTTK....
+..tTTTKk....
+..tTTTTK....
+...tTTT.....
+..pPPPPp....
+..pP.PP.....
 ..PP.PP.....
 ...PP.PP....
-...OO.OO...
-...OO.OO...`;
+...Oo.oO....
+...OO.OO....`;
 
   // Player facing left, frame 1
   const playerLeft1 = `
-....HHHH....
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
-...HHHHHH...
-..SSESSS....
-..SSSSSS....
-...SSSS.....
-..TTTTTB....
-..TTTTBB....
-..TTTTTB....
-...TTTT.....
-..PPPPPP....
-..PP.PP.....
+..sWEsSs....
+..sSSSss....
+...sMss.....
+..tTTTTK....
+..tTTTKk....
+..tTTTTK....
+...tTTT.....
+..pPPPPp....
+..pP.PP.....
 ..PP.PP.....
 ..PP..PP....
-..OO..OO....
-...OO.OO...`;
+..Oo..oO....
+...OO.OO....`;
 
   // Player facing right, frame 0
   const playerRight0 = `
-....HHHH....
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
-...HHHHHH...
-....SSSESS..
-....SSSSSS..
-.....SSSS...
-....BTTTTT..
-....BBTTTT..
-....BTTTTT..
-.....TTTT...
-....PPPPPP..
-.....PP.PP..
+....sSsEWs..
+....ssSSSs..
+.....ssMs...
+....KTTTTt..
+....kKTTTt..
+....KTTTTt..
+.....TTTt...
+....pPPPPp..
+.....PP.Pp..
 .....PP.PP..
 ....PP.PP...
-...OO.OO...
-...OO.OO...`;
+....Oo.oO...
+....OO.OO...`;
 
   // Player facing right, frame 1
   const playerRight1 = `
-....HHHH....
+....hHHi....
+...HhHHiH...
 ...HHHHHH...
-...HHHHHH...
-....SSSESS..
-....SSSSSS..
-.....SSSS...
-....BTTTTT..
-....BBTTTT..
-....BTTTTT..
-.....TTTT...
-....PPPPPP..
-.....PP.PP..
+....sSsEWs..
+....ssSSSs..
+.....ssMs...
+....KTTTTt..
+....kKTTTt..
+....KTTTTt..
+.....TTTt...
+....pPPPPp..
+.....PP.Pp..
 .....PP.PP..
 ....PP..PP..
-....OO..OO..
-...OO.OO...`;
+....Oo..oO..
+....OO.OO...`;
 
   const playerFrames = {
     down:  [playerDown0, playerDown1],
@@ -197,35 +209,45 @@ const Sprites = (() => {
     drawPixelMap(ctx, x, y, map, playerPalette);
   }
 
-  // ============ CLERK SPRITES ============
+  // ============ CLERK SPRITES (HD) ============
   function getClerkPalette(store) {
     const base = {
-      'H': '#1a1a2e', // hair
+      'H': '#1a1a2e', // hair dark
+      'h': '#2a2a3e', // hair highlight
       'S': '#f5d0a9', // skin
-      'E': '#222',    // eyes
+      's': '#e0b88a', // skin shadow
+      'E': '#1a1a2e', // eyes
       'W': '#fff',
+      'M': '#d4685a', // mouth
+      'B': '#f0a0a0', // blush
       'A': '#888',    // apron
+      'a': '#777',    // apron shadow
       'P': '#2c3e50', // pants
+      'p': '#1e2d3a', // pants shadow
       'O': '#333',    // shoes
     };
-    if (store === '7-Eleven') { base['U'] = '#d4380d'; base['A'] = '#e8652e'; } // red/orange
-    else if (store === 'Lawson') { base['U'] = '#1a6fc4'; base['A'] = '#3498db'; } // blue
-    else { base['U'] = '#27ae60'; base['A'] = '#2ecc71'; } // green
+    if (store === '7-Eleven') {
+      base['U'] = '#d4380d'; base['u'] = '#aa2a08'; base['A'] = '#e8652e'; base['a'] = '#c45420';
+    } else if (store === 'Lawson') {
+      base['U'] = '#1a6fc4'; base['u'] = '#155aa0'; base['A'] = '#3498db'; base['a'] = '#2a7ab8';
+    } else {
+      base['U'] = '#27ae60'; base['u'] = '#1e8c4e'; base['A'] = '#2ecc71'; base['a'] = '#25a85e';
+    }
     return base;
   }
 
   const clerkDown = `
-....HHHH....
+....hHHh....
 ...HHHHHH...
-...HHHHHH...
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
+...HhHHhH...
+..sWEsWEs..
+..sSBSSBSs..
+...ssMs.....
+..uUUUUUUu..
 ..UUUUUUUU..
-..UUUUUUUU..
-..AAUUUUAA..
+..aAUUUUAa..
 ..AAAAAAAA..
-..PPPPPPPP..
+..pPPPPPPp..
 ..PP.PP.PP..
 ..PP.PP.PP..
 ...PP..PP...
@@ -233,17 +255,17 @@ const Sprites = (() => {
 ...OO..OO...`;
 
   const clerkUp = `
-....HHHH....
+....hHHh....
 ...HHHHHH...
 ...HHHHHH...
 ...HHHHHH...
-..SSSSSSSS..
-...SSSSSS...
+..sSSSSSs...
+...sSSSs....
+..uUUUUUUu..
 ..UUUUUUUU..
-..UUUUUUUU..
-..AAUUUUAA..
+..aAUUUUAa..
 ..AAAAAAAA..
-..PPPPPPPP..
+..pPPPPPPp..
 ..PP.PP.PP..
 ..PP.PP.PP..
 ...PP..PP...
@@ -251,40 +273,40 @@ const Sprites = (() => {
 ...OO..OO...`;
 
   const clerkLeft = `
-....HHHH....
+....hHHh....
 ...HHHHHH...
-...HHHHHH...
-..SSESSS....
-..SSSSSS....
-...SSSS.....
+...HhHHhH...
+..sWEsSs....
+..sSSSss....
+...sMss.....
+..uUUUUU....
 ..UUUUUU....
-..UUUUUU....
-..AAUUUU....
+..aAUUUU....
 ..AAAAAA....
-..PPPPPP....
+..pPPPPp....
 ..PP.PP.....
 ..PP.PP.....
 ...PP.PP....
-...OO.OO...
-...OO.OO...`;
+...OO.OO....
+...OO.OO....`;
 
   const clerkRight = `
-....HHHH....
+....hHHh....
 ...HHHHHH...
-...HHHHHH...
-....SSSESS..
-....SSSSSS..
-.....SSSS...
+...HhHHhH...
+....sSsEWs..
+....ssSSSs..
+.....ssMs...
+....UUUUUu..
 ....UUUUUU..
-....UUUUUU..
-....UUUUAA..
+....UUUUAa..
 ....AAAAAA..
-....PPPPPP..
+....pPPPPp..
 .....PP.PP..
 .....PP.PP..
 ....PP.PP...
-...OO.OO...
-...OO.OO...`;
+....OO.OO...
+....OO.OO...`;
 
   const clerkFrames = { down: clerkDown, up: clerkUp, left: clerkLeft, right: clerkRight };
 
@@ -293,17 +315,17 @@ const Sprites = (() => {
     drawPixelMap(ctx, x, y, clerkFrames[dir] || clerkDown, palette);
   }
 
-  // ============ NPC SPRITES ============
-  // Old man
+  // ============ NPC SPRITES (HD) ============
+  // Old man — wrinkled face, grey/white hair, warm brown coat, walking cane implied
   const npcOldMan = `
 ...WWWWWW...
+..WwWWWwWW..
 ..WWWWWWWW..
-..WWWWWWWW..
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
+..sWEsWEs..
+..sSSSSSs...
+...ssMss....
 ..88888888..
-..88888888..
+..8C8888C8..
 ..88888888..
 ...888888...
 ..66666666..
@@ -314,43 +336,49 @@ const Sprites = (() => {
 ...33..33...`;
 
   const npcOldManPalette = {
-    'W': '#bbb', 'S': '#e8c090', 'E': '#222', '8': '#7f6b52', '6': '#555', '3': '#3a3a3a'
+    'W': '#c8c8c8', 'w': '#ddd',   // grey hair with highlight
+    'S': '#e0b88a', 's': '#d0a07a', 'E': '#222', 'M': '#c09080',
+    '8': '#7a6548', 'C': '#8b7558', // coat with button highlight
+    '6': '#4a4a4a', '3': '#333'
   };
 
-  // School girl
+  // School girl — dark navy uniform, red bow tie, knee socks
   const npcSchoolGirl = `
 ....1111....
+...1q11q1...
 ...111111...
-...111111...
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
+..sWEsWEs..
+..sSBSSBSs..
+...ssMs.....
 ..NNNNNNNN..
-..NWNNNNWN..
+..NrNNNNrN..
 ..NNNNNNNN..
 ...NNNNNN...
 ..22222222..
 ..22.22.22..
 ..22.22.22..
-...22..22...
 ...WW..WW...
-...WW..WW...`;
+...WW..WW...
+...OO..OO...`;
 
   const npcSchoolGirlPalette = {
-    '1': '#1a1a2e', 'S': '#f5d0a9', 'E': '#222', 'W': '#fff',
-    'N': '#1a3a6e', '2': '#2c3e50'
+    '1': '#1a1a2e', 'q': '#2a2a44', // hair with highlight
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#e07070', 'B': '#ffaaaa', // pink mouth, blush
+    'N': '#1a3a6e', 'r': '#e74c3c', // navy uniform, red bow
+    '2': '#2c3e50', 'O': '#1a1a2e'
   };
 
-  // Business man
+  // Business man — dark suit, white shirt collar, red tie, briefcase
   const npcBusinessMan = `
 ....1111....
+...1q11q1...
 ...111111...
-...111111...
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
-..44444444..
-..44R44444..
+..sWEsWEs..
+..sSSSSSs...
+...ssSss....
+..44W44W44..
+..44WRW444..
 ..44444444..
 ...444444...
 ..44444444..
@@ -361,21 +389,23 @@ const Sprites = (() => {
 ...33..33...`;
 
   const npcBusinessManPalette = {
-    '1': '#1a1a2e', 'S': '#f5d0a9', 'E': '#222', 'R': '#c0392b',
-    '4': '#2c3e50', '3': '#1a1a1a'
+    '1': '#1a1a2e', 'q': '#2a2a3e',
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#e8e8e8',
+    'R': '#c0392b', // red tie
+    '4': '#2c3450', '3': '#1a1a1a'
   };
 
-  // Sensei (review NPC) - older wise teacher with traditional look
+  // Sensei — grey hair, wise wrinkles, maroon/gold robe, wooden sandals
   const npcSensei = `
 ....HHHH....
+...HhHHhH...
 ...HHHHHH...
-...HHHHHH...
-..SSEESSE..
-..SSSSSSSS..
-..SSMMSS....
+..sWEsWEs..
+..sSSSSSs...
+..ssMSSs....
 ..RRRRRRRR..
 ..RRGRRGRR..
-..RRRRRRRR..
+..RrRRRRrR..
 ...RRRRRR...
 ..RRRRRRRR..
 ..RR.RR.RR..
@@ -385,23 +415,26 @@ const Sprites = (() => {
 ...55..55...`;
 
   const npcSenseiPalette = {
-    'H': '#888', 'S': '#e8c090', 'E': '#222', 'M': '#c0a080',
-    'R': '#8b2252', 'G': '#d4af37', '5': '#4a3a2a'
+    'H': '#999',  'h': '#bbb',  // grey hair with silver highlights
+    'S': '#e0b88a', 's': '#d0a07a', 'E': '#222', 'W': '#e8ddd0',
+    'M': '#c09080',
+    'R': '#8b2252', 'r': '#6b1a42', 'G': '#d4af37', // maroon robe, gold accents
+    '5': '#5a4030'  // wooden sandals
   };
 
-  // Challenge Master NPC - energetic game-show host type with headband
+  // Challenge Master NPC — energetic, yellow outfit, red headband, bright eyes
   const npcChallenger = `
 ....HHHH....
 ...HhHHhH...
-..RRRRRRrr..
-..SSEESSE..
-..SSSSSSSS..
-...SSMSS....
-..YYYYYYYY..
-..YYWYYWYY..
+..rRRRRRRr..
+..sWEsWEs..
+..sSSSSSs...
+...ssMss....
+..yYYYYYYy..
+..YYwYYwYY..
 ..YYYYYYYY..
 ...YYYYYY...
-..YYYYYYYY..
+..yYYYYYYy..
 ..YY.YY.YY..
 ..YY.YY.YY..
 ...YY..YY...
@@ -409,22 +442,23 @@ const Sprites = (() => {
 ...WW..WW...`;
 
   const npcChallengerPalette = {
-    'H': '#1a1a2e', 'h': '#2a2a3e', 'S': '#f5d0a9', 'E': '#222', 'M': '#c0a080',
+    'H': '#1a1a2e', 'h': '#2a2a3e',
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff', 'w': '#e8e8e8',
+    'M': '#c09080',
     'R': '#e74c3c', 'r': '#c0392b', // red headband
-    'Y': '#f1c40f', 'W': '#fff', // yellow outfit, white shoes
+    'Y': '#f1c40f', 'y': '#d4a80d', // yellow outfit with shadow
   };
 
-  // Walk frame 1 variants -- shift feet to simulate walking
-  // Old man walk frame 1 (legs swapped)
+  // Walk frame 1 variants -- shift feet for walking animation
   const npcOldManWalk = `
 ...WWWWWW...
+..WwWWWwWW..
 ..WWWWWWWW..
-..WWWWWWWW..
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
+..sWEsWEs..
+..sSSSSSs...
+...ssMss....
 ..88888888..
-..88888888..
+..8C8888C8..
 ..88888888..
 ...888888...
 ..66666666..
@@ -434,16 +468,15 @@ const Sprites = (() => {
 ..33..33....
 ...33.33....`;
 
-  // School girl walk frame 1
   const npcSchoolGirlWalk = `
 ....1111....
+...1q11q1...
 ...111111...
-...111111...
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
+..sWEsWEs..
+..sSBSSBSs..
+...ssMs.....
 ..NNNNNNNN..
-..NWNNNNWN..
+..NrNNNNrN..
 ..NNNNNNNN..
 ...NNNNNN...
 ..22222222..
@@ -453,16 +486,15 @@ const Sprites = (() => {
 ....WW..WW..
 ...WW..WW...`;
 
-  // Business man walk frame 1
   const npcBusinessManWalk = `
 ....1111....
+...1q11q1...
 ...111111...
-...111111...
-..SSEESSE..
-..SSSSSSSS..
-...SSSSSS...
-..44444444..
-..44R44444..
+..sWEsWEs..
+..sSSSSSs...
+...ssSss....
+..44W44W44..
+..44WRW444..
 ..44444444..
 ...444444...
 ..44444444..
@@ -487,8 +519,7 @@ const Sprites = (() => {
     drawPixelMap(ctx, x, y, sprite.frames[frameIdx], sprite.palette);
   }
 
-  // ============ TILE DRAWING ============
-  // Draw a cached tile to an offscreen canvas
+  // ============ TILE DRAWING (HD) ============
   function getTileCanvas(id, drawFn) {
     if (!spriteCache[id]) {
       const c = document.createElement('canvas');
@@ -500,146 +531,251 @@ const Sprites = (() => {
     return spriteCache[id];
   }
 
-  // --- Tile drawing functions ---
+  // --- HD Tile drawing functions ---
   function drawSidewalk(tc) {
     tc.fillStyle = '#c8c0b0';
     tc.fillRect(0, 0, T, T);
-    tc.fillStyle = '#b8b0a0';
+    tc.fillStyle = '#beb6a6';
     tc.fillRect(0, 0, 8, 8);
     tc.fillRect(8, 8, 8, 8);
+    // Grout lines
     tc.strokeStyle = '#a8a090';
     tc.lineWidth = 0.5;
     tc.strokeRect(0, 0, 8, 8);
     tc.strokeRect(8, 0, 8, 8);
     tc.strokeRect(0, 8, 8, 8);
     tc.strokeRect(8, 8, 8, 8);
+    // Subtle cracks and wear
+    tc.fillStyle = '#b0a898';
+    tc.fillRect(3, 3, 1, 1);
+    tc.fillRect(11, 5, 1, 1);
+    tc.fillRect(5, 12, 2, 1);
+    // Slight highlight on top edges
+    tc.fillStyle = '#d4ccc0';
+    tc.fillRect(1, 0, 6, 1);
+    tc.fillRect(9, 8, 6, 1);
   }
 
   function drawRoad(tc) {
-    tc.fillStyle = '#555';
+    tc.fillStyle = '#484848';
     tc.fillRect(0, 0, T, T);
-    // Subtle asphalt texture
-    tc.fillStyle = '#4a4a4a';
-    for (let i = 0; i < 6; i++) {
-      tc.fillRect(Math.random()*14|0, Math.random()*14|0, 2, 1);
-    }
+    // Asphalt texture - deterministic for caching
+    tc.fillStyle = '#424242';
+    tc.fillRect(2, 1, 2, 1);
+    tc.fillRect(8, 4, 3, 1);
+    tc.fillRect(1, 8, 2, 1);
+    tc.fillRect(11, 11, 2, 1);
+    tc.fillRect(5, 13, 1, 1);
+    tc.fillStyle = '#525252';
+    tc.fillRect(6, 3, 1, 1);
+    tc.fillRect(13, 7, 1, 1);
+    tc.fillRect(3, 11, 1, 1);
   }
 
   function drawRoadCenter(tc) {
-    tc.fillStyle = '#555';
+    tc.fillStyle = '#484848';
     tc.fillRect(0, 0, T, T);
+    // Yellow center line with slight glow
+    tc.fillStyle = '#c8a830';
+    tc.fillRect(0, 6, T, 1);
     tc.fillStyle = '#e8c840';
     tc.fillRect(0, 7, T, 2);
+    tc.fillStyle = '#c8a830';
+    tc.fillRect(0, 9, T, 1);
   }
 
   function drawCrosswalk(tc) {
-    tc.fillStyle = '#555';
+    tc.fillStyle = '#484848';
     tc.fillRect(0, 0, T, T);
-    tc.fillStyle = '#eee';
+    tc.fillStyle = '#e8e8e8';
     for (let y = 0; y < T; y += 4) {
       tc.fillRect(0, y, T, 2);
     }
+    // Wear marks
+    tc.fillStyle = '#d0d0d0';
+    tc.fillRect(3, 0, 2, 1);
+    tc.fillRect(8, 4, 2, 1);
+    tc.fillRect(5, 8, 3, 1);
   }
 
   function drawGrass(tc) {
     tc.fillStyle = '#5a8f3a';
     tc.fillRect(0, 0, T, T);
+    // Multi-shade grass texture
     tc.fillStyle = '#4a7f2a';
     tc.fillRect(2, 3, 2, 2);
     tc.fillRect(10, 7, 2, 2);
     tc.fillRect(6, 12, 2, 2);
+    tc.fillStyle = '#6a9f4a';
+    tc.fillRect(0, 1, 1, 1);
+    tc.fillRect(7, 4, 1, 2);
+    tc.fillRect(13, 10, 1, 1);
+    tc.fillRect(4, 8, 1, 1);
+    // Tiny flowers
+    tc.fillStyle = '#f0e080';
+    tc.fillRect(12, 2, 1, 1);
+    tc.fillStyle = '#e0a0a0';
+    tc.fillRect(1, 13, 1, 1);
   }
 
   function drawTree(tc) {
-    // Trunk
-    tc.fillStyle = '#6b4226';
+    // Trunk with bark detail
+    tc.fillStyle = '#5a3a1e';
     tc.fillRect(6, 10, 4, 6);
-    // Leaves
-    tc.fillStyle = '#2d8a4e';
+    tc.fillStyle = '#6b4226';
+    tc.fillRect(7, 10, 2, 6);
+    // Shadow at trunk base
+    tc.fillStyle = '#4a2e15';
+    tc.fillRect(6, 14, 4, 2);
+    // Leaf canopy with depth
+    tc.fillStyle = '#1e7040';
     tc.fillRect(2, 2, 12, 10);
     tc.fillRect(4, 0, 8, 2);
+    tc.fillStyle = '#2d8a4e';
+    tc.fillRect(3, 3, 10, 7);
     tc.fillStyle = '#3aaa5e';
-    tc.fillRect(4, 3, 8, 6);
+    tc.fillRect(4, 4, 8, 5);
+    // Light dapples
+    tc.fillStyle = '#50c070';
+    tc.fillRect(5, 3, 2, 2);
+    tc.fillRect(9, 5, 2, 1);
+    // Dark depth
+    tc.fillStyle = '#1a6038';
+    tc.fillRect(2, 8, 3, 2);
+    tc.fillRect(11, 6, 2, 2);
   }
 
   function drawCherryBlossom(tc) {
-    tc.fillStyle = '#4a3020';
+    // Trunk
+    tc.fillStyle = '#3a2018';
     tc.fillRect(6, 10, 4, 6);
-    tc.fillStyle = '#f0a0b0';
+    tc.fillStyle = '#4a3020';
+    tc.fillRect(7, 10, 2, 6);
+    // Blossom canopy layers
+    tc.fillStyle = '#e88898';
     tc.fillRect(2, 2, 12, 10);
     tc.fillRect(4, 0, 8, 2);
+    tc.fillStyle = '#f0a0b0';
+    tc.fillRect(3, 3, 10, 7);
     tc.fillStyle = '#f8c0d0';
-    tc.fillRect(4, 3, 8, 6);
-    // Petals
-    tc.fillStyle = '#fff';
+    tc.fillRect(4, 4, 8, 5);
+    // Individual petal highlights
+    tc.fillStyle = '#ffe0e8';
     tc.fillRect(3, 4, 1, 1);
     tc.fillRect(9, 2, 1, 1);
-    tc.fillRect(6, 8, 1, 1);
+    tc.fillRect(6, 7, 1, 1);
+    tc.fillRect(11, 5, 1, 1);
+    // Dark depth
+    tc.fillStyle = '#d07888';
+    tc.fillRect(2, 8, 2, 2);
+    tc.fillRect(10, 7, 2, 2);
   }
 
   function drawBench(tc) {
     tc.fillStyle = '#c8c0b0';
     tc.fillRect(0, 0, T, T);
-    // Bench seat
-    tc.fillStyle = '#8b5e3c';
+    // Shadow on ground
+    tc.fillStyle = '#b8b0a0';
+    tc.fillRect(1, 13, 14, 3);
+    // Back support
+    tc.fillStyle = '#6a4020';
+    tc.fillRect(1, 3, 14, 3);
+    tc.fillStyle = '#7a4e2c';
+    tc.fillRect(2, 4, 12, 1);
+    // Seat with wood grain
+    tc.fillStyle = '#7a4a2a';
     tc.fillRect(1, 6, 14, 3);
-    // Legs
-    tc.fillStyle = '#5a3a1e';
+    tc.fillStyle = '#8b5e3c';
+    tc.fillRect(2, 7, 12, 1);
+    // Legs with shadow
+    tc.fillStyle = '#4a2e15';
     tc.fillRect(2, 9, 2, 4);
     tc.fillRect(12, 9, 2, 4);
-    // Back
-    tc.fillStyle = '#7a4e2c';
-    tc.fillRect(1, 3, 14, 3);
+    tc.fillStyle = '#5a3a1e';
+    tc.fillRect(3, 9, 1, 4);
+    tc.fillRect(13, 9, 1, 4);
   }
 
   function drawStreetLamp(tc) {
     tc.fillStyle = '#c8c0b0';
     tc.fillRect(0, 0, T, T);
-    // Pole
-    tc.fillStyle = '#666';
+    // Pole with gradient
+    tc.fillStyle = '#555';
     tc.fillRect(7, 4, 2, 12);
-    // Light
+    tc.fillStyle = '#666';
+    tc.fillRect(8, 4, 1, 12);
+    // Lamp housing
+    tc.fillStyle = '#555';
+    tc.fillRect(3, 0, 10, 2);
+    tc.fillStyle = '#666';
+    tc.fillRect(4, 0, 8, 1);
+    // Light glow
     tc.fillStyle = '#ffe066';
-    tc.fillRect(4, 0, 8, 4);
+    tc.fillRect(4, 2, 8, 2);
     tc.fillStyle = '#fff8cc';
-    tc.fillRect(5, 1, 6, 2);
+    tc.fillRect(5, 2, 6, 1);
+    // Warm light on ground
+    tc.fillStyle = '#d8d0c0';
+    tc.fillRect(4, 14, 8, 2);
   }
 
   function drawFence(tc) {
     tc.fillStyle = '#5a8f3a';
     tc.fillRect(0, 0, T, T);
-    // Horizontal bars
-    tc.fillStyle = '#8b5e3c';
+    // Horizontal bars with wood grain
+    tc.fillStyle = '#7a4a2a';
     tc.fillRect(0, 4, T, 2);
     tc.fillRect(0, 10, T, 2);
+    tc.fillStyle = '#8b5e3c';
+    tc.fillRect(0, 5, T, 1);
+    tc.fillRect(0, 11, T, 1);
     // Vertical posts
-    tc.fillStyle = '#6b4226';
+    tc.fillStyle = '#5a3a1e';
     tc.fillRect(1, 2, 2, 12);
     tc.fillRect(7, 2, 2, 12);
     tc.fillRect(13, 2, 2, 12);
+    // Post caps
+    tc.fillStyle = '#6b4226';
+    tc.fillRect(1, 2, 2, 1);
+    tc.fillRect(7, 2, 2, 1);
+    tc.fillRect(13, 2, 2, 1);
   }
 
   function drawVendingMachine(tc) {
-    tc.fillStyle = '#2c5aa0';
+    // Machine body with depth
+    tc.fillStyle = '#1e4880';
     tc.fillRect(1, 0, 14, 16);
-    tc.fillStyle = '#3a7ae0';
+    tc.fillStyle = '#2c5aa0';
+    tc.fillRect(2, 0, 12, 16);
+    // Display window with glow
+    tc.fillStyle = '#e8f4ff';
     tc.fillRect(2, 1, 12, 10);
-    // Drinks
-    tc.fillStyle = '#e74c3c'; tc.fillRect(3, 2, 3, 4);
-    tc.fillStyle = '#2ecc71'; tc.fillRect(7, 2, 3, 4);
-    tc.fillStyle = '#f39c12'; tc.fillRect(11, 2, 2, 4);
-    tc.fillStyle = '#fff'; tc.fillRect(3, 7, 3, 3);
-    tc.fillStyle = '#e67e22'; tc.fillRect(7, 7, 3, 3);
-    // Slot
-    tc.fillStyle = '#1a1a2e';
+    tc.fillStyle = '#d0e8ff';
+    tc.fillRect(3, 2, 10, 8);
+    // Drinks — arranged rows
+    tc.fillStyle = '#e74c3c'; tc.fillRect(3, 2, 3, 3);
+    tc.fillStyle = '#ff6b5b'; tc.fillRect(4, 2, 1, 2);
+    tc.fillStyle = '#2ecc71'; tc.fillRect(7, 2, 3, 3);
+    tc.fillStyle = '#4ee891'; tc.fillRect(8, 2, 1, 2);
+    tc.fillStyle = '#f39c12'; tc.fillRect(11, 2, 2, 3);
+    // Second row
+    tc.fillStyle = '#fff'; tc.fillRect(3, 6, 3, 3);
+    tc.fillStyle = '#e67e22'; tc.fillRect(7, 6, 3, 3);
+    tc.fillStyle = '#3498db'; tc.fillRect(11, 6, 2, 3);
+    // Coin slot and button panel
+    tc.fillStyle = '#152a50';
     tc.fillRect(5, 12, 6, 3);
-    tc.fillStyle = '#444';
+    tc.fillStyle = '#333';
     tc.fillRect(6, 13, 4, 1);
+    // Coin slot highlight
+    tc.fillStyle = '#d4af37';
+    tc.fillRect(11, 12, 2, 1);
   }
 
   function drawBuildingWall(tc) {
     tc.fillStyle = '#d4c4a0';
     tc.fillRect(0, 0, T, T);
+    // Brick pattern with mortar
     tc.strokeStyle = '#c0b090';
     tc.lineWidth = 0.5;
     for (let y = 0; y < T; y += 4) {
@@ -647,50 +783,89 @@ const Sprites = (() => {
         tc.strokeRect(x, y, 8, 4);
       }
     }
+    // Subtle shading for depth
+    tc.fillStyle = '#ccc4a0';
+    tc.fillRect(0, 0, T, 1);
+    tc.fillStyle = '#c8b890';
+    tc.fillRect(0, 15, T, 1);
   }
 
   function drawStoreAwning(tc, color1, color2) {
     tc.fillStyle = color1;
     tc.fillRect(0, 0, T, T);
+    // Striped pattern with shadow
     tc.fillStyle = color2;
     for (let x = 0; x < T; x += 4) {
       tc.fillRect(x, 0, 2, T);
     }
-    // Bottom edge
+    // Top dark edge
+    tc.fillStyle = 'rgba(0,0,0,0.15)';
+    tc.fillRect(0, 0, T, 1);
+    // Bottom fringe with scallop
     tc.fillStyle = '#fff';
     tc.fillRect(0, T - 2, T, 2);
+    tc.fillStyle = '#ffe';
+    tc.fillRect(0, T - 3, T, 1);
+    // Scallop detail
+    tc.fillStyle = color1;
+    tc.fillRect(1, T - 2, 1, 1);
+    tc.fillRect(5, T - 2, 1, 1);
+    tc.fillRect(9, T - 2, 1, 1);
+    tc.fillRect(13, T - 2, 1, 1);
   }
 
   function drawStoreDoor(tc, color) {
+    // Wall surround
     tc.fillStyle = '#8a7a60';
     tc.fillRect(0, 0, T, T);
-    // Door
+    tc.fillStyle = '#9a8a70';
+    tc.fillRect(0, 0, T, 1);
+    // Door frame
     tc.fillStyle = color;
     tc.fillRect(2, 0, 12, 14);
-    // Glass
-    tc.fillStyle = '#aed6f1';
+    tc.fillStyle = 'rgba(0,0,0,0.15)';
+    tc.fillRect(2, 0, 1, 14);
+    // Glass pane with reflection
+    tc.fillStyle = '#88c8e8';
     tc.fillRect(3, 1, 10, 8);
+    tc.fillStyle = '#aed6f1';
+    tc.fillRect(4, 2, 4, 4); // reflection highlight
+    // Door divider
+    tc.fillStyle = color;
+    tc.fillRect(7, 1, 2, 8);
     // Handle
     tc.fillStyle = '#d4af37';
     tc.fillRect(10, 10, 2, 2);
+    tc.fillStyle = '#e8c847';
+    tc.fillRect(10, 10, 1, 1);
     // Mat
-    tc.fillStyle = '#555';
+    tc.fillStyle = '#444';
     tc.fillRect(0, 14, T, 2);
+    tc.fillStyle = '#555';
+    tc.fillRect(1, 14, 14, 1);
   }
 
   function drawStoreWindow(tc, color) {
     tc.fillStyle = '#d4c4a0';
     tc.fillRect(0, 0, T, T);
-    // Window frame
+    // Window frame with depth
     tc.fillStyle = color;
     tc.fillRect(1, 2, 14, 10);
-    // Glass
-    tc.fillStyle = '#aed6f1';
+    // Inner frame
+    tc.fillStyle = 'rgba(0,0,0,0.1)';
+    tc.fillRect(1, 2, 14, 1);
+    // Glass with gradient reflection
+    tc.fillStyle = '#88c8e8';
     tc.fillRect(2, 3, 12, 8);
-    // Cross
+    tc.fillStyle = '#aed6f1';
+    tc.fillRect(2, 3, 5, 4); // top-left reflection
+    // Cross frame
     tc.fillStyle = color;
     tc.fillRect(7, 3, 2, 8);
     tc.fillRect(2, 6, 12, 2);
+    // Sill
+    tc.fillStyle = '#c8b890';
+    tc.fillRect(0, 12, T, 1);
   }
 
   // Store floor tiles
@@ -700,99 +875,165 @@ const Sprites = (() => {
     tc.fillStyle = color2;
     tc.fillRect(0, 0, 8, 8);
     tc.fillRect(8, 8, 8, 8);
+    // Floor shine
+    tc.fillStyle = 'rgba(255,255,255,0.06)';
+    tc.fillRect(2, 2, 4, 4);
+    tc.fillRect(10, 10, 4, 4);
   }
 
   function drawStoreWall(tc, color) {
     tc.fillStyle = color;
     tc.fillRect(0, 0, T, T);
+    // Baseboard
     tc.fillStyle = '#fff';
     tc.fillRect(0, T - 1, T, 1);
+    // Subtle wall panel lines
+    tc.fillStyle = 'rgba(0,0,0,0.04)';
+    tc.fillRect(4, 0, 1, T - 1);
+    tc.fillRect(11, 0, 1, T - 1);
   }
 
   function drawShelf(tc, accentColor) {
-    tc.fillStyle = '#8b5e3c';
+    // Shelf body with wood grain
+    tc.fillStyle = '#7a4e2c';
     tc.fillRect(0, 0, T, T);
-    // Shelf surfaces
+    tc.fillStyle = '#8b5e3c';
+    tc.fillRect(1, 0, 14, T);
+    // Shelf ledges with highlight
     tc.fillStyle = '#a0764a';
     tc.fillRect(0, 4, T, 1);
     tc.fillRect(0, 10, T, 1);
-    // Products
+    tc.fillStyle = '#b08a5a';
+    tc.fillRect(1, 4, 14, 1);
+    tc.fillRect(1, 10, 14, 1);
+    // Products — more varied with labels
     const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', accentColor];
     for (let row = 0; row < 2; row++) {
       for (let i = 0; i < 4; i++) {
+        const cx = 1 + i * 4;
+        const cy = row * 6 + 1;
         tc.fillStyle = colors[(row * 4 + i) % colors.length];
-        tc.fillRect(1 + i * 4, row * 6 + 1, 3, 3);
+        tc.fillRect(cx, cy, 3, 3);
+        // Product label/highlight
+        tc.fillStyle = 'rgba(255,255,255,0.3)';
+        tc.fillRect(cx, cy, 2, 1);
       }
     }
-    tc.fillStyle = colors[2];
-    tc.fillRect(1, 12, 3, 3);
-    tc.fillStyle = colors[0];
-    tc.fillRect(5, 12, 3, 3);
-    tc.fillStyle = colors[3];
-    tc.fillRect(9, 12, 3, 3);
-    tc.fillStyle = colors[1];
-    tc.fillRect(13, 12, 2, 3);
+    // Bottom row
+    tc.fillStyle = colors[2]; tc.fillRect(1, 12, 3, 3);
+    tc.fillStyle = colors[0]; tc.fillRect(5, 12, 3, 3);
+    tc.fillStyle = colors[3]; tc.fillRect(9, 12, 3, 3);
+    tc.fillStyle = colors[1]; tc.fillRect(13, 12, 2, 3);
+    // Product highlights bottom
+    tc.fillStyle = 'rgba(255,255,255,0.3)';
+    tc.fillRect(1, 12, 2, 1);
+    tc.fillRect(5, 12, 2, 1);
+    tc.fillRect(9, 12, 2, 1);
+    tc.fillRect(13, 12, 1, 1);
   }
 
   function drawCounter(tc) {
-    tc.fillStyle = '#d4c4a0';
+    // Floor below
+    tc.fillStyle = '#e8e0d0';
     tc.fillRect(0, 0, T, T);
-    tc.fillStyle = '#8b5e3c';
+    // Counter body with depth
+    tc.fillStyle = '#7a4e2c';
     tc.fillRect(0, 2, T, 12);
+    tc.fillStyle = '#8b5e3c';
+    tc.fillRect(1, 2, 14, 12);
+    // Counter top with shine
     tc.fillStyle = '#a0764a';
     tc.fillRect(0, 0, T, 3);
+    tc.fillStyle = '#b88a5a';
+    tc.fillRect(1, 0, 14, 2);
     // Register
-    tc.fillStyle = '#555';
+    tc.fillStyle = '#444';
     tc.fillRect(5, 3, 6, 5);
+    tc.fillStyle = '#555';
+    tc.fillRect(5, 3, 6, 1);
+    // Register screen
     tc.fillStyle = '#2ecc71';
     tc.fillRect(6, 4, 4, 2);
+    tc.fillStyle = '#4ee891';
+    tc.fillRect(6, 4, 2, 1);
+    // Keypad dots
+    tc.fillStyle = '#888';
+    tc.fillRect(6, 7, 1, 1);
+    tc.fillRect(8, 7, 1, 1);
+    tc.fillRect(10, 7, 1, 1);
   }
 
   function drawDoorMat(tc) {
-    tc.fillStyle = '#d4c4a0';
+    tc.fillStyle = '#e8e0d0';
     tc.fillRect(0, 0, T, T);
-    tc.fillStyle = '#666';
-    tc.fillRect(2, 4, 12, 8);
+    // Mat with texture
     tc.fillStyle = '#555';
+    tc.fillRect(2, 4, 12, 8);
+    tc.fillStyle = '#4a4a4a';
     tc.fillRect(3, 5, 10, 6);
+    // Mat texture lines
+    tc.fillStyle = '#606060';
+    tc.fillRect(3, 6, 10, 1);
+    tc.fillRect(3, 9, 10, 1);
   }
 
   function drawSign(tc) {
     tc.fillStyle = '#c8c0b0';
     tc.fillRect(0, 0, T, T);
-    // Sign board
-    tc.fillStyle = '#2c3e50';
+    // Sign board with beveled edge
+    tc.fillStyle = '#1e2d3a';
     tc.fillRect(2, 1, 12, 10);
-    tc.fillStyle = '#34495e';
+    tc.fillStyle = '#2c3e50';
     tc.fillRect(3, 2, 10, 8);
+    tc.fillStyle = '#34495e';
+    tc.fillRect(3, 2, 10, 1);
     // Post
-    tc.fillStyle = '#666';
+    tc.fillStyle = '#555';
     tc.fillRect(7, 11, 2, 5);
-    // Text lines
+    tc.fillStyle = '#666';
+    tc.fillRect(8, 11, 1, 5);
+    // Text lines with varied widths
     tc.fillStyle = '#ecf0f1';
     tc.fillRect(4, 3, 8, 1);
     tc.fillRect(4, 5, 6, 1);
     tc.fillRect(4, 7, 7, 1);
+    // Decorative dot
+    tc.fillStyle = '#e74c3c';
+    tc.fillRect(10, 7, 1, 1);
   }
 
   // Hot food counter
   function drawHotFoodCounter(tc, accentColor) {
-    tc.fillStyle = '#d4c4a0';
+    // Floor
+    tc.fillStyle = '#e8e0d0';
     tc.fillRect(0, 0, T, T);
-    tc.fillStyle = '#8b5e3c';
+    // Counter body
+    tc.fillStyle = '#7a4e2c';
     tc.fillRect(0, 2, T, 12);
-    // Glass display
+    tc.fillStyle = '#8b5e3c';
+    tc.fillRect(1, 2, 14, 12);
+    // Glass display case top
     tc.fillStyle = accentColor;
     tc.fillRect(1, 0, 14, 3);
-    tc.fillStyle = '#f0e0c0';
+    // Glass with warm glow
+    tc.fillStyle = '#f8e8c0';
     tc.fillRect(2, 3, 12, 6);
-    // Food items
+    tc.fillStyle = '#f0ddb0';
+    tc.fillRect(3, 4, 10, 4);
+    // Food items with detail
     tc.fillStyle = '#d4880f';
     tc.fillRect(3, 4, 3, 3);
+    tc.fillStyle = '#e8a030';
+    tc.fillRect(3, 4, 2, 1);
+    tc.fillStyle = '#c07808';
     tc.fillRect(8, 4, 3, 3);
-    // Label
+    tc.fillStyle = '#d48818';
+    tc.fillRect(8, 4, 2, 1);
+    // Price label
     tc.fillStyle = '#fff';
     tc.fillRect(4, 10, 8, 2);
+    tc.fillStyle = '#e74c3c';
+    tc.fillRect(5, 10, 2, 1);
   }
 
   // Create tile by ID
