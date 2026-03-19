@@ -78,6 +78,8 @@ const Dialogue = (() => {
     choices = options;
     choiceIndex = 0;
     onChoice = callback;
+    // Speak the first highlighted option after a brief delay
+    setTimeout(() => speakCurrentChoice(), 200);
   }
 
   function hideChoices() {
@@ -147,9 +149,25 @@ const Dialogue = (() => {
     if (dir === 'up') {
       choiceIndex = (choiceIndex - 1 + choices.length) % choices.length;
       GameAudio.playCursor();
+      speakCurrentChoice();
     } else if (dir === 'down') {
       choiceIndex = (choiceIndex + 1) % choices.length;
       GameAudio.playCursor();
+      speakCurrentChoice();
+    }
+  }
+
+  // Speak the currently highlighted choice option if it contains Japanese
+  function speakCurrentChoice() {
+    if (!choiceActive || choiceIndex < 0 || choiceIndex >= choices.length) return;
+    const choice = choices[choiceIndex];
+    const text = choice.text || choice;
+    if (typeof text !== 'string') return;
+    // Only speak if text contains Japanese characters
+    const isJp = /[\u3000-\u9fff\uff00-\uffef]/.test(text);
+    if (isJp && text !== '[\u4f55\u3082\u8a00\u308f\u306a\u3044]') {
+      // Small delay so cursor sound plays first, then voice
+      setTimeout(() => GameAudio.speakJapanese(text), 80);
     }
   }
 

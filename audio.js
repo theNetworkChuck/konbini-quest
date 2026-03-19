@@ -348,19 +348,29 @@ const GameAudio = (() => {
   // Preload common konbini phrases in background
   function preloadCommonPhrases() {
     const common = [
-      'いらっしゃいませ',
-      'ポイントカードはお持ちですか',
-      'お弁当は温めますか',
-      'レジ袋はご利用ですか',
-      'お箸はお付けしますか',
-      'ありがとうございました',
-      'またお越しくださいませ',
-      'いくつお付けしますか',
-      'こちらでお召し上がりですか'
+      // Clerk greetings/questions
+      '\u3044\u3089\u3063\u3057\u3083\u3044\u307e\u305b',
+      '\u30dd\u30a4\u30f3\u30c8\u30ab\u30fc\u30c9\u306f\u304a\u6301\u3061\u3067\u3059\u304b',
+      '\u304a\u5f01\u5f53\u306f\u6e29\u3081\u307e\u3059\u304b',
+      '\u30ec\u30b8\u888b\u306f\u3054\u5229\u7528\u3067\u3059\u304b',
+      '\u304a\u7bb8\u306f\u304a\u4ed8\u3051\u3057\u307e\u3059\u304b',
+      '\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3057\u305f',
+      '\u307e\u305f\u304a\u8d8a\u3057\u304f\u3060\u3055\u3044\u307e\u305b',
+      '\u3044\u304f\u3064\u304a\u4ed8\u3051\u3057\u307e\u3059\u304b',
+      '\u3053\u3061\u3089\u3067\u304a\u53ec\u3057\u4e0a\u304c\u308a\u3067\u3059\u304b',
+      // Common player responses
+      '\u3042\u308a\u304c\u3068\u3046\u3054\u3056\u3044\u307e\u3059',
+      '\u306f\u3044\u3001\u304a\u9858\u3044\u3057\u307e\u3059',
+      '\u5927\u4e08\u592b\u3067\u3059',
+      '\u3055\u3088\u3046\u306a\u3089',
+      '\u30d0\u30a4\u30d0\u30a4\uff01',
+      '\u3053\u3093\u306b\u3061\u306f\uff01',
+      '\u3042\u308a\u304c\u3068\u3046\uff01',
+      '\u3044\u3089\u3063\u3057\u3083\u3044\u307e\u305b\uff01',
     ];
     // Stagger fetches to avoid rate limiting
     common.forEach((phrase, i) => {
-      setTimeout(() => fetchVoiceAudio(phrase), i * 1500);
+      setTimeout(() => fetchVoiceAudio(phrase), i * 1200);
     });
   }
 
@@ -379,15 +389,12 @@ const GameAudio = (() => {
   }
 
   // Main TTS function - uses ElevenLabs with fallback
+  // Always attempts ElevenLabs first; only uses Web Speech API as last resort
   function speakJapanese(text) {
     if (muted || !text) return;
 
     // Stop any currently playing voice
-    if (currentVoiceAudio) {
-      try { currentVoiceAudio.pause(); currentVoiceAudio.currentTime = 0; } catch(e) {}
-      currentVoiceAudio = null;
-    }
-    try { window.speechSynthesis.cancel(); } catch(e) {}
+    stopCurrentVoice();
 
     if (!elevenLabsAvailable) {
       speakJapaneseFallback(text);
@@ -401,10 +408,31 @@ const GameAudio = (() => {
       return;
     }
 
-    // Fetch and play (async) -- use fallback immediately while fetching
-    // so the player hears something, then cache for next time
-    speakJapaneseFallback(text);
-    fetchVoiceAudio(text); // pre-cache for next occurrence
+    // Fetch from ElevenLabs and play as soon as it arrives
+    // No fallback -- wait for the real voice
+    fetchAndPlay(text);
+  }
+
+  // Fetch audio from ElevenLabs and play it immediately when ready
+  async function fetchAndPlay(text) {
+    const entry = await fetchVoiceAudio(text);
+    if (entry) {
+      // Only play if nothing else has started playing since we began fetching
+      // (prevents stale audio from playing over newer requests)
+      playVoiceFromCache(entry);
+    } else {
+      // ElevenLabs failed for this phrase -- fall back
+      speakJapaneseFallback(text);
+    }
+  }
+
+  // Stop any currently playing voice audio
+  function stopCurrentVoice() {
+    if (currentVoiceAudio) {
+      try { currentVoiceAudio.pause(); currentVoiceAudio.currentTime = 0; } catch(e) {}
+      currentVoiceAudio = null;
+    }
+    try { window.speechSynthesis.cancel(); } catch(e) {}
   }
 
   function playVoiceFromCache(entry) {
@@ -443,9 +471,9 @@ const GameAudio = (() => {
     playStoreChime, playCorrect, playWrong,
     playLevelComplete, playStar, playSelect,
     playCursor, playFootstep, playDoor, playAlert,
-    speakJapanese, playRewardSound,
+    speakJapanese, stopCurrentVoice, playRewardSound,
     playSlidingDoor, playSlidingDoorClose,
     startRainAmbience, stopRainAmbience, isRainPlaying,
-    preloadCommonPhrases, getVoiceStatus,
+    preloadCommonPhrases, fetchVoiceAudio, getVoiceStatus,
   };
 })();

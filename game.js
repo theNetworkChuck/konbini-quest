@@ -474,7 +474,13 @@
       state.reviewCorrect++;
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
 
-      Dialogue.show('Sensei', 'よくできた！ Well done!', () => {
+      // Speak the player's correct Japanese response
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && responseText !== '[\u4f55\u3082\u8a00\u308f\u306a\u3044]') {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      Dialogue.show('Sensei', '\u3088\u304f\u3067\u304d\u305f\uff01 Well done!', () => {
         state.reviewIdx++;
         runReview();
       });
@@ -658,6 +664,12 @@
       challengeGameState.challengeCorrect++;
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
 
+      // Speak the player's correct Japanese response
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && responseText !== '[\u4f55\u3082\u8a00\u308f\u306a\u3044]') {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
       // Roll for variable reward (bonus phrase drop)
       tryVariableReward();
 
@@ -771,6 +783,9 @@
     state.currentInteractionIdx = 0;
     state.interactionMistakes = 0;
 
+    // Preload all Japanese phrases for this level (clerk lines + answer options)
+    preloadLevelPhrases(level);
+
     const displayMode = getDisplayMode(level);
     state.currentDisplayMode = displayMode;
 
@@ -800,6 +815,32 @@
       }
     } else {
       runInteraction();
+    }
+  }
+
+  // Preload all Japanese phrases for a level so ElevenLabs voices are cached
+  function preloadLevelPhrases(level) {
+    if (!level || !level.interactions) return;
+    const phrases = new Set();
+    for (const interaction of level.interactions) {
+      // Clerk lines
+      if (interaction.clerkJp) phrases.add(interaction.clerkJp);
+      // Answer option texts
+      if (interaction.options) {
+        for (const opt of interaction.options) {
+          const text = opt.text || opt.textJp || '';
+          // Only preload Japanese text (skip English-only options)
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && text !== '[\u4f55\u3082\u8a00\u308f\u306a\u3044]') {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    // Stagger fetches to avoid rate limiting
+    let delay = 0;
+    for (const phrase of phrases) {
+      setTimeout(() => GameAudio.fetchVoiceAudio(phrase), delay);
+      delay += 800;
     }
   }
 
@@ -926,6 +967,12 @@
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
 
+      // Speak the player's correct Japanese response
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && responseText !== '[\u4f55\u3082\u8a00\u308f\u306a\u3044]') {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
       // Track for spaced repetition
       if (state.currentInteractionLevel) {
         NPCs.trackPhrase(
@@ -1031,6 +1078,12 @@
       // Correct!
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+
+      // Speak the player's correct Japanese response aloud
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && responseText !== '[\u4f55\u3082\u8a00\u308f\u306a\u3044]') {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
 
       // Track for spaced repetition
       if (state.currentInteractionLevel) {
