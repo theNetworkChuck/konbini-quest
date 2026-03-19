@@ -25,7 +25,7 @@
 12. ~~**Particle Effects**~~ ✅ - Stars burst when completing levels, sparkles on correct answers.
 
 ### Batch 4: Deeper Japanese Content
-13. **Payment Method Interactions** - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
+13. ~~**Payment Method Interactions**~~ ✅ - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
 14. **Seasonal Items** - Oden in winter, ice cream in summer. Teaches seasonal vocabulary.
 15. **Regional Dialects** - Kansai-ben clerk at one store as a bonus challenge.
 16. **Politeness Levels** - Show casual vs polite vs keigo versions of the same phrase.
@@ -324,3 +324,28 @@
 - **Store interiors:** Floor tiles with subtle shine, wall panel lines, shelf product label highlights, counter with register keypad dots, hot food display with warm glow and price labels.
 
 **Files modified:** sprites.js
+
+### 2026-03-19 -- #13 Payment Method Interactions
+**Commit:** `2d974c4`
+
+**What was changed:**
+- New NPC "Reiko" the Payment Coach added to Konbini Street at position (17, 10)
+- Custom pixel art sprite: teal blazer, light brown hair, professional konbini payment instructor look
+- Pulsing teal card icon bubble indicator appears above Reiko when player has completed 2+ store levels
+- 6 complete payment scenarios covering all common konbini payment methods:
+  1. **Cash Payment (現金)** - Basic cash flow with money tray etiquette
+  2. **IC Card (Suica/PASMO)** - Tap-to-pay with proper phrasing
+  3. **Credit Card** - One-time payment confirmation flow
+  4. **QR Code (PayPay etc.)** - App-specific naming convention
+  5. **Changing Payment** - What to do when your card is declined
+  6. **Receipt & Change** - Handling お釣り and レシート politely
+- Each scenario has 2 multi-step interactions (12 total quiz exchanges)
+- Full interactive quiz flow: intro → clerk Japanese dialogue → multiple choice → correct/wrong feedback with explanations
+- Authentic keigo phrases throughout (お支払い方法はいかがなさいますか, Suicaでお願いします, etc.)
+- ElevenLabs voice preloading for all Japanese phrases in each scenario
+- Correct answers trigger sparkle particles + voice playback + variable reward rolls
+- Scenario progression tracking: completed count, unique scenarios unlocked (0-6)
+- Payment bubble rendering in engine.js follows same pattern as challenge/review bubbles
+- Unlocks after completing 2 store levels (ensures player knows basics first)
+
+**Files modified:** sprites.js, npc.js, engine.js, game.js
