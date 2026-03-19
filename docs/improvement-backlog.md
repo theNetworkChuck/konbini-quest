@@ -22,7 +22,7 @@
 11. ~~**HD Graphics Upgrade**~~ ✅ - Significantly improve sprite quality across the game. Current sprites use small pixel maps (e.g., 16x16). Upgrade to larger, more detailed pixel art with richer color palettes. Focus on: player character (more expressive, more animation frames), store exteriors (more architectural detail, signage), store interiors (shelving detail, products on display), NPC designs (more distinct, more personality). Maintain the kawaii 8-bit Pokemon aesthetic but push quality higher — think Game Boy Color level detail vs original Game Boy.
 
 ### Batch 3b: Visual Polish (continued)
-12. **Particle Effects** - Stars burst when completing levels, sparkles on correct answers.
+12. ~~**Particle Effects**~~ ✅ - Stars burst when completing levels, sparkles on correct answers.
 
 ### Batch 4: Deeper Japanese Content
 13. **Payment Method Interactions** - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
@@ -279,6 +279,23 @@
 - **Skips [何も言わない]:** The "Stay Silent" option is intentionally not spoken when highlighted or selected.
 
 **Files modified:** audio.js, dialogue.js, game.js
+
+### 2026-03-19 -- #12 Particle Effects
+**Commit:** `e75db63`
+
+**What was added:**
+- New particle effects system in engine.js with two distinct effect types:
+  - **Sparkles** (correct answers): 12 small 1-3px pixel squares burst outward in a kawaii green/gold/white/teal palette, with twinkle oscillation and gravity
+  - **Star bursts** (level completion): 20 cross-shaped star particles in gold/red/purple + 12 trailing sparkle ring, more dramatic spread and longer lifetime
+- Physics: gravity pull, velocity drag, twinkle (sine-wave alpha oscillation), fade-out in last 30% of life
+- All particles are pixel-consistent (integer positions, no gradients, 1-3px squares) to match 8-bit aesthetic
+- Sparkles hooked into all 4 correct-answer handlers: main quiz, review sensei, challenge master, listening mode
+- Star bursts hooked into all 3 level-complete handlers: main store, review complete, challenge complete
+- Particles render above dialogue/overlays but below door animation and screen fade
+- Update loop integrated into main game update for smooth animation
+- Auto-cleanup: particles remove themselves after their lifetime expires (~0.5-1.3s)
+
+**Files modified:** engine.js, game.js
 
 ### 2026-03-19 -- #11 HD Graphics Upgrade
 **Commit:** `4f4aa9f`
