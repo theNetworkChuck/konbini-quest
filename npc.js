@@ -68,6 +68,15 @@ const NPCs = (() => {
         "The pattern is simple: [method] + で + お願いします!"
       ]
     },
+    // Seasonal Guide NPC (seasonal konbini vocabulary)
+    { map: 0, x: 10, y: 15, type: 'seasonalguide', name: 'Obaa-chan', dir: 'up',
+      isSeasonalGuide: true,
+      dialogues: [
+        "季節 (kisetsu) means season! Japanese konbini change with the seasons.",
+        "In winter, warm oden by the register. In summer, cold noodles on ice!",
+        "季節限定 (kisetsu gentei) means limited seasonal item -- always exciting!"
+      ]
+    },
 
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
@@ -896,6 +905,249 @@ const NPCs = (() => {
     };
   }
 
+  // ============ SEASONAL ITEMS SYSTEM ============
+  const SEASONAL_LESSONS = [
+    {
+      id: 'spring',
+      season: 'Spring',
+      seasonJp: '春 (haru)',
+      icon: 'sakura',
+      color: '#FFB7C5',
+      intro: 'Cherry blossoms are blooming! Konbini fill with sakura treats.',
+      interactions: [
+        {
+          clerkJp: '桜餅はいかがですか？',
+          clerkRomaji: 'Sakura mochi wa ikaga desu ka?',
+          clerkEn: 'Would you like some sakura mochi?',
+          tip: 'Sakura mochi is a pink rice cake with bean paste wrapped in a cherry leaf.',
+          question: 'The clerk is offering you a seasonal spring sweet. How do you respond?',
+          options: [
+            { text: 'はい、お願いします', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: '大丈夫です', romaji: 'Daijoubu desu', en: 'No thanks', correct: true },
+            { text: 'いくらですか？', romaji: 'Ikura desu ka?', en: 'How much?', correct: false },
+          ],
+          correctExplanation: '桜餅 (sakura mochi) is THE iconic spring sweet at konbini. Available March-April only!',
+          wrongExplanation: 'When offered an item, respond with はい、お願いします (yes please) or 大丈夫です (no thanks).'
+        },
+        {
+          clerkJp: 'こちらの苺茶は季節限定です',
+          clerkRomaji: 'Kochira no ichigo-cha wa kisetsu gentei desu',
+          clerkEn: 'This strawberry tea is a seasonal limited item',
+          tip: '季節限定 (kisetsu gentei) = seasonal limited edition. These items disappear after the season!',
+          question: 'What does 季節限定 (kisetsu gentei) mean?',
+          options: [
+            { text: 'Seasonal limited edition', en: 'Seasonal limited edition', correct: true },
+            { text: 'Always available', en: 'Always available', correct: false },
+            { text: 'Sold out', en: 'Sold out', correct: false },
+          ],
+          correctExplanation: '季節限定 means seasonal limited edition. Spring brings strawberry and sakura everything!',
+          wrongExplanation: '季節 = season, 限定 = limited. Together: seasonal limited edition!'
+        },
+        {
+          clerkJp: '苺大福もおすすめですよ',
+          clerkRomaji: 'Ichigo daifuku mo osusume desu yo',
+          clerkEn: 'I also recommend the strawberry daifuku',
+          question: 'What is the clerk recommending?',
+          options: [
+            { text: 'Strawberry daifuku (mochi with strawberry)', en: 'Strawberry mochi', correct: true },
+            { text: 'Strawberry cake', en: 'Strawberry cake', correct: false },
+            { text: 'Strawberry drink', en: 'Strawberry drink', correct: false },
+          ],
+          correctExplanation: '苺大福 (ichigo daifuku) is fresh strawberry wrapped in mochi and sweet bean paste. A spring favorite!',
+          wrongExplanation: '大福 (daifuku) is a type of mochi. 苺 (ichigo) = strawberry. So 苺大福 = strawberry mochi!'
+        }
+      ]
+    },
+    {
+      id: 'summer',
+      season: 'Summer',
+      seasonJp: '夏 (natsu)',
+      icon: 'sun',
+      color: '#3498db',
+      intro: 'It is hot! Konbini have cold treats to beat the heat.',
+      interactions: [
+        {
+          clerkJp: '冷やし中華はいかがですか？',
+          clerkRomaji: 'Hiyashi chuuka wa ikaga desu ka?',
+          clerkEn: 'Would you like cold ramen?',
+          tip: '冷やし中華 is cold ramen with toppings -- a summer-only konbini staple!',
+          question: 'What seasonal summer dish is the clerk offering?',
+          options: [
+            { text: 'Cold ramen (冷やし中華)', en: 'Cold Chinese-style noodles', correct: true },
+            { text: 'Hot ramen', en: 'Hot ramen', correct: false },
+            { text: 'Rice bowl', en: 'Rice bowl', correct: false },
+          ],
+          correctExplanation: '冷やし中華 (hiyashi chuuka) literally means "chilled Chinese." It only appears in summer!',
+          wrongExplanation: '冷やし (hiyashi) = chilled/cold. This is a cold noodle dish only served in summer.'
+        },
+        {
+          clerkJp: 'アイスの新作が出ましたよ',
+          clerkRomaji: 'Aisu no shinsaku ga demashita yo',
+          clerkEn: 'We have a new ice cream flavor',
+          question: 'What does 新作 (shinsaku) mean?',
+          options: [
+            { text: 'New product/flavor', en: 'New creation', correct: true },
+            { text: 'Discount', en: 'Discount', correct: false },
+            { text: 'Last one', en: 'Last one', correct: false },
+          ],
+          correctExplanation: '新作 (shinsaku) = new creation. Konbini release new ice cream (アイス) flavors all summer!',
+          wrongExplanation: '新 (shin) = new, 作 (saku) = creation. 新作 = new product or flavor.'
+        },
+        {
+          clerkJp: '麦茶はいかがですか？冷たいのもあります',
+          clerkRomaji: 'Mugicha wa ikaga desu ka? Tsumetai no mo arimasu',
+          clerkEn: 'How about barley tea? We also have it cold',
+          question: 'What drink is being offered?',
+          options: [
+            { text: 'Barley tea (麦茶)', en: 'Barley tea', correct: true },
+            { text: 'Green tea', en: 'Green tea', correct: false },
+            { text: 'Coffee', en: 'Coffee', correct: false },
+          ],
+          correctExplanation: '麦茶 (mugicha) is cold barley tea -- THE quintessential Japanese summer drink. Every home has it!',
+          wrongExplanation: '麦 (mugi) = barley, 茶 (cha) = tea. 麦茶 is barley tea, the summer staple of Japan.'
+        }
+      ]
+    },
+    {
+      id: 'autumn',
+      season: 'Autumn',
+      seasonJp: '秋 (aki)',
+      icon: 'leaf',
+      color: '#e67e22',
+      intro: 'The leaves are changing! Konbini bring out chestnut and sweet potato treats.',
+      interactions: [
+        {
+          clerkJp: '栗のお菓子が入りました',
+          clerkRomaji: 'Kuri no okashi ga hairimashita',
+          clerkEn: 'We got chestnut sweets in stock',
+          tip: '秋 (aki) = autumn. Chestnut (栗 kuri) and sweet potato (さつまいも satsumaimo) are THE autumn flavors.',
+          question: 'What autumn flavor does 栗 (kuri) mean?',
+          options: [
+            { text: 'Chestnut', en: 'Chestnut', correct: true },
+            { text: 'Pumpkin', en: 'Pumpkin', correct: false },
+            { text: 'Apple', en: 'Apple', correct: false },
+          ],
+          correctExplanation: '栗 (kuri) = chestnut. Mont Blanc cake (モンブラン) and 栗きんとん (kuri kinton) fill konbini shelves every autumn!',
+          wrongExplanation: '栗 (kuri) is chestnut, not pumpkin or apple. It is the signature autumn flavor in Japan.'
+        },
+        {
+          clerkJp: 'さつまいもラテは季節限定です',
+          clerkRomaji: 'Satsumaimo rate wa kisetsu gentei desu',
+          clerkEn: 'The sweet potato latte is seasonal',
+          question: 'What is さつまいも (satsumaimo)?',
+          options: [
+            { text: 'Sweet potato', en: 'Sweet potato / yam', correct: true },
+            { text: 'Pumpkin', en: 'Pumpkin', correct: false },
+            { text: 'Chestnut', en: 'Chestnut', correct: false },
+          ],
+          correctExplanation: 'さつまいも (satsumaimo) = Japanese sweet potato. 焙き苋 (yakiimo) vendors appear on streets every autumn!',
+          wrongExplanation: 'さつまいも is sweet potato. Named after Satsuma (old name for Kagoshima). Autumn is sweet potato season!'
+        },
+        {
+          clerkJp: '秋の味覧はこちらです',
+          clerkRomaji: 'Aki no aji ichiran wa kochira desu',
+          clerkEn: 'The autumn flavor lineup is over here',
+          question: 'What does 秋の味 (aki no aji) mean?',
+          options: [
+            { text: 'Autumn flavor', en: 'Taste of autumn', correct: true },
+            { text: 'Autumn sale', en: 'Autumn sale', correct: false },
+            { text: 'Autumn menu', en: 'Autumn menu', correct: false },
+          ],
+          correctExplanation: '秋 (aki) = autumn, 味 (aji) = flavor/taste. 秋の味 means "taste of autumn" -- you will see this on packaging!',
+          wrongExplanation: '味 (aji) means flavor or taste, not sale or menu. 秋の味 = autumn flavor.'
+        }
+      ]
+    },
+    {
+      id: 'winter',
+      season: 'Winter',
+      seasonJp: '冬 (fuyu)',
+      icon: 'oden',
+      color: '#e74c3c',
+      intro: 'Brr, it is cold! Time for oden and warm nikuman at the konbini.',
+      interactions: [
+        {
+          clerkJp: 'おでんはいかがですか？',
+          clerkRomaji: 'Oden wa ikaga desu ka?',
+          clerkEn: 'Would you like some oden?',
+          tip: 'おでん is a winter stew simmered by the konbini register. Point at what you want!',
+          question: 'How do you order oden at a konbini?',
+          options: [
+            { text: '大根とたまごをお願いします', romaji: 'Daikon to tamago o onegaishimasu', en: 'Daikon and egg, please', correct: true },
+            { text: 'おでんをください', romaji: 'Oden o kudasai', en: 'Give me oden', correct: false },
+            { text: '[Point at the pot]', en: 'Just point silently', correct: false },
+          ],
+          correctExplanation: 'Name specific items! 大根 (daikon, radish) and たまご (tamago, egg) are the most popular oden choices.',
+          wrongExplanation: 'Order specific items by name: 大根 (daikon), たまご (egg), ちくわ (fish cake), こんにゃく (konjac).'
+        },
+        {
+          clerkJp: '肉まんとあんまん、どちらにしますか？',
+          clerkRomaji: 'Nikuman to anman, dochira ni shimasu ka?',
+          clerkEn: 'Meat bun or sweet bean bun -- which one?',
+          tip: '肉まん (nikuman) = meat bun. あんまん (anman) = sweet red bean bun. Both are steamed!',
+          question: 'What is the clerk asking you to choose between?',
+          options: [
+            { text: 'Meat bun vs. sweet bean bun', en: 'Nikuman vs. Anman', correct: true },
+            { text: 'Two sizes', en: 'Small vs. large', correct: false },
+            { text: 'Hot vs. cold', en: 'Temperature', correct: false },
+          ],
+          correctExplanation: '肉まん (nikuman, meat bun) and あんまん (anman, red bean bun) sit in a steamer by the register all winter!',
+          wrongExplanation: 'どちらにしますか = which one will you have? The clerk is asking you to choose between two bun types.'
+        },
+        {
+          clerkJp: 'からしはつけますか？',
+          clerkRomaji: 'Karashi wa tsukemasu ka?',
+          clerkEn: 'Shall I add mustard?',
+          tip: 'からし (karashi) = Japanese hot mustard, the traditional oden condiment.',
+          question: 'What condiment is the clerk offering for your oden?',
+          options: [
+            { text: 'Japanese mustard (からし)', en: 'Karashi mustard', correct: true },
+            { text: 'Soy sauce', en: 'Soy sauce', correct: false },
+            { text: 'Wasabi', en: 'Wasabi', correct: false },
+          ],
+          correctExplanation: 'からし (karashi) is spicy yellow Japanese mustard. It is THE classic oden condiment at konbini!',
+          wrongExplanation: 'からし is Japanese hot mustard, not soy sauce or wasabi. It comes in a small packet with oden.'
+        }
+      ]
+    }
+  ];
+
+  // Seasonal practice state
+  const seasonalState = {
+    lessonsCompleted: 0,
+    seasonsCompleted: [], // IDs of completed seasons
+    lastPracticeTime: 0,
+  };
+
+  function isSeasonalPracticeReady() {
+    // Available after completing at least 1 store level
+    return completedLevelsCount >= 1;
+  }
+
+  function getNextSeasonalLesson() {
+    // Show unseen seasons first
+    const unseen = SEASONAL_LESSONS.filter(s => !seasonalState.seasonsCompleted.includes(s.id));
+    if (unseen.length > 0) return unseen[0];
+    // All done? Pick random for continued practice
+    return SEASONAL_LESSONS[Math.floor(Math.random() * SEASONAL_LESSONS.length)];
+  }
+
+  function completeSeasonalLesson(seasonId) {
+    if (!seasonalState.seasonsCompleted.includes(seasonId)) {
+      seasonalState.seasonsCompleted.push(seasonId);
+    }
+    seasonalState.lessonsCompleted++;
+    seasonalState.lastPracticeTime = Date.now();
+  }
+
+  function getSeasonalStats() {
+    return {
+      completed: seasonalState.lessonsCompleted,
+      seasonsUnlocked: seasonalState.seasonsCompleted.length,
+      totalSeasons: SEASONAL_LESSONS.length,
+    };
+  }
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -963,5 +1215,11 @@ const NPCs = (() => {
     getNextPaymentScenario,
     completePaymentScenario,
     getPaymentStats,
+    // Seasonal items
+    SEASONAL_LESSONS,
+    isSeasonalPracticeReady,
+    getNextSeasonalLesson,
+    completeSeasonalLesson,
+    getSeasonalStats,
   };
 })();

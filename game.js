@@ -373,6 +373,11 @@
       interactWithPaymentCoach(npc);
       return;
     }
+    // Check if this is the Seasonal Guide NPC
+    if (npc.isSeasonalGuide) {
+      interactWithSeasonalGuide(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
   }
@@ -956,6 +961,204 @@
     Dialogue.show('Reiko', resultLines, () => {
       paymentGameState.inPayment = false;
       paymentGameState.scenario = null;
+    });
+  }
+
+  // ============ SEASONAL GUIDE ============
+  const seasonalGameState = {
+    inSeasonal: false,
+    lesson: null,
+    interactionIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithSeasonalGuide(npc) {
+    if (!NPCs.isSeasonalPracticeReady()) {
+      Dialogue.show('Obaa-chan', [
+        '季節 (kisetsu) means season!',
+        'Complete at least one store level first, dear.',
+        'Then come back and I\'ll teach you about seasonal konbini treats!',
+        '春、夏、秋、冬... every season has special food!'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getSeasonalStats();
+    const lesson = NPCs.getNextSeasonalLesson();
+
+    if (!lesson) {
+      Dialogue.show('Obaa-chan', 'Something went wrong... come back later!');
+      return;
+    }
+
+    // Set up seasonal practice state
+    seasonalGameState.inSeasonal = true;
+    seasonalGameState.lesson = lesson;
+    seasonalGameState.interactionIdx = 0;
+    seasonalGameState.correct = 0;
+    seasonalGameState.total = lesson.interactions.length;
+
+    // Preload Japanese phrases for this lesson
+    preloadSeasonalPhrases(lesson);
+
+    const isNew = stats.completed === 0;
+    const introLines = isNew
+      ? [
+          '季節の勉強へようこそ! Welcome to Seasonal Studies!',
+          'I\'m Obaa-chan. Let me teach you what konbini sell each season.',
+          `Today: ${lesson.seasonJp} -- ${lesson.season}!`,
+          lesson.intro
+        ]
+      : [
+          `${lesson.seasonJp}! ${lesson.season} lesson`,
+          `Practice ${stats.completed + 1} | ${stats.seasonsUnlocked}/${stats.totalSeasons} seasons learned`,
+          lesson.intro
+        ];
+
+    GameAudio.playAlert();
+    Dialogue.show('Obaa-chan', introLines, () => {
+      runSeasonalInteraction();
+    });
+  }
+
+  function preloadSeasonalPhrases(lesson) {
+    if (!lesson || !lesson.interactions) return;
+    const phrases = new Set();
+    for (const interaction of lesson.interactions) {
+      if (interaction.clerkJp) phrases.add(interaction.clerkJp);
+      if (interaction.options) {
+        for (const opt of interaction.options) {
+          const text = opt.text || opt.textJp || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase);
+    }
+  }
+
+  function runSeasonalInteraction() {
+    if (seasonalGameState.interactionIdx >= seasonalGameState.lesson.interactions.length) {
+      finishSeasonalLesson();
+      return;
+    }
+
+    const interaction = seasonalGameState.lesson.interactions[seasonalGameState.interactionIdx];
+    const qNum = seasonalGameState.interactionIdx + 1;
+    const qTotal = seasonalGameState.total;
+    const season = seasonalGameState.lesson.season;
+    const header = `${season} ${qNum}/${qTotal}`;
+
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      const lines = [interaction.clerkJp];
+      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+      if (interaction.tip) lines.push(interaction.tip);
+      if (interaction.question) lines.push(interaction.question);
+
+      Dialogue.show(header, lines, () => {
+        showSeasonalQuiz(interaction);
+      });
+    } else {
+      showSeasonalQuiz(interaction);
+    }
+  }
+
+  function showSeasonalQuiz(interaction) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleSeasonalAnswer(interaction, selected);
+    });
+  }
+
+  function handleSeasonalAnswer(interaction, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      Engine.spawnSparkles();
+      seasonalGameState.correct++;
+
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      tryVariableReward();
+
+      const encouragements = [
+        '正解! Correct!', 'いいね! Nice!',
+        '季節の達人! Seasonal expert!', 'よくできました! Well done!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = interaction.correctExplanation || '';
+
+      Dialogue.show('Obaa-chan', explanation ? [msg, explanation] : msg, () => {
+        seasonalGameState.interactionIdx++;
+        runSeasonalInteraction();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Obaa-chan', [
+        'もう一回! Let me explain...',
+        explanation
+      ], () => {
+        seasonalGameState.interactionIdx++;
+        runSeasonalInteraction();
+      });
+    }
+  }
+
+  function finishSeasonalLesson() {
+    const correct = seasonalGameState.correct;
+    const total = seasonalGameState.total;
+    const lesson = seasonalGameState.lesson;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completeSeasonalLesson(lesson.id);
+    const stats = NPCs.getSeasonalStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '\u5b8c\u74a7! Seasonal master! \u2605\u2605\u2605';
+    else if (pct >= 50) rating = '\u3044\u3044\u306d! Good work! \u2605\u2605\u2606';
+    else rating = '\u3082\u3046\u5c11\u3057! Keep practicing! \u2605\u2606\u2606';
+
+    const resultLines = [
+      `Lesson Complete: ${correct}/${total} correct!`,
+      rating,
+      `Seasons mastered: ${stats.seasonsUnlocked}/${stats.totalSeasons}`,
+    ];
+
+    if (stats.seasonsUnlocked >= stats.totalSeasons) {
+      resultLines.push('全季節クリア! You know all four seasons of konbini!');
+    } else {
+      resultLines.push('Come back to learn about the next season!');
+    }
+
+    Dialogue.show('Obaa-chan', resultLines, () => {
+      seasonalGameState.inSeasonal = false;
+      seasonalGameState.lesson = null;
     });
   }
 

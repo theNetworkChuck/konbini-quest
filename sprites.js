@@ -531,6 +531,33 @@ const Sprites = (() => {
     '2': '#2c3e50', 'O': '#1a1a2e'
   };
 
+  // Seasonal Guide NPC -- warm grandmother type, headscarf, apron, gentle colors
+  const npcSeasonalGuide = `
+...AAAAAA...
+..AaAAAAaA..
+..AAAAAAAA..
+..sWEsWEs..
+..sSSSSSs...
+...ssMs.....
+..GGGGGGGG..
+..GwGGGGwG..
+..GGGGGGGG..
+...GGGGGG...
+..PPPPPPPP..
+..PP.PP.PP..
+..PP.PP.PP..
+...PP..PP...
+...33..33...
+...33..33...`;
+
+  const npcSeasonalGuidePalette = {
+    'A': '#c06040', 'a': '#d47850', // warm rust headscarf with highlight
+    'S': '#f0c8a0', 's': '#d8b090', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#c08070', // gentle smile
+    'G': '#608050', 'w': '#f0e8d0', // olive green apron, cream shirt
+    'P': '#705040', '3': '#4a3020' // brown skirt, dark shoes
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
@@ -538,6 +565,7 @@ const Sprites = (() => {
     sensei:      { frames: [npcSensei], palette: npcSenseiPalette },
     challenger:  { frames: [npcChallenger], palette: npcChallengerPalette },
     paymentcoach: { frames: [npcPaymentCoach], palette: npcPaymentCoachPalette },
+    seasonalguide: { frames: [npcSeasonalGuide], palette: npcSeasonalGuidePalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1199,6 +1227,25 @@ const Sprites = (() => {
     ctx.globalAlpha = 1;
   }
 
+  // Seasonal practice indicator (pulsing leaf/sakura icon)
+  function drawSeasonalBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 3) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (warm autumn orange)
+    ctx.fillStyle = '#c06040';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Leaf icon
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillRect(x + 6, y - 12, 4, 3);
+    ctx.fillRect(x + 5, y - 11, 2, 2);
+    ctx.fillRect(x + 10, y - 11, 2, 2);
+    // Stem
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(x + 7, y - 9, 2, 3);
+    ctx.globalAlpha = 1;
+  }
+
   // Streak fire icon for HUD
   function drawStreakFire(ctx, x, y, streak) {
     // Flame base
@@ -1716,6 +1763,7 @@ const Sprites = (() => {
     drawReviewBubble,
     drawChallengeBubble,
     drawPaymentBubble,
+    drawSeasonalBubble,
     drawStreakFire,
     drawStar,
     drawPixelMap,

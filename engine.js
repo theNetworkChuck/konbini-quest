@@ -263,6 +263,10 @@ const Engine = (() => {
         if (npc.isPaymentCoach && NPCs.isPaymentPracticeReady()) {
           Sprites.drawPaymentBubble(ctx, sx, sy, time);
         }
+        // Show seasonal bubble above seasonal guide when ready
+        if (npc.isSeasonalGuide && NPCs.isSeasonalPracticeReady()) {
+          Sprites.drawSeasonalBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing
