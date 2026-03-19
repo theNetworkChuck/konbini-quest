@@ -18,7 +18,7 @@
 9. ~~**NPC Walk Cycles**~~ -- Street NPCs wander around instead of standing still. More Pokemon-like.
 
 ### ⭐ HIGH PRIORITY — User Requested
-10. **ElevenLabs Real Japanese Voices** - Replace the Web Speech API TTS with real Japanese voices from ElevenLabs. Use the REST API (`POST https://api.elevenlabs.io/v1/text-to-speech/:voice_id`) with `xi-api-key` header and `eleven_multilingual_v2` model. The `speakJapanese(text)` function in `audio.js` currently uses `window.speechSynthesis` — replace it with a fetch call to ElevenLabs that returns audio, then play it via Web Audio API or `Audio()` element. Cache audio blobs in memory to avoid re-fetching the same phrases. Select a natural-sounding Japanese female voice (research available voice IDs). API Key: `sk_fdc4e35db2ff37ef0b2286d05c744a2e15e753be1c1778e4`.
+10. ~~**ElevenLabs Real Japanese Voices**~~ -- Replace the Web Speech API TTS with real Japanese voices from ElevenLabs. Use the REST API (`POST https://api.elevenlabs.io/v1/text-to-speech/:voice_id`) with `xi-api-key` header and `eleven_multilingual_v2` model. The `speakJapanese(text)` function in `audio.js` currently uses `window.speechSynthesis` — replace it with a fetch call to ElevenLabs that returns audio, then play it via Web Audio API or `Audio()` element. Cache audio blobs in memory to avoid re-fetching the same phrases. Select a natural-sounding Japanese female voice (research available voice IDs). API Key: `sk_fdc4e35db2ff37ef0b2286d05c744a2e15e753be1c1778e4`.
 11. **HD Graphics Upgrade** - Significantly improve sprite quality across the game. Current sprites use small pixel maps (e.g., 16x16). Upgrade to larger, more detailed pixel art with richer color palettes. Focus on: player character (more expressive, more animation frames), store exteriors (more architectural detail, signage), store interiors (shelving detail, products on display), NPC designs (more distinct, more personality). Maintain the kawaii 8-bit Pokemon aesthetic but push quality higher — think Game Boy Color level detail vs original Game Boy.
 
 ### Batch 3b: Visual Polish (continued)
@@ -245,3 +245,23 @@
 - All 3 store entries verified working with correct brand colors
 
 **Files modified:** audio.js, engine.js, game.js
+
+### 2026-03-19 -- #10 ElevenLabs Real Japanese Voices
+**Commit:** `393a725`
+
+**What was added:**
+- Replaced Web Speech API (window.speechSynthesis) with ElevenLabs eleven_multilingual_v2 model for all Japanese TTS
+- Selected Hanako voice (IIUvcn96WSMnC5WxNypI) -- young conversational Japanese female with standard accent, perfect for konbini clerk role
+- REST API integration: POST to /v1/text-to-speech/:voice_id with xi-api-key header
+- In-memory audio cache (Map keyed by text) -- once a phrase is fetched, it plays instantly from cache forever after
+- Preloads 9 common konbini phrases on game start (staggered 1.5s apart to avoid rate limiting):
+  - Irasshaimase, point card question, bento warming, bag question, chopsticks question, thank you, please come again, how many, eat here question
+- Smart fallback system: if a phrase is not yet cached, plays Web Speech API immediately while ElevenLabs fetches in background for next time
+- After first encounter, all subsequent plays of the same phrase use the cached ElevenLabs audio (natural, high-quality)
+- Graceful error handling: 401/403 permanently disables ElevenLabs (bad key), other errors retry next time
+- Audio playback via HTML5 Audio() element with volume tied to mute state
+- Stops any currently-playing voice audio before starting new speech (no overlapping)
+- Testing hooks: getVoiceStatus() returns cache size/API status, testVoice(text) plays a phrase
+- Voice status included in render_game_to_text for automated testing
+
+**Files modified:** audio.js, game.js
