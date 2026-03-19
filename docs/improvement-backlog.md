@@ -26,7 +26,7 @@
 
 ### Batch 4: Deeper Japanese Content
 13. ~~**Payment Method Interactions**~~ ✅ - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
-14. **Seasonal Items** - Oden in winter, ice cream in summer. Teaches seasonal vocabulary.
+14. ~~**Seasonal Items**~~ ✅ - Oden in winter, ice cream in summer. Teaches seasonal vocabulary.
 15. **Regional Dialects** - Kansai-ben clerk at one store as a bonus challenge.
 16. **Politeness Levels** - Show casual vs polite vs keigo versions of the same phrase.
 
@@ -347,5 +347,30 @@
 - Scenario progression tracking: completed count, unique scenarios unlocked (0-6)
 - Payment bubble rendering in engine.js follows same pattern as challenge/review bubbles
 - Unlocks after completing 2 store levels (ensures player knows basics first)
+
+**Files modified:** sprites.js, npc.js, engine.js, game.js
+
+### 2026-03-20 -- #14 Seasonal Items & Vocabulary
+**Commit:** `603b1c3`
+
+**What was changed:**
+- New NPC "Obaa-chan" the Seasonal Guide added to Konbini Street at position (10, 15)
+- Custom pixel art sprite: warm grandmother design with rust headscarf, olive green apron
+- Pulsing warm orange leaf bubble indicator appears above Obaa-chan when player has completed 1+ store level
+- 4 seasonal lessons covering all four seasons of authentic konbini seasonal items:
+  1. **Spring (春)** - Sakura mochi (桜餅), kisetsu gentei (季節限定 / seasonal limited), ichigo daifuku (いちご大福)
+  2. **Summer (夏)** - Hiyashi chuuka (冷やし中華), ice cream shinsaku (新作アイス), mugicha (麦茶)
+  3. **Autumn (秋)** - Kuri/chestnut items (栗), satsumaimo/sweet potato (さつまいも), aki no aji (秋の味 / taste of autumn)
+  4. **Winter (冬)** - Oden ordering (おでん), nikuman vs anman (肉まん vs あんまん), karashi condiment (からし)
+- Each season has 3 interactive quiz scenarios (12 total quiz exchanges)
+- Full interactive quiz flow: Obaa-chan introduces season → Japanese dialogue → multiple choice → correct/wrong feedback with cultural context
+- Authentic Japanese seasonal konbini vocabulary researched for accuracy
+- ElevenLabs voice preloading for all seasonal Japanese phrases
+- Correct answers trigger sparkle particles + voice playback + variable reward rolls
+- Season progression tracking: completed seasons, star ratings, 4-season unlock system
+- Seasonal bubble rendering in engine.js follows same pattern as payment/challenge bubbles
+- Unlocks after completing first store level (ensures player knows konbini basics first)
+- Star rating system: 完璧 (perfect ★★★), いいね (good ★★☆), もう少し (keep practicing ★☆☆)
+- All-seasons completion celebration: 全季節クリア! bonus message
 
 **Files modified:** sprites.js, npc.js, engine.js, game.js
