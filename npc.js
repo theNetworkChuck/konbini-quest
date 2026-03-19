@@ -59,6 +59,15 @@ const NPCs = (() => {
         "Build a streak and earn bonus stars! 連勝 (renshō) means winning streak!"
       ]
     },
+    // Payment Coach NPC (payment method practice)
+    { map: 0, x: 17, y: 10, type: 'paymentcoach', name: 'Reiko', dir: 'left',
+      isPaymentCoach: true,
+      dialogues: [
+        "お支払い (o-shiharai) means payment! Let me teach you every method.",
+        "In Japan, always tell the clerk HOW you want to pay.",
+        "The pattern is simple: [method] + で + お願いします!"
+      ]
+    },
 
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
@@ -642,6 +651,251 @@ const NPCs = (() => {
     return total;
   }
 
+  // ============ PAYMENT PRACTICE SYSTEM ============
+  // Payment scenarios: realistic konbini payment interactions with proper keigo
+  const PAYMENT_SCENARIOS = [
+    {
+      id: 'cash_basic',
+      title: 'Paying with Cash',
+      titleJp: '現金でのお支払い',
+      difficulty: 1,
+      interactions: [
+        {
+          clerkJp: '以上で三百円でございます。お支払い方法は？',
+          clerkRomaji: 'Ij\u014d de sanbyaku-en de gozaimasu. O-shiharai h\u014dh\u014d wa?',
+          clerkEn: 'That will be 300 yen. Payment method?',
+          options: [
+            { text: '現金でお願いします', romaji: 'Genkin de onegaishimasu', en: 'Cash, please', correct: true },
+            { text: 'カードでお願いします', romaji: 'K\u0101do de onegaishimasu', en: 'Card, please', correct: false },
+            { text: 'お金', romaji: 'O-kane', en: 'Money (too vague)', correct: false },
+            { text: 'Cash please', en: '(in English)', correct: false }
+          ],
+          correctExplanation: '現金 (genkin) means cash. Pattern: [method] + \u3067 + \u304a\u9858\u3044\u3057\u307e\u3059!',
+          wrongExplanation: 'For cash, say \u73fe\u91d1\u3067\u304a\u9858\u3044\u3057\u307e\u3059 (genkin de onegaishimasu).'
+        },
+        {
+          clerkJp: '一万円か\u3089で\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f',
+          clerkRomaji: 'Ichiman-en kara de yoroshii desu ka?',
+          clerkEn: 'You\'re paying with a 10,000 yen bill, is that correct?',
+          tip: 'The clerk confirms large bills. Just confirm!',
+          options: [
+            { text: 'はい、お願いします', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: 'いいえ', romaji: 'Iie', en: 'No', correct: false },
+            { text: '大丈夫です', romaji: 'Daij\u014dbu desu', en: 'I\'m fine', correct: false }
+          ],
+          correctExplanation: 'The clerk is confirming a large bill. \u306f\u3044\u3001\u304a\u9858\u3044\u3057\u307e\u3059 confirms it!',
+          wrongExplanation: 'The clerk is confirming your 10,000 yen note. Say \u306f\u3044\u3001\u304a\u9858\u3044\u3057\u307e\u3059!'
+        }
+      ]
+    },
+    {
+      id: 'ic_card',
+      title: 'IC Card Payment',
+      titleJp: 'IC\u30ab\u30fc\u30c9\u3067\u304a\u652f\u6255\u3044',
+      difficulty: 1,
+      interactions: [
+        {
+          clerkJp: '\u304a\u652f\u6255\u3044\u65b9\u6cd5\u306f\u3044\u304b\u304c\u306a\u3055\u3044\u307e\u3059\u304b\uff1f',
+          clerkRomaji: 'O-shiharai h\u014dh\u014d wa ikaga nasaimasu ka?',
+          clerkEn: 'How would you like to pay?',
+          tip: 'This is very polite keigo. For Suica/Pasmo, just say the card name + \u3067!',
+          options: [
+            { text: 'Suica\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'Suica de onegaishimasu', en: 'Suica, please', correct: true },
+            { text: 'IC\u30ab\u30fc\u30c9\u3067', romaji: 'IC k\u0101do de', en: 'IC card (casual but okay)', correct: true },
+            { text: '\u96fb\u5b50\u30de\u30cd\u30fc', romaji: 'Denshi man\u012b', en: 'E-money (too vague)', correct: false },
+            { text: '[\u30ab\u30fc\u30c9\u3092\u7121\u8a00\u3067\u51fa\u3059]', en: 'Show card silently', correct: false }
+          ],
+          correctExplanation: 'Suica\u3067\u304a\u9858\u3044\u3057\u307e\u3059 or IC\u30ab\u30fc\u30c9\u3067 both work! The clerk needs to select it on the register.',
+          wrongExplanation: 'Say the card name! Suica\u3067\u304a\u9858\u3044\u3057\u307e\u3059. The clerk must select the method first.'
+        },
+        {
+          clerkJp: '\u30ab\u30fc\u30c9\u3092\u30bf\u30c3\u30c1\u3057\u3066\u304f\u3060\u3055\u3044',
+          clerkRomaji: 'K\u0101do o tacchi shite kudasai',
+          clerkEn: 'Please tap your card',
+          options: [
+            { text: '[\u30bf\u30c3\u30c1\u3059\u308b]', textJp: '[\u30bf\u30c3\u30c1\u3059\u308b]', en: 'Tap card on reader', correct: true },
+            { text: '\u30ab\u30fc\u30c9\u3092\u6e21\u3059', romaji: 'K\u0101do o watasu', en: 'Hand card to clerk', correct: false },
+            { text: '[\u4f55\u3082\u3057\u306a\u3044]', en: 'Do nothing', correct: false }
+          ],
+          correctExplanation: 'Just tap your IC card on the reader! \u30bf\u30c3\u30c1 (tacchi) is the "touch" sound.',
+          wrongExplanation: 'Tap your card on the reader yourself! Never hand your IC card to the clerk.'
+        }
+      ]
+    },
+    {
+      id: 'credit_card',
+      title: 'Credit Card Payment',
+      titleJp: '\u30af\u30ec\u30b8\u30c3\u30c8\u30ab\u30fc\u30c9\u3067\u304a\u652f\u6255\u3044',
+      difficulty: 2,
+      interactions: [
+        {
+          clerkJp: '\u304a\u652f\u6255\u3044\u65b9\u6cd5\u306f\uff1f',
+          clerkRomaji: 'O-shiharai h\u014dh\u014d wa?',
+          clerkEn: 'Payment method?',
+          options: [
+            { text: '\u30af\u30ec\u30b8\u30c3\u30c8\u30ab\u30fc\u30c9\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'Kurejitto k\u0101do de onegaishimasu', en: 'Credit card, please', correct: true },
+            { text: '\u30ab\u30fc\u30c9\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'K\u0101do de onegaishimasu', en: 'Card, please', correct: true },
+            { text: 'VISA', en: 'Just the brand name', correct: false },
+            { text: '\u73fe\u91d1\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'Genkin de onegaishimasu', en: 'Cash, please', correct: false }
+          ],
+          correctExplanation: '\u30af\u30ec\u30b8\u30c3\u30c8\u30ab\u30fc\u30c9 (kurejitto k\u0101do) or just \u30ab\u30fc\u30c9 (k\u0101do) both work!',
+          wrongExplanation: 'Say \u30af\u30ec\u30b8\u30c3\u30c8\u30ab\u30fc\u30c9\u3067\u304a\u9858\u3044\u3057\u307e\u3059 or \u30ab\u30fc\u30c9\u3067\u304a\u9858\u3044\u3057\u307e\u3059.'
+        },
+        {
+          clerkJp: '\u4e00\u62ec\u6255\u3044\u3067\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f',
+          clerkRomaji: 'Ikkatsu-barai de yoroshii desu ka?',
+          clerkEn: 'One-time payment, is that okay?',
+          tip: '\u4e00\u62ec\u6255\u3044 (ikkatsu-barai) means single payment. At konbini, it\'s always one-time!',
+          options: [
+            { text: '\u306f\u3044\u3001\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: '\u5206\u5272\u3067', romaji: 'Bunkatsu de', en: 'Installments (not at konbini!)', correct: false },
+            { text: '\u5927\u4e08\u592b\u3067\u3059', romaji: 'Daij\u014dbu desu', en: 'I\'m fine (confusing here)', correct: false }
+          ],
+          correctExplanation: 'At konbini, credit card payments are always \u4e00\u62ec\u6255\u3044 (single payment). Just confirm!',
+          wrongExplanation: 'Konbini only allows one-time payment. Say \u306f\u3044\u3001\u304a\u9858\u3044\u3057\u307e\u3059!'
+        }
+      ]
+    },
+    {
+      id: 'qr_payment',
+      title: 'QR Code Payment',
+      titleJp: 'QR\u30b3\u30fc\u30c9\u6c7a\u6e08',
+      difficulty: 2,
+      interactions: [
+        {
+          clerkJp: '\u304a\u652f\u6255\u3044\u65b9\u6cd5\u306f\u3044\u304b\u304c\u306a\u3055\u3044\u307e\u3059\u304b\uff1f',
+          clerkRomaji: 'O-shiharai h\u014dh\u014d wa ikaga nasaimasu ka?',
+          clerkEn: 'How would you like to pay?',
+          options: [
+            { text: 'PayPay\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'PayPay de onegaishimasu', en: 'PayPay, please', correct: true },
+            { text: 'QR\u30b3\u30fc\u30c9\u3067', romaji: 'QR k\u014ddo de', en: 'QR code payment', correct: true },
+            { text: '\u30b9\u30de\u30db\u3067', romaji: 'Sumaho de', en: 'With my phone (too vague)', correct: false },
+            { text: '[\u30b9\u30de\u30db\u3092\u898b\u305b\u308b]', en: 'Show phone silently', correct: false }
+          ],
+          correctExplanation: 'Name the app! PayPay, LINE Pay, or \u697d\u5929Pay\u3067\u304a\u9858\u3044\u3057\u307e\u3059. The clerk needs to know which one.',
+          wrongExplanation: 'Be specific! Say PayPay\u3067\u304a\u9858\u3044\u3057\u307e\u3059 or name the QR payment app.'
+        },
+        {
+          clerkJp: '\u30d0\u30fc\u30b3\u30fc\u30c9\u3092\u304a\u898b\u305b\u304f\u3060\u3055\u3044',
+          clerkRomaji: 'B\u0101k\u014ddo o o-mise kudasai',
+          clerkEn: 'Please show your barcode',
+          options: [
+            { text: '[\u30d0\u30fc\u30b3\u30fc\u30c9\u3092\u898b\u305b\u308b]', textJp: '[\u30d0\u30fc\u30b3\u30fc\u30c9\u3092\u898b\u305b\u308b]', en: 'Show barcode', correct: true },
+            { text: '\u306f\u3044', romaji: 'Hai', en: 'Yes (but don\'t show it)', correct: false }
+          ],
+          correctExplanation: 'Open the app, show the barcode. The clerk scans it!',
+          wrongExplanation: 'Open PayPay and show the barcode to the clerk\'s scanner!'
+        }
+      ]
+    },
+    {
+      id: 'change_method',
+      title: 'Changing Payment',
+      titleJp: '\u652f\u6255\u3044\u5909\u66f4',
+      difficulty: 3,
+      interactions: [
+        {
+          clerkJp: '\u304a\u652f\u6255\u3044\u65b9\u6cd5\u306f\uff1f',
+          clerkRomaji: 'O-shiharai h\u014dh\u014d wa?',
+          clerkEn: 'Payment method?',
+          options: [
+            { text: '\u73fe\u91d1\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'Genkin de onegaishimasu', en: 'Cash, please', correct: true },
+            { text: '\u30ab\u30fc\u30c9\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'K\u0101do de onegaishimasu', en: 'Card, please', correct: true },
+            { text: '[\u7121\u8a00]', en: 'Stay silent', correct: false }
+          ],
+          correctExplanation: 'Good! But wait... your card gets declined!',
+          wrongExplanation: 'You need to state a payment method first!'
+        },
+        {
+          clerkJp: '\u3059\u307f\u307e\u305b\u3093\u3001\u3053\u3061\u3089\u306e\u30ab\u30fc\u30c9\u306f\u3054\u5229\u7528\u3044\u305f\u3060\u3051\u307e\u305b\u3093',
+          clerkRomaji: 'Sumimasen, kochira no k\u0101do wa go-riy\u014d itadakemasen',
+          clerkEn: 'Sorry, this card cannot be used',
+          tip: 'Your card was declined! Switch to another method.',
+          options: [
+            { text: '\u3059\u307f\u307e\u305b\u3093\u3001\u73fe\u91d1\u3067\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'Sumimasen, genkin de onegaishimasu', en: 'Sorry, cash please', correct: true },
+            { text: '\u3082\u3046\u4e00\u5ea6\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'M\u014d ichido onegaishimasu', en: 'Please try again', correct: false },
+            { text: '[\u56f0\u3063\u305f\u9854]', en: 'Look confused', correct: false }
+          ],
+          correctExplanation: '\u3059\u307f\u307e\u305b\u3093 (sorry) + new method. Switching payment methods politely is an important skill!',
+          wrongExplanation: 'When your card is declined, politely switch: \u3059\u307f\u307e\u305b\u3093\u3001\u73fe\u91d1\u3067\u304a\u9858\u3044\u3057\u307e\u3059'
+        }
+      ]
+    },
+    {
+      id: 'receipt_change',
+      title: 'Receipt & Change',
+      titleJp: '\u304a\u91e3\u308a\u3068\u30ec\u30b7\u30fc\u30c8',
+      difficulty: 2,
+      interactions: [
+        {
+          clerkJp: '\u4e94\u5343\u5186\u304b\u3089\u304a\u9810\u304b\u308a\u3057\u307e\u3059',
+          clerkRomaji: 'Go-sen-en kara o-azukari shimasu',
+          clerkEn: 'Received 5,000 yen',
+          tip: '\u304a\u9810\u304b\u308a\u3057\u307e\u3059 is keigo for "I\'m holding your money." Just wait for change.',
+          options: [
+            { text: '[\u5f85\u3064]', textJp: '[\u5f85\u3064]', en: 'Wait for change', correct: true },
+            { text: '\u304a\u91e3\u308a\u306f\u3044\u308a\u307e\u305b\u3093', romaji: 'O-tsuri wa irimasen', en: 'Keep the change', correct: false },
+            { text: '\u65e9\u304f\uff01', romaji: 'Hayaku!', en: 'Hurry!', correct: false }
+          ],
+          correctExplanation: 'Just wait patiently! In Japan, you never say "keep the change" -- it would be very awkward.',
+          wrongExplanation: 'Tipping/declining change is not done in Japan. Just wait!'
+        },
+        {
+          clerkJp: '\u56db\u5343\u4e8c\u767e\u5186\u306e\u304a\u8fd4\u3057\u3067\u3059\u3002\u30ec\u30b7\u30fc\u30c8\u306f\u3088\u308d\u3057\u3044\u3067\u3059\u304b\uff1f',
+          clerkRomaji: 'Yon-sen ni-hyaku-en no o-kaeshi desu. Resh\u012bto wa yoroshii desu ka?',
+          clerkEn: '4,200 yen change. Do you need the receipt?',
+          options: [
+            { text: '\u5927\u4e08\u592b\u3067\u3059', romaji: 'Daij\u014dbu desu', en: 'No thanks', correct: true },
+            { text: '\u306f\u3044\u3001\u304a\u9858\u3044\u3057\u307e\u3059', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: 'No', en: '(in English)', correct: false }
+          ],
+          correctExplanation: 'Both work! Most Japanese decline with \u5927\u4e08\u592b\u3067\u3059. \u304a\u8fd4\u3057 (o-kaeshi) is the polite word for change.',
+          wrongExplanation: 'Say \u5927\u4e08\u592b\u3067\u3059 (no thanks) or \u306f\u3044\u3001\u304a\u9858\u3044\u3057\u307e\u3059 (yes please) for the receipt.'
+        }
+      ]
+    }
+  ];
+
+  // Payment practice state
+  const paymentState = {
+    practicesCompleted: 0,
+    scenariosCompleted: [], // IDs of completed scenarios
+    lastPracticeTime: 0,
+  };
+
+  function isPaymentPracticeReady() {
+    // Always ready if player has completed at least 2 levels (knows basics)
+    return completedLevelsCount >= 2;
+  }
+
+  function getNextPaymentScenario() {
+    // First show scenarios the player hasn't done yet
+    const unseen = PAYMENT_SCENARIOS.filter(s => !paymentState.scenariosCompleted.includes(s.id));
+    if (unseen.length > 0) {
+      // Sort by difficulty
+      unseen.sort((a, b) => a.difficulty - b.difficulty);
+      return unseen[0];
+    }
+    // All done? Pick a random one for continued practice
+    return PAYMENT_SCENARIOS[Math.floor(Math.random() * PAYMENT_SCENARIOS.length)];
+  }
+
+  function completePaymentScenario(scenarioId) {
+    if (!paymentState.scenariosCompleted.includes(scenarioId)) {
+      paymentState.scenariosCompleted.push(scenarioId);
+    }
+    paymentState.practicesCompleted++;
+    paymentState.lastPracticeTime = Date.now();
+  }
+
+  function getPaymentStats() {
+    return {
+      completed: paymentState.practicesCompleted,
+      scenariosUnlocked: paymentState.scenariosCompleted.length,
+      totalScenarios: PAYMENT_SCENARIOS.length,
+    };
+  }
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -703,5 +957,11 @@ const NPCs = (() => {
     updateNPCWalking,
     getNPCWalkState,
     getNPCIndex,
+    // Payment practice
+    PAYMENT_SCENARIOS,
+    isPaymentPracticeReady,
+    getNextPaymentScenario,
+    completePaymentScenario,
+    getPaymentStats,
   };
 })();

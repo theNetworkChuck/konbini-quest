@@ -368,6 +368,11 @@
       interactWithChallenger(npc);
       return;
     }
+    // Check if this is the Payment Coach NPC
+    if (npc.isPaymentCoach) {
+      interactWithPaymentCoach(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
   }
@@ -748,6 +753,209 @@
     Dialogue.show('Hana', resultLines, () => {
       challengeGameState.inChallenge = false;
       challengeGameState.challengePhrases = [];
+    });
+  }
+
+  // ============ PAYMENT COACH ============
+  const paymentGameState = {
+    inPayment: false,
+    scenario: null,
+    interactionIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithPaymentCoach(npc) {
+    if (!NPCs.isPaymentPracticeReady()) {
+      // Player needs more experience first
+      Dialogue.show('Reiko', [
+        'お支払い (o-shiharai) means payment!',
+        'Complete a few store levels first, then come back.',
+        'I\'ll teach you every payment method used in konbini!',
+        '現金、カード、Suica、PayPay... 全部教えます！'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getPaymentStats();
+    const scenario = NPCs.getNextPaymentScenario();
+
+    if (!scenario) {
+      Dialogue.show('Reiko', 'Something went wrong... come back later!');
+      return;
+    }
+
+    // Set up payment practice state
+    paymentGameState.inPayment = true;
+    paymentGameState.scenario = scenario;
+    paymentGameState.interactionIdx = 0;
+    paymentGameState.correct = 0;
+    paymentGameState.total = scenario.interactions.length;
+
+    // Preload all Japanese phrases for this scenario
+    preloadPaymentPhrases(scenario);
+
+    // Intro dialogue
+    const isNew = !stats.scenariosUnlocked || stats.completed === 0;
+    const introLines = isNew
+      ? [
+          'お支払いマスターへようこそ！ Welcome to Payment Training!',
+          'I\'m Reiko. I\'ll teach you how to pay at any konbini.',
+          `Today's lesson: ${scenario.title} (${scenario.titleJp})`,
+          'いきましょう！ Let\'s go!'
+        ]
+      : [
+          `${scenario.titleJp}! ${scenario.title}`,
+          `Practice ${stats.completed + 1} | ${stats.scenariosUnlocked}/${stats.totalScenarios} scenarios learned`,
+          '準備はいい？ Ready?'
+        ];
+
+    GameAudio.playAlert();
+    Dialogue.show('Reiko', introLines, () => {
+      runPaymentInteraction();
+    });
+  }
+
+  function preloadPaymentPhrases(scenario) {
+    if (!scenario || !scenario.interactions) return;
+    const phrases = new Set();
+    for (const interaction of scenario.interactions) {
+      if (interaction.clerkJp) phrases.add(interaction.clerkJp);
+      if (interaction.options) {
+        for (const opt of interaction.options) {
+          const text = opt.text || opt.textJp || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase); // triggers cache/preload
+    }
+  }
+
+  function runPaymentInteraction() {
+    if (paymentGameState.interactionIdx >= paymentGameState.scenario.interactions.length) {
+      finishPaymentPractice();
+      return;
+    }
+
+    const interaction = paymentGameState.scenario.interactions[paymentGameState.interactionIdx];
+    const qNum = paymentGameState.interactionIdx + 1;
+    const qTotal = paymentGameState.total;
+    const header = `Payment ${qNum}/${qTotal}`;
+
+    // Show clerk dialogue, then quiz
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      const lines = [interaction.clerkJp];
+      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+      if (interaction.tip) lines.push('💡 ' + interaction.tip);
+
+      Dialogue.show(header, lines, () => {
+        showPaymentQuiz(interaction);
+      });
+    } else {
+      showPaymentQuiz(interaction);
+    }
+  }
+
+  function showPaymentQuiz(interaction) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    // Shuffle options
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    // Play each option's Japanese text on hover/selection for learning
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handlePaymentAnswer(interaction, selected);
+    });
+  }
+
+  function handlePaymentAnswer(interaction, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      Engine.spawnSparkles();
+      paymentGameState.correct++;
+
+      // Speak the player's correct Japanese response
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      // Roll for variable reward
+      tryVariableReward();
+
+      const encouragements = [
+        '正解！ Correct!', 'いいね！ Nice!',
+        'お支払い上手！ Great payment skills!', 'バッチリ！ Perfect!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = interaction.correctExplanation || '';
+
+      Dialogue.show('Reiko', explanation ? [msg, explanation] : msg, () => {
+        paymentGameState.interactionIdx++;
+        runPaymentInteraction();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Reiko', [
+        'もう一回！ Try again!',
+        explanation
+      ], () => {
+        paymentGameState.interactionIdx++;
+        runPaymentInteraction();
+      });
+    }
+  }
+
+  function finishPaymentPractice() {
+    const correct = paymentGameState.correct;
+    const total = paymentGameState.total;
+    const scenario = paymentGameState.scenario;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completePaymentScenario(scenario.id);
+    const stats = NPCs.getPaymentStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '完璧！ Perfect payment skills! ★★★';
+    else if (pct >= 50) rating = 'いいね！ Good work! ★★☆';
+    else rating = 'もう少し！ Keep practicing! ★☆☆';
+
+    const resultLines = [
+      `Practice Complete: ${correct}/${total} correct!`,
+      rating,
+      `Scenarios mastered: ${stats.scenariosUnlocked}/${stats.totalScenarios}`,
+    ];
+
+    if (stats.scenariosUnlocked >= stats.totalScenarios) {
+      resultLines.push('🎉 全クリ！ You\'ve mastered all payment methods!');
+    } else {
+      resultLines.push('Come back to learn more payment methods!');
+    }
+
+    Dialogue.show('Reiko', resultLines, () => {
+      paymentGameState.inPayment = false;
+      paymentGameState.scenario = null;
     });
   }
 

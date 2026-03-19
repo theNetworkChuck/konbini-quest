@@ -259,6 +259,10 @@ const Engine = (() => {
         if (npc.isChallenger && NPCs.isChallengeReady()) {
           Sprites.drawChallengeBubble(ctx, sx, sy, time);
         }
+        // Show payment bubble above payment coach when ready
+        if (npc.isPaymentCoach && NPCs.isPaymentPracticeReady()) {
+          Sprites.drawPaymentBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing

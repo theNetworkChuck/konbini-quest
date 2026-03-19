@@ -504,12 +504,40 @@ const Sprites = (() => {
 ..33..33....
 ...33.33....`;
 
+  // Payment Coach NPC -- professional woman, teal blazer, light hair, holding card
+  const npcPaymentCoach = `
+....1111....
+...1q11q1...
+...111111...
+..sWEsWEs..
+..sSBSSBSs..
+...ssMs.....
+..TTTTTTTT..
+..TwTTTTwT..
+..TTTTTTTT..
+...TTTTTT...
+..22222222..
+..22.22.22..
+..22.22.22..
+...22..22...
+...WW..WW...
+...OO..OO...`;
+
+  const npcPaymentCoachPalette = {
+    '1': '#c08850', 'q': '#d4a060', // light brown hair with highlight
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#d47070', 'B': '#ffaaaa', // pink mouth, blush
+    'T': '#2a8a8a', 'w': '#e8e8e8', // teal blazer with white shirt detail
+    '2': '#2c3e50', 'O': '#1a1a2e'
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
     businessman: { frames: [npcBusinessMan, npcBusinessManWalk], palette: npcBusinessManPalette },
     sensei:      { frames: [npcSensei], palette: npcSenseiPalette },
     challenger:  { frames: [npcChallenger], palette: npcChallengerPalette },
+    paymentcoach: { frames: [npcPaymentCoach], palette: npcPaymentCoachPalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1151,6 +1179,26 @@ const Sprites = (() => {
     ctx.globalAlpha = 1;
   }
 
+  // Payment practice indicator (pulsing teal card icon)
+  function drawPaymentBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 3.5) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (teal)
+    ctx.fillStyle = '#2a8a8a';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Card icon
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 4, y - 12, 8, 6);
+    // Card stripe
+    ctx.fillStyle = '#f1c40f';
+    ctx.fillRect(x + 4, y - 10, 8, 2);
+    // Card chip
+    ctx.fillStyle = '#d4af37';
+    ctx.fillRect(x + 5, y - 8, 3, 2);
+    ctx.globalAlpha = 1;
+  }
+
   // Streak fire icon for HUD
   function drawStreakFire(ctx, x, y, streak) {
     // Flame base
@@ -1667,6 +1715,7 @@ const Sprites = (() => {
     drawCheckmark,
     drawReviewBubble,
     drawChallengeBubble,
+    drawPaymentBubble,
     drawStreakFire,
     drawStar,
     drawPixelMap,
