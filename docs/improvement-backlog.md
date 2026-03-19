@@ -16,25 +16,31 @@
 7. ~~**Animated Store Entry**~~ ✅ - Sliding door animation when entering stores instead of just fade-to-black.
 8. ~~**Weather System**~~ ✅ - Rain, night, cherry blossom petals. Makes the overworld feel alive.
 9. ~~**NPC Walk Cycles**~~ -- Street NPCs wander around instead of standing still. More Pokemon-like.
-10. **Particle Effects** - Stars burst when completing levels, sparkles on correct answers.
+
+### ⭐ HIGH PRIORITY — User Requested
+10. **ElevenLabs Real Japanese Voices** - Replace the Web Speech API TTS with real Japanese voices from ElevenLabs. Use the REST API (`POST https://api.elevenlabs.io/v1/text-to-speech/:voice_id`) with `xi-api-key` header and `eleven_multilingual_v2` model. The `speakJapanese(text)` function in `audio.js` currently uses `window.speechSynthesis` — replace it with a fetch call to ElevenLabs that returns audio, then play it via Web Audio API or `Audio()` element. Cache audio blobs in memory to avoid re-fetching the same phrases. Select a natural-sounding Japanese female voice (research available voice IDs). API Key: `sk_fdc4e35db2ff37ef0b2286d05c744a2e15e753be1c1778e4`.
+11. **HD Graphics Upgrade** - Significantly improve sprite quality across the game. Current sprites use small pixel maps (e.g., 16x16). Upgrade to larger, more detailed pixel art with richer color palettes. Focus on: player character (more expressive, more animation frames), store exteriors (more architectural detail, signage), store interiors (shelving detail, products on display), NPC designs (more distinct, more personality). Maintain the kawaii 8-bit Pokemon aesthetic but push quality higher — think Game Boy Color level detail vs original Game Boy.
+
+### Batch 3b: Visual Polish (continued)
+12. **Particle Effects** - Stars burst when completing levels, sparkles on correct answers.
 
 ### Batch 4: Deeper Japanese Content
-11. **Payment Method Interactions** - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
-12. **Seasonal Items** - Oden in winter, ice cream in summer. Teaches seasonal vocabulary.
-13. **Regional Dialects** - Kansai-ben clerk at one store as a bonus challenge.
-14. **Politeness Levels** - Show casual vs polite vs keigo versions of the same phrase.
+13. **Payment Method Interactions** - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
+14. **Seasonal Items** - Oden in winter, ice cream in summer. Teaches seasonal vocabulary.
+15. **Regional Dialects** - Kansai-ben clerk at one store as a bonus challenge.
+16. **Politeness Levels** - Show casual vs polite vs keigo versions of the same phrase.
 
 ### Batch 5: Advanced Mechanics
-15. **Mini-map** - Small map in corner showing store locations and completion status.
-16. **Inventory System** - Items you "buy" appear in a bag. Review what you purchased with Japanese labels.
-17. **Achievement Badges** - "First Purchase", "Point Card Pro", "Konbini Master" etc.
-18. **Sound Design** - Ambient konbini BGM, register beeps, bag rustling.
+17. **Mini-map** - Small map in corner showing store locations and completion status.
+18. **Inventory System** - Items you "buy" appear in a bag. Review what you purchased with Japanese labels.
+19. **Achievement Badges** - "First Purchase", "Point Card Pro", "Konbini Master" etc.
+20. **Sound Design** - Ambient konbini BGM, register beeps, bag rustling.
 
 ### Batch 6: Advanced Learning
-19. **Mistake Journal** - Track wrong answers, show them in a review section.
-20. **Cultural Notes** - Brief cultural context popups (money tray etiquette, bowing, etc.)
-21. **Speed Round** - Timed mode where clerk fires rapid questions. Tests recall under pressure.
-22. **Pronunciation Guide** - Show pitch accent patterns for key phrases.
+21. **Mistake Journal** - Track wrong answers, show them in a review section.
+22. **Cultural Notes** - Brief cultural context popups (money tray etiquette, bowing, etc.)
+23. **Speed Round** - Timed mode where clerk fires rapid questions. Tests recall under pressure.
+24. **Pronunciation Guide** - Show pitch accent patterns for key phrases.
 
 ## Research Notes
 - Flow Theory: 7 key elements for educational game engagement - learning goals, immediate feedback, adaptive challenge, control/autonomy, concentration, rewards, sensory immersion
