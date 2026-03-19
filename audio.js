@@ -282,9 +282,90 @@ const GameAudio = (() => {
 
   function isRainPlaying() { return rainActive; }
 
-  // TTS
-  function speakJapanese(text) {
-    if (muted || !text) return;
+  // === ElevenLabs Real Japanese Voice System ===
+  const ELEVENLABS_API_KEY = 'sk_fdc4e35db2ff37ef0b2286d05c744a2e15e753be1c1778e4';
+  // Hanako - young conversational Japanese female (standard accent)
+  const ELEVENLABS_VOICE_ID = 'IIUvcn96WSMnC5WxNypI';
+  const ELEVENLABS_MODEL = 'eleven_multilingual_v2';
+  const ELEVENLABS_URL = `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`;
+
+  // Audio cache: text -> { blob, url } to avoid re-fetching the same phrase
+  const voiceCache = new Map();
+  let currentVoiceAudio = null; // track current playing Audio element
+  let voiceFetchInFlight = new Set(); // prevent duplicate fetches
+  let elevenLabsAvailable = true; // set false on persistent failures
+
+  // Fetch audio from ElevenLabs and cache it
+  async function fetchVoiceAudio(text) {
+    // Return cached version if available
+    if (voiceCache.has(text)) return voiceCache.get(text);
+    // Skip if already fetching this exact text
+    if (voiceFetchInFlight.has(text)) return null;
+    voiceFetchInFlight.add(text);
+
+    try {
+      const resp = await fetch(ELEVENLABS_URL, {
+        method: 'POST',
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'audio/mpeg'
+        },
+        body: JSON.stringify({
+          text: text,
+          model_id: ELEVENLABS_MODEL,
+          voice_settings: {
+            stability: 0.50,
+            similarity_boost: 0.75,
+            style: 0.0,
+            use_speaker_boost: true
+          }
+        })
+      });
+
+      if (!resp.ok) {
+        console.warn('ElevenLabs API error:', resp.status);
+        if (resp.status === 401 || resp.status === 403) {
+          elevenLabsAvailable = false; // bad key, stop trying
+        }
+        voiceFetchInFlight.delete(text);
+        return null;
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const entry = { blob, url };
+      voiceCache.set(text, entry);
+      voiceFetchInFlight.delete(text);
+      return entry;
+    } catch (e) {
+      console.warn('ElevenLabs fetch failed:', e);
+      voiceFetchInFlight.delete(text);
+      return null;
+    }
+  }
+
+  // Preload common konbini phrases in background
+  function preloadCommonPhrases() {
+    const common = [
+      'いらっしゃいませ',
+      'ポイントカードはお持ちですか',
+      'お弁当は温めますか',
+      'レジ袋はご利用ですか',
+      'お箸はお付けしますか',
+      'ありがとうございました',
+      'またお越しくださいませ',
+      'いくつお付けしますか',
+      'こちらでお召し上がりですか'
+    ];
+    // Stagger fetches to avoid rate limiting
+    common.forEach((phrase, i) => {
+      setTimeout(() => fetchVoiceAudio(phrase), i * 1500);
+    });
+  }
+
+  // Fallback to Web Speech API
+  function speakJapaneseFallback(text) {
     try {
       window.speechSynthesis.cancel();
       const utt = new SpeechSynthesisUtterance(text);
@@ -295,6 +376,62 @@ const GameAudio = (() => {
       if (jpVoice) utt.voice = jpVoice;
       window.speechSynthesis.speak(utt);
     } catch(e) {}
+  }
+
+  // Main TTS function - uses ElevenLabs with fallback
+  function speakJapanese(text) {
+    if (muted || !text) return;
+
+    // Stop any currently playing voice
+    if (currentVoiceAudio) {
+      try { currentVoiceAudio.pause(); currentVoiceAudio.currentTime = 0; } catch(e) {}
+      currentVoiceAudio = null;
+    }
+    try { window.speechSynthesis.cancel(); } catch(e) {}
+
+    if (!elevenLabsAvailable) {
+      speakJapaneseFallback(text);
+      return;
+    }
+
+    // Check cache first for instant playback
+    if (voiceCache.has(text)) {
+      const entry = voiceCache.get(text);
+      playVoiceFromCache(entry);
+      return;
+    }
+
+    // Fetch and play (async) -- use fallback immediately while fetching
+    // so the player hears something, then cache for next time
+    speakJapaneseFallback(text);
+    fetchVoiceAudio(text); // pre-cache for next occurrence
+  }
+
+  function playVoiceFromCache(entry) {
+    try {
+      const audio = new Audio(entry.url);
+      audio.volume = muted ? 0 : 0.85;
+      currentVoiceAudio = audio;
+      audio.play().catch(e => {
+        console.warn('Voice playback failed:', e);
+        // Fallback not needed -- cache hit means we tried before
+      });
+      audio.onended = () => {
+        if (currentVoiceAudio === audio) currentVoiceAudio = null;
+      };
+    } catch(e) {
+      console.warn('Voice Audio() failed:', e);
+    }
+  }
+
+  // Expose voice system status for debugging
+  function getVoiceStatus() {
+    return {
+      cached: voiceCache.size,
+      inFlight: voiceFetchInFlight.size,
+      elevenLabsAvailable,
+      voiceId: ELEVENLABS_VOICE_ID
+    };
   }
 
   if (typeof speechSynthesis !== 'undefined') {
@@ -309,5 +446,6 @@ const GameAudio = (() => {
     speakJapanese, playRewardSound,
     playSlidingDoor, playSlidingDoorClose,
     startRainAmbience, stopRainAmbience, isRainPlaying,
+    preloadCommonPhrases, getVoiceStatus,
   };
 })();

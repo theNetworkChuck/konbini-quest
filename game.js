@@ -92,6 +92,7 @@
       if (!audioInitialized) {
         GameAudio.init();
         GameAudio.resume();
+        GameAudio.preloadCommonPhrases();
         audioInitialized = true;
       }
       GameAudio.playSelect();
@@ -1379,6 +1380,8 @@
       rewardActive: !!state.rewardNotification,
       collectedPhrases: NPCs.getCollectedCount(),
       totalBonusPhrases: NPCs.getTotalBonusPhrases(),
+      // ElevenLabs voice system
+      voiceStatus: GameAudio.getVoiceStatus(),
     });
   };
 
@@ -1467,6 +1470,13 @@
       update(1 / 60);
     }
     render();
+  };
+
+  // ElevenLabs voice system debug/test hooks
+  window.getVoiceStatus = () => GameAudio.getVoiceStatus();
+  window.testVoice = (text) => {
+    text = text || 'いらっしゃいませ';
+    GameAudio.speakJapanese(text);
   };
 
   // ============ INIT ============
