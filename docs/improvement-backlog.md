@@ -33,7 +33,7 @@
 ### Batch 5: Advanced Mechanics
 17. ~~**Mini-map**~~ ✅ - Small map in corner showing store locations and completion status.
 18. ~~**Inventory System**~~ -- Items you "buy" appear in a bag. Review what you purchased with Japanese labels.
-19. **Achievement Badges** - "First Purchase", "Point Card Pro", "Konbini Master" etc.
+19. ~~**Achievement Badges**~~ ✅ - "First Purchase", "Point Card Pro", "Konbini Master" etc.
 20. **Sound Design** - Ambient konbini BGM, register beeps, bag rustling.
 
 ### Batch 6: Advanced Learning
@@ -444,6 +444,31 @@
 - renderMiniMap() function added to engine.js, called from game.js render pipeline after HUD
 
 **Files modified:** engine.js, game.js
+
+### 2026-03-21 -- #19 Achievement Badges System
+**Commit:** `389d27b`
+
+**What was added:**
+- 21 achievement badges across 6 categories with Bronze/Silver/Gold tiers:
+  - **Store Milestones** (5): First Purchase, 7-Eleven Fan, Lawson Regular, FamiMa Friend, Konbini Master
+  - **Star Excellence** (2): Star Collector (10 stars), Perfectionist (30 stars)
+  - **Collection** (4): Stamp Starter, Stamp King, Phrase Hunter, Phrase Encyclopedia, Full Bag
+  - **Challenge** (3): Challenger, Hot Streak (3-streak), On Fire (10-streak)
+  - **NPC Specialist** (4): Payment Pro, Four Seasons, Kansai Speaker, Keigo Master
+  - **Learning** (2): Review Student, Memory Master
+- Unique pixel-art icons for each achievement type: bag, crown, star, sparkle, fire, card, leaf, speech, bow, pencil, brain, and store logos
+- Achievement gallery overlay accessible via [G] key from street
+- Two-column grid layout: unlocked badges show colored borders, icons, names + Japanese; locked badges show description hints and tier labels
+- Trophy icon in HUD (top-right, below inventory bag) showing unlocked/total count
+- Gold pulsing HUD border when new achievements are unlocked
+- Tier-colored unlock notification banner that slides in from top with glow effect and star burst particles
+- Notification queue system: if multiple achievements unlock simultaneously, they display one after another
+- Achievement checks trigger automatically after: level completion, challenge completion, payment/seasonal/kansai/politeness lesson completion, and review sessions
+- Progress bar at bottom of gallery showing overall completion percentage
+- Accurate Japanese names for all 21 badges (初めてのお買い物, コンビニマスター, 完璧主義者, etc.)
+- Testing hooks: toggleAchievements(), testAchievement()
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js
 
 ### 2026-03-21 -- #18 Inventory Bag System
 **Commit:** `8e19e50`
