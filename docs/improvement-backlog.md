@@ -32,7 +32,7 @@
 
 ### Batch 5: Advanced Mechanics
 17. ~~**Mini-map**~~ ✅ - Small map in corner showing store locations and completion status.
-18. **Inventory System** - Items you "buy" appear in a bag. Review what you purchased with Japanese labels.
+18. ~~**Inventory System**~~ -- Items you "buy" appear in a bag. Review what you purchased with Japanese labels.
 19. **Achievement Badges** - "First Purchase", "Point Card Pro", "Konbini Master" etc.
 20. **Sound Design** - Ambient konbini BGM, register beeps, bag rustling.
 
@@ -444,3 +444,34 @@
 - renderMiniMap() function added to engine.js, called from game.js render pipeline after HUD
 
 **Files modified:** engine.js, game.js
+
+### 2026-03-21 -- #18 Inventory Bag System
+**Commit:** `8e19e50`
+
+**What was added:**
+- Full inventory/shopping bag system: 12 konbini items tied to each game level
+- Items catalog with accurate Japanese vocabulary:
+  - Lv1: ガム (Gamu / Gum) - 7-Eleven
+  - Lv2: お茶 (Ocha / Green Tea) - Lawson
+  - Lv3: おにぎり (Onigiri / Rice Ball) - FamilyMart
+  - Lv4: サンドイッチ (Sandoicchi / Egg Sandwich) - 7-Eleven
+  - Lv5: お弁当 (Obento / Bento Box) - Lawson
+  - Lv6: スープ (Suupu / Soup) - FamilyMart
+  - Lv7: コーヒー (Koohii / Coffee) - 7-Eleven
+  - Lv8: ツナマヨおにぎり (Tuna mayo onigiri) - Lawson
+  - Lv9: ファミチキ (Famichiki / Fried Chicken) - FamilyMart
+  - Lv10: 幕の内弁当 (Makunouchi bento) - 7-Eleven
+  - Lv11: ビール (Biiru / Beer) - Lawson
+  - Lv12: メロンパン (Meronpan / Melon Bread) - FamilyMart
+- Unique 16x16 pixel-art icons for each item type (10 distinct designs)
+- Bag icon added to HUD (top-right, below phrase book) with count display
+- Gold border on bag icon when new items are uncollected
+- Full-screen inventory overlay opened with [I] key on street map
+- Each item shows: pixel icon, Japanese name, romaji, English translation
+- Store color bars (red/blue/green) indicate which konbini each item is from
+- Progress bar and store legend at bottom
+- Pulsing NEW indicators on freshly acquired items
+- Items auto-added to bag when completing store levels via finishLevel()
+- Overlay hidden during dialogue and other overlays; mini-map also hidden when open
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js
