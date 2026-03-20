@@ -78,6 +78,16 @@ const NPCs = (() => {
       ]
     },
 
+    // Politeness Coach NPC (casual -> polite -> keigo)
+    { map: 0, x: 6, y: 14, type: 'politenesscoach', name: 'Keiko', dir: 'right',
+      isPolitenessCoach: true,
+      dialogues: [
+        "丁寧語 (teineigo) means polite language! It's the heart of Japanese manners.",
+        "In a konbini, clerks always use keigo. Learning it shows deep respect!",
+        "Casual → Polite → Keigo: three steps to sounding truly Japanese."
+      ]
+    },
+
     // Kansai Dialect Coach NPC
     { map: 0, x: 15, y: 14, type: 'kansaicoach', name: 'Takoyaki', dir: 'down',
       isKansaiCoach: true,
@@ -1449,6 +1459,298 @@ const NPCs = (() => {
     };
   }
 
+  // ============ POLITENESS LEVELS SYSTEM ============
+  // Teaches casual (tameguchi) -> polite (teineigo) -> keigo for the same konbini phrases
+  const POLITENESS_LESSONS = [
+    {
+      id: 'greetings_levels',
+      title: 'Greeting Politeness',
+      titleJp: '挨拶の丁寧さ',
+      intro: 'The same greeting changes completely depending on politeness level. Let\'s compare!',
+      interactions: [
+        {
+          clerkJp: 'い\u3089\u3063\u3057\u3083\u3044\u307E\u305B',
+          clerkRomaji: 'Irasshaimase',
+          clerkEn: 'Welcome! (Keigo -- what clerks actually say)',
+          context: 'Clerks always use keigo. The casual form い\u3089\u3063\u3057\u3083\u3044 (irasshai) is only for close friends visiting your home.',
+          question: 'Which is the CASUAL version of い\u3089\u3063\u3057\u3083\u3044\u307E\u305B?',
+          options: [
+            { text: 'い\u3089\u3063\u3057\u3083\u3044 / Hey, welcome', en: 'Casual welcome', correct: true },
+            { text: 'い\u3089\u3063\u3057\u3083\u3044\u307E\u305B / Formal welcome', en: 'Keigo welcome', correct: false },
+            { text: 'よ\u3046\u3053\u305D / Welcome (general)', en: 'General welcome', correct: false }
+          ],
+          correctExplanation: 'い\u3089\u3063\u3057\u3083\u3044 is the casual form. い\u3089\u3063\u3057\u3083\u3044\u307E\u305B is keigo (honorific of 来\u308B). You\'d never use the casual form at work!',
+          wrongExplanation: 'The casual form is い\u3089\u3063\u3057\u3083\u3044 (irasshai). い\u3089\u3063\u3057\u3083\u3044\u307E\u305B adds the honorific ま\u305B ending.'
+        },
+        {
+          clerkJp: 'あ\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059',
+          clerkRomaji: 'Arigatou gozaimasu',
+          clerkEn: 'Thank you very much (Polite)',
+          context: 'Three levels of "thank you": あ\u308A\u304C\u3068\u3046 (casual) → あ\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059 (polite) → 誠\u306B\u3042\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059 (keigo)',
+          question: 'Which is the KEIGO (most formal) "thank you"?',
+          options: [
+            { text: '誠\u306B\u3042\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059', en: 'Truly thank you (keigo)', correct: true },
+            { text: 'あ\u308A\u304C\u3068\u3046', en: 'Thanks (casual)', correct: false },
+            { text: 'あ\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059', en: 'Thank you (polite)', correct: false },
+            { text: 'ど\u3046\u3082', en: 'Not at all', correct: false }
+          ],
+          correctExplanation: '誠\u306Bあ\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059 (makoto ni) adds extreme formality. Clerks use this for big purchases or valued customers.',
+          wrongExplanation: 'The keigo form is 誠\u306Bあ\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059. 誠\u306B (makoto ni) means "truly/sincerely" and elevates the formality.'
+        },
+        {
+          clerkJp: 'す\u307F\u307E\u305B\u3093',
+          clerkRomaji: 'Sumimasen',
+          clerkEn: 'Excuse me (Polite)',
+          context: 'Excuse me / Sorry: ご\u3081\u3093 (casual) → す\u307F\u307E\u305B\u3093 (polite) → 申\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093 (keigo)',
+          question: 'Which is the CASUAL version of す\u307F\u307E\u305B\u3093?',
+          options: [
+            { text: 'ご\u3081\u3093 / Sorry (casual)', en: 'Casual sorry', correct: true },
+            { text: '申\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093', en: 'Keigo sorry', correct: false },
+            { text: 'す\u307F\u307E\u305B\u3093', en: 'Polite sorry', correct: false }
+          ],
+          correctExplanation: 'ご\u3081\u3093 (gomen) is casual. す\u307F\u307E\u305B\u3093 is polite. 申\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093 (moushiwake gozaimasen) is keigo -- used by clerks for serious apologies.',
+          wrongExplanation: 'ご\u3081\u3093 is the casual form. You\'d use it with friends. Never say ご\u3081\u3093 to a clerk!'
+        }
+      ]
+    },
+    {
+      id: 'requests_levels',
+      title: 'Making Requests',
+      titleJp: 'お願いの丁寧さ',
+      intro: 'Requesting things in Japanese has very different levels of politeness. Essential for konbini!',
+      interactions: [
+        {
+          clerkJp: 'お箭\u3092\u304A\u4ED8\u3051\u3057\u307E\u3059\u304B\uff1f',
+          clerkRomaji: 'Ohashi wo otsuke shimasu ka?',
+          clerkEn: 'Shall I include chopsticks? (Keigo -- humble form)',
+          context: 'お\u4ED8\u3051\u3057\u307E\u3059 is humble keigo (謙\u8B72\u8A9E). The casual form is just 箸\u3044\u308B\uff1f (hashi iru? = need chopsticks?)',
+          question: 'The clerk says お\u7BB8\u3092\u304A\u4ED8\u3051\u3057\u307E\u3059\u304B. What politeness level is this?',
+          options: [
+            { text: '敬\u8A9E (keigo) -- humble form', en: 'Keigo/humble', correct: true },
+            { text: '普\u901A (casual)', en: 'Casual', correct: false },
+            { text: '丁\u5BE7\u8A9E (polite)', en: 'Polite', correct: false }
+          ],
+          correctExplanation: 'お\u4ED8\u3051\u3057\u307E\u3059 is humble keigo (謙\u8B72\u8A9E). The お + verb stem + し\u307E\u3059 pattern is how clerks humble their own actions to honor the customer.',
+          wrongExplanation: 'This is keigo! The pattern お + verb stem + し\u307E\u3059 is humble form (謙\u8B72\u8A9E), where the speaker lowers their own action.'
+        },
+        {
+          clerkJp: 'は\u3044\u3001\u304A\u9858\u3044\u3057\u307E\u3059',
+          clerkRomaji: 'Hai, onegai shimasu',
+          clerkEn: 'Yes please (Polite)',
+          context: 'Three ways to say "please": お\u9858\u3044 or 頑\u5F35\u3063\u3066 (casual) → お\u9858\u3044\u3057\u307E\u3059 (polite) → お\u9858\u3044\u3044\u305F\u3057\u307E\u3059 (keigo)',
+          question: 'Which is the POLITE (middle level) way to say "yes please"?',
+          options: [
+            { text: 'は\u3044\u3001\u304A\u9858\u3044\u3057\u307E\u3059', en: 'Yes, please (polite)', correct: true },
+            { text: 'う\u3093\u3001\u304A\u9858\u3044', en: 'Yeah, please (casual)', correct: false },
+            { text: 'は\u3044\u3001\u304A\u9858\u3044\u3044\u305F\u3057\u307E\u3059', en: 'Yes, I humbly request (keigo)', correct: false }
+          ],
+          correctExplanation: 'お\u9858\u3044\u3057\u307E\u3059 is the polite 丁\u5BE7\u8A9E form -- perfect for konbini. お\u9858\u3044\u3044\u305F\u3057\u307E\u3059 adds the humble い\u305F\u3060\u304F for extreme formality.',
+          wrongExplanation: 'The polite form is お\u9858\u3044\u3057\u307E\u3059. It uses the standard し\u307E\u3059 ending. This is the one you\'ll use most at konbinis!'
+        },
+        {
+          clerkJp: '大\u4E08\u592B\u3067\u3059',
+          clerkRomaji: 'Daijoubu desu',
+          clerkEn: 'I\'m fine / No thanks (Polite)',
+          context: 'Declining: 大\u4E08\u592B (casual) → 大\u4E08\u592B\u3067\u3059 (polite) → 結\u69CB\u3067\u3054\u3056\u3044\u307E\u3059 (keigo)',
+          question: 'Which is the KEIGO way to politely decline?',
+          options: [
+            { text: '結\u69CB\u3067\u3054\u3056\u3044\u307E\u3059', en: 'I am quite fine (keigo)', correct: true },
+            { text: '大\u4E08\u592B', en: 'It\'s fine (casual)', correct: false },
+            { text: 'い\u3044\u3048\u3001\u7D50\u69CB\u3067\u3059', en: 'No, it\'s okay (polite)', correct: false },
+            { text: 'い\u3089\u306A\u3044', en: 'Don\'t need (blunt)', correct: false }
+          ],
+          correctExplanation: '結\u69CB\u3067\u3054\u3056\u3044\u307E\u3059 (kekkou de gozaimasu) is the keigo form. ご\u3056\u3044\u307E\u3059 replaces で\u3059 for maximum politeness. Very elegant!',
+          wrongExplanation: 'The keigo form is 結\u69CB\u3067\u3054\u3056\u3044\u307E\u3059. ご\u3056\u3044\u307E\u3059 is the keigo version of で\u3059, making the whole phrase super formal.'
+        }
+      ]
+    },
+    {
+      id: 'existence_levels',
+      title: 'Having & Existing',
+      titleJp: '持\u3064\u30FB\u3042\u308Bの丁寧さ',
+      intro: 'Point card questions use different verbs depending on formality. This trips up many learners!',
+      interactions: [
+        {
+          clerkJp: 'ポ\u30A4\u30F3\u30C8\u30AB\u30FC\u30C9\u306F\u304A\u6301\u3061\u3067\u3059\u304B\uff1f',
+          clerkRomaji: 'Pointo kaado wa omochi desu ka?',
+          clerkEn: 'Do you have a point card? (Polite/honorific)',
+          context: 'お\u6301\u3061 (omochi) is the honorific form of 持\u3064 (motsu = to have/hold). The お makes it respectful.',
+          question: 'Which is the CASUAL way to ask "Do you have a point card?"',
+          options: [
+            { text: 'ポ\u30A4\u30F3\u30C8\u30AB\u30FC\u30C9\u6301\u3063\u3066\u308B\uff1f', en: 'Got a point card? (casual)', correct: true },
+            { text: 'ポ\u30A4\u30F3\u30C8\u30AB\u30FC\u30C9\u306F\u304A\u6301\u3061\u3067\u3059\u304B\uff1f', en: 'Do you have...? (polite)', correct: false },
+            { text: 'ポ\u30A4\u30F3\u30C8\u30AB\u30FC\u30C9\u306F\u304A\u6301\u3061\u3067\u3044\u3089\u3063\u3057\u3083\u3044\u307E\u3059\u304B\uff1f', en: 'Might you have...? (keigo)', correct: false }
+          ],
+          correctExplanation: '持\u3063\u3066\u308B\uff1f (motteru?) is casual, dropping the い from 持\u3063\u3066\u3044\u308B. お\u6301\u3061\u3067\u3059\u304B is polite. お\u6301\u3061\u3067\u3044\u3089\u3063\u3057\u3083\u3044\u307E\u3059\u304B is ultra-keigo.',
+          wrongExplanation: 'The casual form is 持\u3063\u3066\u308B\uff1f (motteru?). In casual Japanese, い\u308B often contracts to just \u308B.'
+        },
+        {
+          clerkJp: 'レ\u30B7\u30FC\u30C8\u306F\u3044\u308A\u307E\u3059\u304B\uff1f',
+          clerkRomaji: 'Reshiito wa irimasu ka?',
+          clerkEn: 'Do you need a receipt? (Polite)',
+          context: 'い\u308B\uff1f (casual) → い\u308A\u307E\u3059\u304B\uff1f (polite) → ご\u5165\u7528\u3067\u3054\u3056\u3044\u307E\u3059\u304B\uff1f (keigo)',
+          question: 'Which is the KEIGO way to ask "Do you need a receipt?"',
+          options: [
+            { text: 'レ\u30B7\u30FC\u30C8\u306F\u3054\u5165\u7528\u3067\u3054\u3056\u3044\u307E\u3059\u304B\uff1f', en: 'Receipt needed? (keigo)', correct: true },
+            { text: 'レ\u30B7\u30FC\u30C8\u3044\u308B\uff1f', en: 'Need a receipt? (casual)', correct: false },
+            { text: 'レ\u30B7\u30FC\u30C8\u306F\u3044\u308A\u307E\u3059\u304B\uff1f', en: 'Do you need a receipt? (polite)', correct: false }
+          ],
+          correctExplanation: 'ご\u5165\u7528 (go-nyuuyou) is the keigo noun form meaning "your use/need." ご\u5165\u7528\u3067\u3054\u3056\u3044\u307E\u3059\u304B is ultra-formal -- heard at department stores and high-end places.',
+          wrongExplanation: 'The keigo form uses ご\u5165\u7528\u3067\u3054\u3056\u3044\u307E\u3059\u304B. ご\u5165\u7528 (go-nyuuyou) is the honorific noun for "need" or "use".'
+        },
+        {
+          clerkJp: 'お\u5F01\u5F53\u6E29\u3081\u307E\u3059\u304B\uff1f',
+          clerkRomaji: 'Obentou atatame masu ka?',
+          clerkEn: 'Shall I heat your bento? (Polite)',
+          context: '温\u3081\u308B\uff1f (casual) → 温\u3081\u307E\u3059\u304B\uff1f (polite) → お\u6E29\u3081\u3044\u305F\u3057\u307E\u3057\u3087\u3046\u304B\uff1f (keigo)',
+          question: 'Which is the POLITE form of "Shall I heat it?"',
+          options: [
+            { text: 'お\u5F01\u5F53\u6E29\u3081\u307E\u3059\u304B\uff1f', en: 'Shall I heat the bento? (polite)', correct: true },
+            { text: '温\u3081\u308B\uff1f', en: 'Heat it? (casual)', correct: false },
+            { text: 'お\u6E29\u3081\u3044\u305F\u3057\u307E\u3057\u3087\u3046\u304B\uff1f', en: 'Shall I humbly heat it? (keigo)', correct: false },
+            { text: 'チ\u30F3\u3059\u308B\uff1f', en: 'Microwave it? (slang)', correct: false }
+          ],
+          correctExplanation: '温\u3081\u307E\u3059\u304B is standard polite (丁\u5BE7\u8A9E). Most konbini clerks use this form. お\u6E29\u3081\u3044\u305F\u3057\u307E\u3057\u3087\u3046\u304B is humble keigo -- rarer at konbinis.',
+          wrongExplanation: 'The polite form is 温\u3081\u307E\u3059\u304B -- the standard ま\u3059 ending. This is the most common form you\'ll hear at konbinis.'
+        }
+      ]
+    },
+    {
+      id: 'payment_levels',
+      title: 'Payment Politeness',
+      titleJp: 'お会計の丁寧さ',
+      intro: 'Paying at konbinis -- how the same exchange sounds at each level of formality.',
+      interactions: [
+        {
+          clerkJp: 'お\u4F1A\u8A08\u306F\u5408\u8A08\u3067500\u5186\u3067\u3054\u3056\u3044\u307E\u3059',
+          clerkRomaji: 'Okaikei wa goukei de gohyaku en de gozaimasu',
+          clerkEn: 'Your total comes to 500 yen (Keigo)',
+          context: 'で\u3054\u3056\u3044\u307E\u3059 (de gozaimasu) is the keigo version of で\u3059 (desu). You\'ll hear this at every register.',
+          question: 'What politeness level is で\u3054\u3056\u3044\u307E\u3059 (de gozaimasu)?',
+          options: [
+            { text: '敬\u8A9E (keigo)', en: 'Keigo - highest politeness', correct: true },
+            { text: '丁\u5BE7\u8A9E (teineigo)', en: 'Polite', correct: false },
+            { text: '普\u901A (futsuutai)', en: 'Casual', correct: false }
+          ],
+          correctExplanation: 'で\u3054\u3056\u3044\u307E\u3059 is keigo! It\'s the formal version of で\u3059. Casual: 500円だよ. Polite: 500円で\u3059. Keigo: 500円\u3067\u3054\u3056\u3044\u307E\u3059.',
+          wrongExplanation: 'で\u3054\u3056\u3044\u307E\u3059 is keigo, the most formal form of で\u3059. It\'s standard for all customer-facing service in Japan.'
+        },
+        {
+          clerkJp: 'Suica\u3067\u304A\u9858\u3044\u3057\u307E\u3059',
+          clerkRomaji: 'Suica de onegai shimasu',
+          clerkEn: 'Suica please (Polite -- perfect for konbini)',
+          context: 'Saying how you pay: Suica\u3067 (casual) → Suica\u3067\u304A\u9858\u3044\u3057\u307E\u3059 (polite) → Suica\u3067\u304A\u9858\u3044\u3044\u305F\u3057\u307E\u3059 (keigo)',
+          question: 'You want to pay with Suica. Which is the most NATURAL level for a konbini?',
+          options: [
+            { text: 'Suica\u3067\u304A\u9858\u3044\u3057\u307E\u3059', en: 'Suica please (polite)', correct: true },
+            { text: 'Suica\u3067', en: 'Suica (casual, abrupt)', correct: false },
+            { text: 'Suica\u3067\u304A\u9858\u3044\u3044\u305F\u3057\u307E\u3059', en: 'Suica please (keigo, too formal)', correct: false }
+          ],
+          correctExplanation: 'お\u9858\u3044\u3057\u307E\u3059 is the sweet spot! Polite enough to be respectful but not overly formal. This is the golden phrase for konbini payment.',
+          wrongExplanation: 'お\u9858\u3044\u3057\u307E\u3059 is perfect for konbinis. Just saying Suica\u3067 is too abrupt, and \u304A\u9858\u3044\u3044\u305F\u3057\u307E\u3059 is overkill for a convenience store.'
+        },
+        {
+          clerkJp: '少\u3005\u304A\u5F85\u3061\u304F\u3060\u3055\u3044',
+          clerkRomaji: 'Shoushou omachi kudasai',
+          clerkEn: 'Please wait a moment (Keigo)',
+          context: '待\u3063\u3066 (casual) → 待\u3063\u3066\u304F\u3060\u3055\u3044 (polite) → 少\u3005\u304A\u5F85\u3061\u304F\u3060\u3055\u3044 (keigo)',
+          question: 'What is the CASUAL way to say "wait a sec"?',
+          options: [
+            { text: 'ち\u3087\u3063\u3068\u5F85\u3063\u3066', en: 'Wait a sec (casual)', correct: true },
+            { text: '少\u3005\u304A\u5F85\u3061\u304F\u3060\u3055\u3044', en: 'Please wait (keigo)', correct: false },
+            { text: '待\u3063\u3066\u304F\u3060\u3055\u3044', en: 'Please wait (polite)', correct: false }
+          ],
+          correctExplanation: 'ち\u3087\u3063\u3068\u5F85\u3063\u3066 (chotto matte) is casual. 少\u3005 (shoushou) is the formal version of ち\u3087\u3063\u3068, and お\u5F85\u3061 adds the honorific お prefix.',
+          wrongExplanation: 'ち\u3087\u3063\u3068\u5F85\u3063\u3066 (chotto matte) is the casual form. 少\u3005 replaces ち\u3087\u3063\u3068, and お\u5F85\u3061 is the honorific form of 待\u3064.'
+        }
+      ]
+    },
+    {
+      id: 'desu_masu',
+      title: 'The desu/masu System',
+      titleJp: 'です・ます体',
+      intro: 'The で\u3059/ま\u3059 pattern is the backbone of polite Japanese. Master this and you\'re set!',
+      interactions: [
+        {
+          clerkJp: 'こ\u308C\u306F\u304A\u3044\u3057\u3044\u3067\u3059\u3088',
+          clerkRomaji: 'Kore wa oishii desu yo',
+          clerkEn: 'This is delicious! (Polite)',
+          context: 'Adjective endings: お\u3044\u3057\u3044 (casual) → お\u3044\u3057\u3044\u3067\u3059 (polite). Just add で\u3059 to make any i-adjective polite!',
+          question: 'How do you make the casual お\u3044\u3057\u3044 (oishii) polite?',
+          options: [
+            { text: 'お\u3044\u3057\u3044\u3067\u3059', en: 'Add desu after it', correct: true },
+            { text: 'お\u3044\u3057\u3044\u307E\u3059', en: 'Add masu after it', correct: false },
+            { text: 'お\u3044\u3057\u3054\u3056\u3044\u307E\u3059', en: 'Make it keigo', correct: false }
+          ],
+          correctExplanation: 'For i-adjectives, just add で\u3059! お\u3044\u3057\u3044 → お\u3044\u3057\u3044\u3067\u3059. The ま\u3059 ending is only for verbs.',
+          wrongExplanation: 'For i-adjectives, add で\u3059 (not ま\u3059). ま\u3059 is for verbs: 食\u3079\u308B → 食\u3079\u307E\u3059. But adjectives use で\u3059: お\u3044\u3057\u3044 → お\u3044\u3057\u3044\u3067\u3059.'
+        },
+        {
+          clerkJp: '袋\u306B\u5165\u308C\u307E\u3059\u304B\uff1f',
+          clerkRomaji: 'Fukuro ni iremasu ka?',
+          clerkEn: 'Shall I put it in a bag? (Polite)',
+          context: '入\u308C\u308B\uff1f (casual) → 入\u308C\u307E\u3059\u304B\uff1f (polite). The ま\u3059 ending makes any verb polite.',
+          question: 'What is the verb pattern for polite speech (丁\u5BE7\u8A9E)?',
+          options: [
+            { text: 'Verb stem + ま\u3059', en: 'Add masu to verb stem', correct: true },
+            { text: 'Verb + で\u3059', en: 'Add desu to verb', correct: false },
+            { text: 'お + Verb', en: 'Add o prefix', correct: false }
+          ],
+          correctExplanation: 'Verb stem + ま\u3059 is the golden rule of teineigo! 入\u308C\u308B → 入\u308Cま\u3059, 食\u3079\u308B → 食\u3079ま\u3059, 行\u304F → 行\u304Dま\u3059.',
+          wrongExplanation: 'The polite form of verbs uses stem + ま\u3059. This is the core of 丁\u5BE7\u8A9E (polite speech): take the verb stem and add ま\u3059.'
+        },
+        {
+          clerkJp: 'こ\u3061\u3089\u3067\u304A\u53EC\u3057\u4E0A\u304C\u308A\u3067\u3059\u304B\uff1f',
+          clerkRomaji: 'Kochira de omeshiagari desu ka?',
+          clerkEn: 'Will you eat here? (Keigo)',
+          context: '食\u3079\u308B (casual) → 食\u3079\u307E\u3059 (polite) → \u304A\u53EC\u3057\u4E0A\u304C\u308B (keigo/sonkeigo). 召\u3057\u4E0A\u304C\u308B is a special keigo verb!',
+          question: 'お\u53EC\u3057\u4E0A\u304C\u308A (omeshiagari) is the keigo form of which verb?',
+          options: [
+            { text: '食\u3079\u308B (taberu) -- to eat', en: 'To eat', correct: true },
+            { text: '飲\u3080 (nomu) -- to drink', en: 'To drink', correct: false },
+            { text: '買\u3046 (kau) -- to buy', en: 'To buy', correct: false },
+            { text: '見\u308B (miru) -- to see', en: 'To see', correct: false }
+          ],
+          correctExplanation: '召\u3057\u4E0A\u304C\u308B is the sonkeigo (honorific) form of both 食\u3079\u308B and 飲\u3080. Clerks use it to politely ask "eating here?" -- one of the most common keigo verbs in konbinis!',
+          wrongExplanation: '召\u3057\u4E0A\u304C\u308B is keigo for 食\u3079\u308B (to eat). It\'s also used for 飲\u3080 (to drink). In konbinis, こ\u3061\u3089\u3067\u304A\u53EC\u3057\u4E0A\u304C\u308A\u3067\u3059\u304B means "eating here?"'
+        }
+      ]
+    }
+  ];
+
+  const politenessState = {
+    lessonsCompleted: 0,
+    topicsCompleted: [],
+    lastPracticeTime: 0,
+  };
+
+  function isPolitenessPracticeReady() {
+    const totalLevels = Object.values(progress).reduce((sum, p) => sum + p.completed.length, 0);
+    return totalLevels >= 2; // Unlock after 2 store levels
+  }
+
+  function getNextPolitenessLesson() {
+    const unseen = POLITENESS_LESSONS.filter(s => !politenessState.topicsCompleted.includes(s.id));
+    if (unseen.length > 0) return unseen[0];
+    return POLITENESS_LESSONS[Math.floor(Math.random() * POLITENESS_LESSONS.length)];
+  }
+
+  function completePolitenessLesson(topicId) {
+    if (!politenessState.topicsCompleted.includes(topicId)) {
+      politenessState.topicsCompleted.push(topicId);
+    }
+    politenessState.lessonsCompleted++;
+    politenessState.lastPracticeTime = Date.now();
+  }
+
+  function getPolitenessStats() {
+    return {
+      completed: politenessState.lessonsCompleted,
+      topicsUnlocked: politenessState.topicsCompleted.length,
+      totalTopics: POLITENESS_LESSONS.length,
+    };
+  }
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -1528,5 +1830,11 @@ const NPCs = (() => {
     getNextKansaiLesson,
     completeKansaiLesson,
     getKansaiStats,
+    // Politeness levels
+    POLITENESS_LESSONS,
+    isPolitenessPracticeReady,
+    getNextPolitenessLesson,
+    completePolitenessLesson,
+    getPolitenessStats,
   };
 })();

@@ -271,6 +271,10 @@ const Engine = (() => {
         if (npc.isKansaiCoach && NPCs.isKansaiPracticeReady()) {
           Sprites.drawKansaiBubble(ctx, sx, sy, time);
         }
+        // Show politeness level bubble above coach when ready
+        if (npc.isPolitenessCoach && NPCs.isPolitenessPracticeReady()) {
+          Sprites.drawPolitenessBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing

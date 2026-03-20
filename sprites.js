@@ -585,6 +585,33 @@ const Sprites = (() => {
     '2': '#2c3e50', 'G': '#8b4513' // dark pants, wooden geta sandals
   };
 
+  // Politeness Coach NPC -- refined woman in navy kimono teaching keigo levels
+  const npcPolitenessCoach = `
+...HHHHHH....
+..HhHHHhHH..
+..HHHHHHHH..
+..sWEsSEWs..
+..sSBSSBSs..
+...ssMss....
+..NNNONN....
+..NNONNONw..
+..NNONNONN..
+...NNNNNN...
+..KKKKKKKK..
+..KK.KK.KK..
+..KK.KK.KK..
+...KK..KK...
+...ZZ..ZZ...
+...ZZ..ZZ...`;
+
+  const npcPolitenessCoachPalette = {
+    'H': '#1a1a2e', 'h': '#334',    // dark upswept hair with sheen
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#c06060', 'B': '#f0a0a0', // gentle smile, blush
+    'N': '#1a2744', 'O': '#c0a040', 'w': '#fff', // navy kimono with gold obi
+    'K': '#1a2744', 'Z': '#f5f5f0'  // kimono lower, white tabi socks
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
@@ -594,6 +621,7 @@ const Sprites = (() => {
     paymentcoach: { frames: [npcPaymentCoach], palette: npcPaymentCoachPalette },
     seasonalguide: { frames: [npcSeasonalGuide], palette: npcSeasonalGuidePalette },
     kansaicoach: { frames: [npcKansaiCoach], palette: npcKansaiCoachPalette },
+    politenesscoach: { frames: [npcPolitenessCoach], palette: npcPolitenessCoachPalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1290,6 +1318,24 @@ const Sprites = (() => {
     ctx.globalAlpha = 1;
   }
 
+  function drawPolitenessBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 3.5) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (refined navy-purple)
+    ctx.fillStyle = '#2c1654';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Up-arrow icon (escalation symbol)
+    ctx.fillStyle = '#c0a040';
+    ctx.fillRect(x + 7, y - 12, 2, 1);
+    ctx.fillRect(x + 6, y - 11, 4, 1);
+    ctx.fillRect(x + 5, y - 10, 6, 1);
+    // Three horizontal lines (three levels)
+    ctx.fillRect(x + 5, y - 8, 6, 1);
+    ctx.fillRect(x + 5, y - 6, 6, 1);
+    ctx.globalAlpha = 1;
+  }
+
   // Streak fire icon for HUD
   function drawStreakFire(ctx, x, y, streak) {
     // Flame base
@@ -1809,6 +1855,7 @@ const Sprites = (() => {
     drawPaymentBubble,
     drawSeasonalBubble,
     drawKansaiBubble,
+    drawPolitenessBubble,
     drawStreakFire,
     drawStar,
     drawPixelMap,

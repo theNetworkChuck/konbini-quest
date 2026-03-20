@@ -383,6 +383,11 @@
       interactWithKansaiCoach(npc);
       return;
     }
+    // Check if this is the Politeness Coach NPC
+    if (npc.isPolitenessCoach) {
+      interactWithPolitenessCoach(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
   }
@@ -1366,6 +1371,208 @@
     Dialogue.show('Takoyaki', resultLines, () => {
       kansaiGameState.inKansai = false;
       kansaiGameState.lesson = null;
+    });
+  }
+
+  // ============ POLITENESS LEVELS INTERACTION ============
+  const politenessGameState = {
+    inPoliteness: false,
+    lesson: null,
+    interactionIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithPolitenessCoach(npc) {
+    if (!NPCs.isPolitenessPracticeReady()) {
+      Dialogue.show('Keiko', [
+        '\u3053\u3093\u306B\u3061\u306F! I\'m Keiko, a politeness coach.',
+        'Complete a couple more store levels first, then come back.',
+        'I\'ll teach you \u4E01\u5BE7\u8A9E (teineigo), \u5C0A\u656C\u8A9E (sonkeigo), and \u8B19\u8B72\u8A9E (kenjougo)!',
+        'Understanding politeness levels is the key to natural Japanese.'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getPolitenessStats();
+    const lesson = NPCs.getNextPolitenessLesson();
+
+    if (!lesson) {
+      Dialogue.show('Keiko', 'Something went wrong... come back later!');
+      return;
+    }
+
+    // Set up politeness practice state
+    politenessGameState.inPoliteness = true;
+    politenessGameState.lesson = lesson;
+    politenessGameState.interactionIdx = 0;
+    politenessGameState.correct = 0;
+    politenessGameState.total = lesson.interactions.length;
+
+    // Preload Japanese phrases
+    preloadPolitenessPhrases(lesson);
+
+    const isNew = stats.completed === 0;
+    const introLines = isNew
+      ? [
+          '\u4E01\u5BE7\u8A9E\u30EC\u30C3\u30B9\u30F3\u3078\u3088\u3046\u3053\u305D! Welcome to Politeness Lessons!',
+          'I\'m Keiko. In Japanese, HOW you say something matters as much as WHAT you say.',
+          'There are three levels: \u666E\u901A (casual) \u2192 \u4E01\u5BE7\u8A9E (polite) \u2192 \u656C\u8A9E (keigo)',
+          `Today: ${lesson.titleJp} -- ${lesson.title}`
+        ]
+      : [
+          `${lesson.titleJp}! ${lesson.title}`,
+          `Practice ${stats.completed + 1} | ${stats.topicsUnlocked}/${stats.totalTopics} topics learned`,
+          lesson.intro
+        ];
+
+    GameAudio.playAlert();
+    Dialogue.show('Keiko', introLines, () => {
+      runPolitenessInteraction();
+    });
+  }
+
+  function preloadPolitenessPhrases(lesson) {
+    if (!lesson || !lesson.interactions) return;
+    const phrases = new Set();
+    for (const interaction of lesson.interactions) {
+      if (interaction.clerkJp) phrases.add(interaction.clerkJp);
+      if (interaction.options) {
+        for (const opt of interaction.options) {
+          const text = opt.text || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase);
+    }
+  }
+
+  function runPolitenessInteraction() {
+    if (politenessGameState.interactionIdx >= politenessGameState.lesson.interactions.length) {
+      finishPolitenessLesson();
+      return;
+    }
+
+    const interaction = politenessGameState.lesson.interactions[politenessGameState.interactionIdx];
+    const qNum = politenessGameState.interactionIdx + 1;
+    const qTotal = politenessGameState.total;
+    const header = `\u4E01\u5BE7\u3055 ${qNum}/${qTotal}`;
+
+    // Show the phrase with context, then quiz
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      const lines = [interaction.clerkJp];
+      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+      if (interaction.context) lines.push(interaction.context);
+
+      Dialogue.show(header, lines, () => {
+        showPolitenessQuiz(interaction);
+      });
+    } else {
+      showPolitenessQuiz(interaction);
+    }
+  }
+
+  function showPolitenessQuiz(interaction) {
+    const question = interaction.question || 'What politeness level is this?';
+    const options = interaction.options.map(o => ({
+      text: o.text || '',
+      correct: o.correct,
+      en: o.en,
+    }));
+
+    // Shuffle
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    // Show question then choices
+    Dialogue.show('Keiko', question, () => {
+      Dialogue.showChoices(shuffled, (selectedIdx) => {
+        const selected = shuffled[selectedIdx];
+        handlePolitenessAnswer(interaction, selected);
+      });
+    });
+  }
+
+  function handlePolitenessAnswer(interaction, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      Engine.spawnSparkles();
+      politenessGameState.correct++;
+
+      // Speak the correct answer
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      tryVariableReward();
+
+      const encouragements = [
+        '\u7D20\u6674\u3089\u3057\u3044! Wonderful!', '\u304A\u898B\u4E8B! Splendid!',
+        '\u305D\u306E\u901A\u308A! Exactly right!', '\u3088\u304F\u3067\u304D\u307E\u3057\u305F! Well done!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = interaction.correctExplanation || '';
+
+      Dialogue.show('Keiko', explanation ? [msg, explanation] : msg, () => {
+        politenessGameState.interactionIdx++;
+        runPolitenessInteraction();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Keiko', [
+        '\u60DC\u3057\u3044\u3067\u3059! Not quite!',
+        explanation
+      ], () => {
+        politenessGameState.interactionIdx++;
+        runPolitenessInteraction();
+      });
+    }
+  }
+
+  function finishPolitenessLesson() {
+    const correct = politenessGameState.correct;
+    const total = politenessGameState.total;
+    const lesson = politenessGameState.lesson;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completePolitenessLesson(lesson.id);
+    const stats = NPCs.getPolitenessStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '\u5B8C\u74A7! Perfect manners! \u2605\u2605\u2605';
+    else if (pct >= 50) rating = '\u4E0A\u624B! Well done! \u2605\u2605\u2606';
+    else rating = '\u3082\u3046\u5C11\u3057! Keep practicing! \u2605\u2606\u2606';
+
+    const resultLines = [
+      `Lesson Complete: ${correct}/${total} correct!`,
+      rating,
+      `Topics mastered: ${stats.topicsUnlocked}/${stats.totalTopics}`,
+    ];
+
+    if (stats.topicsUnlocked >= stats.totalTopics) {
+      resultLines.push('\u656C\u8A9E\u30DE\u30B9\u30BF\u30FC! You\'ve mastered politeness levels!');
+    } else {
+      resultLines.push('Come back to learn more about politeness levels!');
+    }
+
+    Dialogue.show('Keiko', resultLines, () => {
+      politenessGameState.inPoliteness = false;
+      politenessGameState.lesson = null;
     });
   }
 
