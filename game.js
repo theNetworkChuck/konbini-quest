@@ -2140,6 +2140,11 @@
     // HUD
     Engine.renderHUD(state.currentMap);
 
+    // Mini-map (street map only, hidden during overlays/dialogue)
+    if (!state.stampCardOpen && !state.phraseBookOpen && !Dialogue.isActive()) {
+      Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
+    }
+
     // Writing mode badge (only during store interactions)
     if (state.interacting && state.currentInteractionLevel) {
       renderWritingModeBadge(ctx);

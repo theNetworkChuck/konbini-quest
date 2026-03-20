@@ -898,6 +898,150 @@ const Engine = (() => {
     ctx.restore();
   }
 
+  // ============ MINI-MAP ============
+  // Small overview map in the bottom-left corner showing stores, player, and completion
+  const MINIMAP = {
+    x: 4,          // bottom-left with small padding
+    y: 0,          // set dynamically: CANVAS_H - height - 4
+    scale: 3,      // each map tile = 3px on mini-map
+    padding: 2,    // inner padding
+    borderW: 1,
+  };
+
+  // Store positions on street map (tile coords of their door centers)
+  const STORE_INFO = [
+    { name: '7-Eleven', color: '#d4380d', cx: 4.5, cy: 1, doorY: 2, mapIdx: 1 },
+    { name: 'Lawson',   color: '#1a6fc4', cx: 11.5, cy: 1, doorY: 2, mapIdx: 2 },
+    { name: 'FamilyMart', color: '#27ae60', cx: 18.5, cy: 1, doorY: 2, mapIdx: 3 },
+  ];
+
+  function renderMiniMap(mapIdx, playerX, playerY, time) {
+    if (mapIdx !== 0) return; // only show on street
+
+    const streetMap = Maps.allMaps[0];
+    const mw = streetMap.width;  // 20
+    const mh = streetMap.height; // 18
+    const s = MINIMAP.scale;
+    const pad = MINIMAP.padding;
+    const bw = MINIMAP.borderW;
+
+    const totalW = mw * s + pad * 2 + bw * 2;
+    const totalH = mh * s + pad * 2 + bw * 2;
+    const mx = MINIMAP.x;
+    const my = CANVAS_H - totalH - 4;
+
+    // Semi-transparent background
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#0a0a1e';
+    ctx.fillRect(mx, my, totalW, totalH);
+    ctx.globalAlpha = 1;
+
+    // Border
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = bw;
+    ctx.strokeRect(mx + 0.5, my + 0.5, totalW - 1, totalH - 1);
+
+    // Inner origin (where tiles start drawing)
+    const ox = mx + bw + pad;
+    const oy = my + bw + pad;
+
+    // Draw simplified map tiles
+    for (let r = 0; r < mh; r++) {
+      for (let c = 0; c < mw; c++) {
+        const tile = Maps.getTile(0, c, r);
+        let col;
+        // Color by tile type (simplified)
+        if (tile === 0) col = '#0a0a1e';      // void
+        else if (tile === 1 || tile === 4) col = '#8a8a7a'; // sidewalk / crosswalk
+        else if (tile === 2 || tile === 3) col = '#4a4a4a'; // road
+        else if (tile === 5 || tile === 33) col = '#2d5a1e'; // grass
+        else if (tile === 6 || tile === 7) col = '#1a4010';  // trees / cherry
+        else if (tile === 8) col = '#6a5535';  // bench
+        else if (tile === 9) col = '#b8b855';  // street lamp
+        else if (tile === 10) col = '#5a5040'; // fence
+        else if (tile === 11) col = '#c44';    // vending machine
+        else if (tile === 12) col = '#5a5565'; // building wall
+        else if (tile === 30) col = '#8888aa'; // sign
+        else if (tile >= 13 && tile <= 15) col = null; // awnings - handled per store
+        else if (tile >= 16 && tile <= 18) col = null; // doors - handled per store
+        else if (tile >= 19 && tile <= 21) col = null; // windows - handled per store
+        else col = '#555';
+
+        if (col) {
+          ctx.fillStyle = col;
+          ctx.fillRect(ox + c * s, oy + r * s, s, s);
+        }
+      }
+    }
+
+    // Draw stores as colored blocks with completion status
+    for (const store of STORE_INFO) {
+      const complete = NPCs.isStoreComplete(store.name);
+      const hasInteraction = NPCs.hasAvailableInteraction(store.name);
+
+      // Store building footprint: approximate tiles from map data
+      // 7-Eleven: cols 3-6, rows 0-2
+      // Lawson: cols 10-13, rows 0-2
+      // FamilyMart: cols 17-19, rows 0-2
+      let startCol, endCol;
+      if (store.name === '7-Eleven') { startCol = 3; endCol = 7; }
+      else if (store.name === 'Lawson') { startCol = 10; endCol = 14; }
+      else { startCol = 17; endCol = 20; }
+
+      // Fill store area with brand color
+      const storeW = (endCol - startCol) * s;
+      const storeH = 3 * s; // rows 0-2
+      const storeX = ox + startCol * s;
+      const storeY = oy;
+
+      ctx.fillStyle = store.color;
+      ctx.globalAlpha = complete ? 0.5 : 0.8;
+      ctx.fillRect(storeX, storeY, storeW, storeH);
+      ctx.globalAlpha = 1;
+
+      // Completion indicator
+      if (complete) {
+        // Gold checkmark dot
+        const checkX = storeX + Math.floor(storeW / 2);
+        const checkY = storeY + Math.floor(storeH / 2);
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(checkX - 1, checkY - 1, 3, 3);
+      } else if (hasInteraction) {
+        // Pulsing dot to indicate available interaction
+        const pulse = Math.sin(time * 4) * 0.3 + 0.7;
+        const dotX = storeX + Math.floor(storeW / 2);
+        const dotY = storeY + Math.floor(storeH / 2);
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(dotX, dotY, 2, 2);
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // Draw player position as a blinking bright dot
+    const blink = Math.sin(time * 6) * 0.3 + 0.7;
+    const px = ox + Math.round(playerX * s);
+    const py = oy + Math.round(playerY * s);
+    // Player dot: white with colored outline
+    ctx.fillStyle = '#fff';
+    ctx.globalAlpha = blink;
+    ctx.fillRect(px, py, s, s);
+    // Tiny colored center
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(px + 1, py + 1, Math.max(1, s - 2), Math.max(1, s - 2));
+    ctx.globalAlpha = 1;
+
+    // Label
+    ctx.font = '4px "Press Start 2P"';
+    ctx.fillStyle = '#aaa';
+    ctx.textAlign = 'center';
+    ctx.fillText('MAP', mx + totalW / 2, my - 1);
+    ctx.textAlign = 'left';
+
+    ctx.restore();
+  }
+
   // ============ TITLE SCREEN ============
   function renderTitle() {
     // Dark background
@@ -976,6 +1120,8 @@ const Engine = (() => {
     getWeatherType, getTimeOfDay,
     // Particle effects
     spawnSparkles, spawnStarBurst, updateParticles, renderParticles,
+    // Mini-map
+    renderMiniMap,
     // Title
     renderTitle,
   };
