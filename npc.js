@@ -78,6 +78,16 @@ const NPCs = (() => {
       ]
     },
 
+    // Kansai Dialect Coach NPC
+    { map: 0, x: 15, y: 14, type: 'kansaicoach', name: 'Takoyaki', dir: 'down',
+      isKansaiCoach: true,
+      dialogues: [
+        "\u307E\u3044\u3069! I'm Takoyaki, from Osaka! Let me teach ya Kansai-ben!",
+        "\u95A2\u897F\u5F01 (Kansai-ben) is the dialect of the Osaka region!",
+        "In Kansai, we don't say \u3042\u308A\u304C\u3068\u3046... we say \u304A\u304A\u304D\u306B!"
+      ]
+    },
+
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
       isClerk: true },
@@ -1148,6 +1158,297 @@ const NPCs = (() => {
     };
   }
 
+  // ============ KANSAI DIALECT SYSTEM ============
+  // Each lesson teaches standard vs Kansai-ben equivalents in konbini context
+  const KANSAI_LESSONS = [
+    {
+      id: 'greetings',
+      title: 'Kansai Greetings',
+      titleJp: '\u95A2\u897F\u306E\u6328\u62F6',
+      intro: 'In Osaka, konbini clerks sometimes greet differently. Let\'s learn!',
+      interactions: [
+        {
+          clerkJp: '\u307E\u3044\u3069\uff01\u304A\u5143\u6C17\u3067\u3059\u304B\uff1F',
+          clerkRomaji: 'Maido! Ogenki desu ka?',
+          clerkEn: 'Hey there! How are you? (Kansai style)',
+          context: '\u307E\u3044\u3069 (maido) is the Kansai all-purpose greeting, short for \u6BCE\u5EA6\u3042\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059',
+          question: 'What does \u307E\u3044\u3069 (maido) mean in Kansai?',
+          options: [
+            { text: '\u3053\u3093\u306B\u3061\u306F / Hello!', en: 'Hello / Welcome', correct: true },
+            { text: '\u3055\u3088\u3046\u306A\u3089 / Goodbye', en: 'Goodbye', correct: false },
+            { text: '\u3044\u304F\u3089\u3067\u3059\u304B / How much?', en: 'How much?', correct: false },
+            { text: '\u3059\u307F\u307E\u305B\u3093 / Sorry', en: 'Sorry', correct: false }
+          ],
+          correctExplanation: '\u307E\u3044\u3069 (maido) = \u3053\u3093\u306B\u3061\u306F! It\'s the classic Kansai shopkeeper greeting, meaning "every time" (thanks for coming).',
+          wrongExplanation: '\u307E\u3044\u3069 is Kansai for \u3053\u3093\u306B\u3061\u306F. It\'s short for \u6BCE\u5EA6\u3042\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3059 (thank you every time).'
+        },
+        {
+          clerkJp: '\u304A\u304A\u304D\u306B\uff01\u307E\u305F\u6765\u3066\u306A\uff01',
+          clerkRomaji: 'Ookini! Mata kite na!',
+          clerkEn: 'Thanks! Come again!',
+          context: '\u304A\u304A\u304D\u306B (ookini) replaces \u3042\u308A\u304C\u3068\u3046 in Kansai. Very warm and friendly!',
+          question: 'What is the standard Japanese for \u304A\u304A\u304D\u306B (ookini)?',
+          options: [
+            { text: '\u3042\u308A\u304C\u3068\u3046', en: 'Thank you', correct: true },
+            { text: '\u3044\u3089\u3063\u3057\u3083\u3044\u307E\u305B', en: 'Welcome', correct: false },
+            { text: '\u3054\u3081\u3093\u306A\u3055\u3044', en: 'Sorry', correct: false }
+          ],
+          correctExplanation: '\u304A\u304A\u304D\u306B = \u3042\u308A\u304C\u3068\u3046! It\'s the warmest "thank you" in Kansai, used especially in shops and markets.',
+          wrongExplanation: '\u304A\u304A\u304D\u306B is Kansai for \u3042\u308A\u304C\u3068\u3046 (thank you). Very common in Osaka shops!'
+        },
+        {
+          clerkJp: '\u307B\u306A\u3001\u6C17\u3092\u3064\u3051\u3066\u306A\uff01',
+          clerkRomaji: 'Hona, ki o tsukete na!',
+          clerkEn: 'Well then, take care!',
+          context: '\u307B\u306A (hona) is Kansai for \u3058\u3083\u3042 or \u305D\u308C\u3058\u3083\u3042. It\'s a casual goodbye.',
+          question: 'What does \u307B\u306A (hona) mean?',
+          options: [
+            { text: '\u3058\u3083\u3042\u306D / See ya', en: 'See ya / Well then', correct: true },
+            { text: '\u306F\u3044 / Yes', en: 'Yes', correct: false },
+            { text: '\u3044\u304F\u3089 / How much', en: 'How much', correct: false }
+          ],
+          correctExplanation: '\u307B\u306A = \u3058\u3083\u3042\u306D (well then / see ya). You\'ll hear this everywhere in Kansai as a friendly parting word.',
+          wrongExplanation: '\u307B\u306A is Kansai for \u3058\u3083\u3042\u306D / \u305D\u308C\u3058\u3083\u3042 -- a casual "see ya" or "well then".'
+        }
+      ]
+    },
+    {
+      id: 'shopping',
+      title: 'Kansai Shopping Talk',
+      titleJp: '\u95A2\u897F\u306E\u8CB7\u3044\u7269\u8A71',
+      intro: 'Osaka is the merchant capital of Japan. Learn how they talk about prices and shopping!',
+      interactions: [
+        {
+          clerkJp: '\u3053\u308C\u3001\u306A\u3093\u307C\u3067\u3059\u304B\uff1F',
+          clerkRomaji: 'Kore, nanbo desu ka?',
+          clerkEn: '(Customer asking) How much is this?',
+          context: '\u306A\u3093\u307C (nanbo) is the Kansai way to ask "how much?" instead of \u3044\u304F\u3089.',
+          question: 'What is \u306A\u3093\u307C (nanbo) in standard Japanese?',
+          options: [
+            { text: '\u3044\u304F\u3089 / How much', en: 'How much', correct: true },
+            { text: '\u306A\u306B / What', en: 'What', correct: false },
+            { text: '\u3069\u3053 / Where', en: 'Where', correct: false },
+            { text: '\u3044\u3064 / When', en: 'When', correct: false }
+          ],
+          correctExplanation: '\u306A\u3093\u307C = \u3044\u304F\u3089! In Osaka\'s merchant culture, knowing how to ask prices is essential.',
+          wrongExplanation: '\u306A\u3093\u307C is the Kansai way of saying \u3044\u304F\u3089 (how much?). Very common in Osaka!'
+        },
+        {
+          clerkJp: '\u3053\u308C\u3001\u3081\u3063\u3061\u3083\u3048\u3048\u3067\uff01',
+          clerkRomaji: 'Kore, meccha ee de!',
+          clerkEn: 'This is really good!',
+          context: '\u3081\u3063\u3061\u3083 (meccha) = \u3068\u3066\u3082 (very), \u3048\u3048 (ee) = \u3044\u3044 (good). Two classic Kansai words!',
+          question: 'What does \u3081\u3063\u3061\u3083\u3048\u3048 (meccha ee) mean?',
+          options: [
+            { text: '\u3068\u3066\u3082\u3044\u3044 / Very good', en: 'Very good', correct: true },
+            { text: '\u5168\u7136\u30C0\u30E1 / Totally bad', en: 'Totally bad', correct: false },
+            { text: '\u3061\u3087\u3063\u3068\u9AD8\u3044 / A bit expensive', en: 'A bit expensive', correct: false }
+          ],
+          correctExplanation: '\u3081\u3063\u3061\u3083 = \u3068\u3066\u3082 (very), \u3048\u3048 = \u3044\u3044 (good). So \u3081\u3063\u3061\u3083\u3048\u3048 = \u3068\u3066\u3082\u3044\u3044!',
+          wrongExplanation: '\u3081\u3063\u3061\u3083 is Kansai for \u3068\u3066\u3082, and \u3048\u3048 is Kansai for \u3044\u3044. Together: very good!'
+        },
+        {
+          clerkJp: '\u3042\u304B\u3093\u3001\u305D\u308C\u58F2\u308A\u5207\u308C\u3084\u306D\u3093',
+          clerkRomaji: 'Akan, sore urikire yanen',
+          clerkEn: 'Sorry, that\'s sold out',
+          context: '\u3042\u304B\u3093 (akan) = \u30C0\u30E1 (no good), \u3084\u306D\u3093 (yanen) = \u306A\u3093\u3060 (it is, explanatory)',
+          question: 'What does \u3042\u304B\u3093 (akan) mean in standard Japanese?',
+          options: [
+            { text: '\u30C0\u30E1 / No good', en: 'No good / Can\'t do', correct: true },
+            { text: '\u304A\u3044\u3057\u3044 / Delicious', en: 'Delicious', correct: false },
+            { text: '\u5927\u4E08\u592B / It\'s fine', en: 'It\'s fine', correct: false }
+          ],
+          correctExplanation: '\u3042\u304B\u3093 = \u30C0\u30E1! One of the most-used Kansai words. \u305D\u308C\u3042\u304B\u3093\u3067 = \u305D\u308C\u306F\u30C0\u30E1\u3060\u3088.',
+          wrongExplanation: '\u3042\u304B\u3093 is Kansai for \u30C0\u30E1 (no good / can\'t). You\'ll hear it constantly in Osaka!'
+        }
+      ]
+    },
+    {
+      id: 'reactions',
+      title: 'Kansai Reactions & Feelings',
+      titleJp: '\u95A2\u897F\u306E\u30EA\u30A2\u30AF\u30B7\u30E7\u30F3',
+      intro: 'Kansai people are known for being expressive. Learn their reaction words!',
+      interactions: [
+        {
+          clerkJp: '\u305D\u308C\u3001\u307B\u3093\u307E\uff1F',
+          clerkRomaji: 'Sore, honma?',
+          clerkEn: 'Really? Is that true?',
+          context: '\u307B\u3093\u307E (honma) replaces \u672C\u5F53 (hontou) in Kansai. Used constantly!',
+          question: 'What is the standard Japanese for \u307B\u3093\u307E (honma)?',
+          options: [
+            { text: '\u672C\u5F53 (hontou) / Really', en: 'Really / True', correct: true },
+            { text: '\u5168\u7136 (zenzen) / Not at all', en: 'Not at all', correct: false },
+            { text: '\u3082\u3061\u308D\u3093 (mochiron) / Of course', en: 'Of course', correct: false }
+          ],
+          correctExplanation: '\u307B\u3093\u307E = \u672C\u5F53 (really/true). \u307B\u3093\u307E\u306B\uff1F is the most common Kansai reaction!',
+          wrongExplanation: '\u307B\u3093\u307E is Kansai for \u672C\u5F53 (really/true). \u307B\u3093\u307E\u304B\u3044\u306A\uff1F = \u672C\u5F53\u306B\uff1F'
+        },
+        {
+          clerkJp: '\u304B\u307E\u3078\u3093\u3001\u304B\u307E\u3078\u3093\uff01',
+          clerkRomaji: 'Kamahen, kamahen!',
+          clerkEn: 'No problem, no problem!',
+          context: '\u304B\u307E\u3078\u3093 (kamahen) is Kansai for \u69CB\u308F\u306A\u3044 / \u5927\u4E08\u592B.',
+          question: 'What does \u304B\u307E\u3078\u3093 (kamahen) mean?',
+          options: [
+            { text: '\u5927\u4E08\u592B / No problem', en: 'It\'s fine / No problem', correct: true },
+            { text: '\u7121\u7406 / Impossible', en: 'Impossible', correct: false },
+            { text: '\u3042\u308A\u304C\u3068\u3046 / Thank you', en: 'Thank you', correct: false }
+          ],
+          correctExplanation: '\u304B\u307E\u3078\u3093 = \u5927\u4E08\u592B / \u69CB\u308F\u306A\u3044! A very reassuring Kansai phrase. Often said twice for emphasis!',
+          wrongExplanation: '\u304B\u307E\u3078\u3093 is Kansai for \u5927\u4E08\u592B (no problem). Doubling it (\u304B\u307E\u3078\u3093\u304B\u307E\u3078\u3093) adds warmth!'
+        },
+        {
+          clerkJp: '\u3053\u306E\u304A\u306B\u304E\u308A\u3001\u3081\u3063\u3061\u3083\u304A\u3082\u308D\u3044\u5473\u3084\u3067\uff01',
+          clerkRomaji: 'Kono onigiri, meccha omoroi aji ya de!',
+          clerkEn: 'This onigiri has a really interesting flavor!',
+          context: '\u304A\u3082\u308D\u3044 (omoroi) = \u9762\u767D\u3044 (omoshiroi), and \u3084\u3067 (ya de) = \u3060\u3088 (emphatic)',
+          question: 'What is \u304A\u3082\u308D\u3044 (omoroi) in standard Japanese?',
+          options: [
+            { text: '\u9762\u767D\u3044 (omoshiroi) / Interesting', en: 'Interesting / Fun', correct: true },
+            { text: '\u3064\u307E\u3089\u306A\u3044 (tsumaranai) / Boring', en: 'Boring', correct: false },
+            { text: '\u3053\u308F\u3044 (kowai) / Scary', en: 'Scary', correct: false }
+          ],
+          correctExplanation: '\u304A\u3082\u308D\u3044 = \u9762\u767D\u3044! The "shi" gets dropped for faster Kansai speech. \u3084\u3067 = \u3060\u3088 (emphasis).',
+          wrongExplanation: '\u304A\u3082\u308D\u3044 is Kansai for \u9762\u767D\u3044 (interesting/fun). Kansai people love \u304A\u3082\u308D\u3044 things!'
+        }
+      ]
+    },
+    {
+      id: 'konbini_kansai',
+      title: 'Kansai Konbini Phrases',
+      titleJp: '\u95A2\u897F\u30B3\u30F3\u30D3\u30CB\u30D5\u30EC\u30FC\u30BA',
+      intro: 'What if the konbini clerk speaks Kansai-ben? Here\'s how to understand them!',
+      interactions: [
+        {
+          clerkJp: '\u304A\u5F01\u5F53\u3042\u305F\u305F\u3081\u307E\u3057\u3087\u304B\uff1F\u3048\u3048\u3067\u3059\u304B\uff1F',
+          clerkRomaji: 'Obento atatame masho ka? Ee desu ka?',
+          clerkEn: 'Shall I heat your bento? Is that okay?',
+          context: '\u3048\u3048\u3067\u3059\u304B (ee desu ka) uses \u3048\u3048 instead of \u3044\u3044. Even polite Kansai speech sneaks in \u3048\u3048!',
+          question: 'The clerk said \u3048\u3048\u3067\u3059\u304B. What does \u3048\u3048 mean?',
+          options: [
+            { text: '\u3044\u3044 / Good, okay', en: 'Good / Okay', correct: true },
+            { text: '\u60AA\u3044 / Bad', en: 'Bad', correct: false },
+            { text: '\u9AD8\u3044 / Expensive', en: 'Expensive', correct: false }
+          ],
+          correctExplanation: '\u3048\u3048 = \u3044\u3044 (good/okay). Even formal Kansai speech uses \u3048\u3048. It\'s the most classic Kansai word!',
+          wrongExplanation: '\u3048\u3048 is Kansai for \u3044\u3044 (good). \u3048\u3048\u3067\u3059\u304B = \u3044\u3044\u3067\u3059\u304B (is that okay?).'
+        },
+        {
+          clerkJp: '\u304A\u7BB8\u3001\u3044\u3089\u3093\uff1F\u8981\u3089\u3093\uff1F',
+          clerkRomaji: 'Ohashi, iran? Iran?',
+          clerkEn: 'Chopsticks, you don\'t need them? Don\'t need?',
+          context: '\u3044\u3089\u3093 (iran) is Kansai negative form, from \u8981\u3089\u306A\u3044 (iranai = don\'t need).',
+          question: 'The clerk asks \u304A\u7BB8\u3001\u3044\u3089\u3093\uff1F What does \u3044\u3089\u3093 mean?',
+          options: [
+            { text: '\u8981\u3089\u306A\u3044 / Don\'t need', en: 'Don\'t need', correct: true },
+            { text: '\u6B32\u3057\u3044 / Want', en: 'Want', correct: false },
+            { text: '\u3042\u308B / Have', en: 'Have', correct: false }
+          ],
+          correctExplanation: '\u3044\u3089\u3093 = \u8981\u3089\u306A\u3044 (don\'t need). Kansai uses \u301C\u3078\u3093/\u301C\u3093 instead of \u301C\u306A\u3044 for negatives!',
+          wrongExplanation: '\u3044\u3089\u3093 is Kansai for \u8981\u3089\u306A\u3044 (don\'t need). Reply with \u3044\u3089\u3093 (no) or \u304A\u9858\u3044\u3057\u307E\u3059 (yes please)!'
+        },
+        {
+          clerkJp: '\u30EC\u30B7\u30FC\u30C8\u3001\u3061\u3083\u3046\u3061\u3083\u3046\uff01\u3082\u3046\u3044\u3089\u3093\u306E\uff1F',
+          clerkRomaji: 'Reshiito, chau chau! Mou iran no?',
+          clerkEn: 'The receipt -- no no! You don\'t need it anymore?',
+          context: '\u3061\u3083\u3046 (chau) = \u9055\u3046 (chigau, different/wrong). Doubled for emphasis!',
+          question: 'What does \u3061\u3083\u3046 (chau) mean?',
+          options: [
+            { text: '\u9055\u3046 / Different, wrong', en: 'Different / Wrong / No', correct: true },
+            { text: '\u6B63\u3057\u3044 / Correct', en: 'Correct', correct: false },
+            { text: '\u304F\u3060\u3055\u3044 / Please', en: 'Please', correct: false }
+          ],
+          correctExplanation: '\u3061\u3083\u3046 = \u9055\u3046 (wrong/different/no). \u3061\u3083\u3046\u3061\u3083\u3046 is doubled for emphasis -- "no no!"',
+          wrongExplanation: '\u3061\u3083\u3046 is Kansai for \u9055\u3046 (different/wrong). \u3061\u3083\u3046\u3061\u3083\u3046 = no no! / that\'s not it!'
+        }
+      ]
+    },
+    {
+      id: 'grammar_fun',
+      title: 'Kansai Grammar Patterns',
+      titleJp: '\u95A2\u897F\u306E\u6587\u6CD5',
+      intro: 'Kansai-ben has unique grammar. Master these patterns for real understanding!',
+      interactions: [
+        {
+          clerkJp: '\u3053\u308C\u98DF\u3079\u3078\u3093\u306E\uff1F',
+          clerkRomaji: 'Kore tabehen no?',
+          clerkEn: 'You\'re not eating this?',
+          context: '\u301C\u3078\u3093 (~hen) replaces \u301C\u306A\u3044 (~nai) for negatives in Kansai.',
+          question: '\u98DF\u3079\u3078\u3093 (tabehen) is the Kansai form of...?',
+          options: [
+            { text: '\u98DF\u3079\u306A\u3044 / Not eating', en: 'Not eating', correct: true },
+            { text: '\u98DF\u3079\u305F\u3044 / Want to eat', en: 'Want to eat', correct: false },
+            { text: '\u98DF\u3079\u307E\u3057\u305F / Ate', en: 'Already ate', correct: false }
+          ],
+          correctExplanation: '\u98DF\u3079\u3078\u3093 = \u98DF\u3079\u306A\u3044. Kansai negative pattern: replace \u301C\u306A\u3044 with \u301C\u3078\u3093! \u884C\u304B\u306A\u3044 -> \u884C\u304B\u3078\u3093, \u308F\u304B\u3089\u306A\u3044 -> \u308F\u304B\u3089\u3078\u3093.',
+          wrongExplanation: '\u301C\u3078\u3093 is the Kansai negative. \u98DF\u3079\u3078\u3093 = \u98DF\u3079\u306A\u3044 (not eating). Key pattern to learn!'
+        },
+        {
+          clerkJp: '\u3053\u306E\u304A\u306B\u304E\u308A\u3001\u304A\u3044\u3057\u3044\u3084\u3067\uff01',
+          clerkRomaji: 'Kono onigiri, oishii ya de!',
+          clerkEn: 'This onigiri is delicious!',
+          context: '\u3084 (ya) replaces \u3060 (da) as the copula in Kansai. \u3084\u3067 = \u3060\u3088 (with emphasis).',
+          question: 'In Kansai, \u3084\u3067 (ya de) replaces which standard ending?',
+          options: [
+            { text: '\u3060\u3088 (da yo) / It is!', en: 'It is! (emphatic)', correct: true },
+            { text: '\u3067\u3059 (desu) / It is (polite)', en: 'It is (polite)', correct: false },
+            { text: '\u304B\u306A (kana) / I wonder', en: 'I wonder', correct: false }
+          ],
+          correctExplanation: '\u3084\u3067 = \u3060\u3088. \u3084 replaces \u3060 in Kansai: \u305D\u3046\u3060 -> \u305B\u3084, \u304A\u3044\u3057\u3044\u3060 -> \u304A\u3044\u3057\u3044\u3084. Add \u3067 for emphasis!',
+          wrongExplanation: '\u3084 is the Kansai copula replacing \u3060. \u3084\u3067 = \u3060\u3088 (emphatic). This is one of the most basic Kansai grammar points!'
+        },
+        {
+          clerkJp: '\u305D\u308C\u3001\u3061\u3083\u3046\u3061\u3083\u3046\u3002\u3053\u3063\u3061\u3084\u308D\uff1F',
+          clerkRomaji: 'Sore, chau chau. Kocchi yarou?',
+          clerkEn: 'That\'s wrong. You mean this one, right?',
+          context: '\u3084\u308D\u3046 (yarou) = \u3060\u308D\u3046 (darou). Kansai uses \u3084 everywhere \u3060 would appear.',
+          question: '\u3053\u3063\u3061\u3084\u308D\u3046 (kocchi yarou) means...?',
+          options: [
+            { text: '\u3053\u3063\u3061\u3060\u308D\u3046 / This one, right?', en: 'This one, right?', correct: true },
+            { text: '\u3053\u3063\u3061\u306F\u30C0\u30E1 / This one is bad', en: 'This one is bad', correct: false },
+            { text: '\u3053\u3063\u3061\u304F\u3060\u3055\u3044 / This one please', en: 'This one please', correct: false }
+          ],
+          correctExplanation: '\u3084\u308D\u3046 = \u3060\u308D\u3046 (probably / right?). Pattern: \u3060 -> \u3084 in all forms! \u3060\u308D\u3046 -> \u3084\u308D\u3046.',
+          wrongExplanation: '\u3084\u308D\u3046 is Kansai for \u3060\u308D\u3046 (right? / probably). The \u3060->\u3084 swap is the foundation of Kansai grammar!'
+        }
+      ]
+    }
+  ];
+
+  // Kansai dialect tracking
+  const kansaiState = {
+    lessonsCompleted: 0,
+    topicsCompleted: [],
+    lastPracticeTime: 0,
+  };
+
+  function isKansaiPracticeReady() {
+    const totalLevels = Object.values(progress).reduce((sum, p) => sum + p.completed.length, 0);
+    return totalLevels >= 3; // Unlock after 3 store levels (player has decent Japanese base)
+  }
+
+  function getNextKansaiLesson() {
+    const unseen = KANSAI_LESSONS.filter(s => !kansaiState.topicsCompleted.includes(s.id));
+    if (unseen.length > 0) return unseen[0];
+    return KANSAI_LESSONS[Math.floor(Math.random() * KANSAI_LESSONS.length)];
+  }
+
+  function completeKansaiLesson(topicId) {
+    if (!kansaiState.topicsCompleted.includes(topicId)) {
+      kansaiState.topicsCompleted.push(topicId);
+    }
+    kansaiState.lessonsCompleted++;
+    kansaiState.lastPracticeTime = Date.now();
+  }
+
+  function getKansaiStats() {
+    return {
+      completed: kansaiState.lessonsCompleted,
+      topicsUnlocked: kansaiState.topicsCompleted.length,
+      totalTopics: KANSAI_LESSONS.length,
+    };
+  }
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -1221,5 +1522,11 @@ const NPCs = (() => {
     getNextSeasonalLesson,
     completeSeasonalLesson,
     getSeasonalStats,
+    // Kansai dialect
+    KANSAI_LESSONS,
+    isKansaiPracticeReady,
+    getNextKansaiLesson,
+    completeKansaiLesson,
+    getKansaiStats,
   };
 })();

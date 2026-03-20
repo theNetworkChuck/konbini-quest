@@ -267,6 +267,10 @@ const Engine = (() => {
         if (npc.isSeasonalGuide && NPCs.isSeasonalPracticeReady()) {
           Sprites.drawSeasonalBubble(ctx, sx, sy, time);
         }
+        // Show Kansai dialect bubble above coach when ready
+        if (npc.isKansaiCoach && NPCs.isKansaiPracticeReady()) {
+          Sprites.drawKansaiBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing

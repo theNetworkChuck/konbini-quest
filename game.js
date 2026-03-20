@@ -378,6 +378,11 @@
       interactWithSeasonalGuide(npc);
       return;
     }
+    // Check if this is the Kansai Dialect Coach NPC
+    if (npc.isKansaiCoach) {
+      interactWithKansaiCoach(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
   }
@@ -1159,6 +1164,208 @@
     Dialogue.show('Obaa-chan', resultLines, () => {
       seasonalGameState.inSeasonal = false;
       seasonalGameState.lesson = null;
+    });
+  }
+
+  // ============ KANSAI DIALECT COACH ============
+  const kansaiGameState = {
+    inKansai: false,
+    lesson: null,
+    interactionIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithKansaiCoach(npc) {
+    if (!NPCs.isKansaiPracticeReady()) {
+      Dialogue.show('Takoyaki', [
+        '\u307E\u3044\u3069! I\'m Takoyaki from Osaka!',
+        'Complete a few more store levels first, then come back.',
+        'I\'ll teach you \u95A2\u897F\u5F01 (Kansai-ben) -- the Osaka dialect!',
+        'It\'s \u3081\u3063\u3061\u3083\u304A\u3082\u308D\u3044 (super fun)!'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getKansaiStats();
+    const lesson = NPCs.getNextKansaiLesson();
+
+    if (!lesson) {
+      Dialogue.show('Takoyaki', 'Something went wrong... come back later!');
+      return;
+    }
+
+    // Set up kansai practice state
+    kansaiGameState.inKansai = true;
+    kansaiGameState.lesson = lesson;
+    kansaiGameState.interactionIdx = 0;
+    kansaiGameState.correct = 0;
+    kansaiGameState.total = lesson.interactions.length;
+
+    // Preload Japanese phrases
+    preloadKansaiPhrases(lesson);
+
+    const isNew = stats.completed === 0;
+    const introLines = isNew
+      ? [
+          '\u95A2\u897F\u5F01\u30EC\u30C3\u30B9\u30F3\u3078\u3088\u3046\u3053\u305D! Welcome to Kansai-ben Lesson!',
+          'I\'m Takoyaki. In Osaka, we talk different from Tokyo!',
+          `Today: ${lesson.titleJp} -- ${lesson.title}`,
+          lesson.intro
+        ]
+      : [
+          `${lesson.titleJp}! ${lesson.title}`,
+          `Practice ${stats.completed + 1} | ${stats.topicsUnlocked}/${stats.totalTopics} topics learned`,
+          lesson.intro
+        ];
+
+    GameAudio.playAlert();
+    Dialogue.show('Takoyaki', introLines, () => {
+      runKansaiInteraction();
+    });
+  }
+
+  function preloadKansaiPhrases(lesson) {
+    if (!lesson || !lesson.interactions) return;
+    const phrases = new Set();
+    for (const interaction of lesson.interactions) {
+      if (interaction.clerkJp) phrases.add(interaction.clerkJp);
+      if (interaction.options) {
+        for (const opt of interaction.options) {
+          const text = opt.text || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase);
+    }
+  }
+
+  function runKansaiInteraction() {
+    if (kansaiGameState.interactionIdx >= kansaiGameState.lesson.interactions.length) {
+      finishKansaiLesson();
+      return;
+    }
+
+    const interaction = kansaiGameState.lesson.interactions[kansaiGameState.interactionIdx];
+    const qNum = kansaiGameState.interactionIdx + 1;
+    const qTotal = kansaiGameState.total;
+    const header = `\u95A2\u897F\u5F01 ${qNum}/${qTotal}`;
+
+    // Show the Kansai phrase with context, then quiz
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      const lines = [interaction.clerkJp];
+      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+      if (interaction.context) lines.push(interaction.context);
+
+      Dialogue.show(header, lines, () => {
+        showKansaiQuiz(interaction);
+      });
+    } else {
+      showKansaiQuiz(interaction);
+    }
+  }
+
+  function showKansaiQuiz(interaction) {
+    const question = interaction.question || 'What does this mean?';
+    const options = interaction.options.map(o => ({
+      text: o.text || '',
+      correct: o.correct,
+      en: o.en,
+    }));
+
+    // Shuffle
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    // Show question then choices
+    Dialogue.show('Takoyaki', question, () => {
+      Dialogue.showChoices(shuffled, (selectedIdx) => {
+        const selected = shuffled[selectedIdx];
+        handleKansaiAnswer(interaction, selected);
+      });
+    });
+  }
+
+  function handleKansaiAnswer(interaction, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      Engine.spawnSparkles();
+      kansaiGameState.correct++;
+
+      // Speak the correct answer
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      tryVariableReward();
+
+      const encouragements = [
+        '\u305B\u3084! Correct!', '\u3081\u3063\u3061\u3083\u3048\u3048! Great!',
+        '\u307B\u3093\u307E\u306B\u3059\u3054\u3044! Really amazing!', '\u304A\u304A\u304D\u306B! Well done!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = interaction.correctExplanation || '';
+
+      Dialogue.show('Takoyaki', explanation ? [msg, explanation] : msg, () => {
+        kansaiGameState.interactionIdx++;
+        runKansaiInteraction();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Takoyaki', [
+        '\u3061\u3083\u3046\u3061\u3083\u3046! That\'s not it!',
+        explanation
+      ], () => {
+        kansaiGameState.interactionIdx++;
+        runKansaiInteraction();
+      });
+    }
+  }
+
+  function finishKansaiLesson() {
+    const correct = kansaiGameState.correct;
+    const total = kansaiGameState.total;
+    const lesson = kansaiGameState.lesson;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completeKansaiLesson(lesson.id);
+    const stats = NPCs.getKansaiStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '\u5B8C\u74A7! Kansai master! \u2605\u2605\u2605';
+    else if (pct >= 50) rating = '\u3048\u3048\u611F\u3058! Not bad! \u2605\u2605\u2606';
+    else rating = '\u3082\u3046\u3061\u3087\u3044! Keep at it! \u2605\u2606\u2606';
+
+    const resultLines = [
+      `Lesson Complete: ${correct}/${total} correct!`,
+      rating,
+      `Topics mastered: ${stats.topicsUnlocked}/${stats.totalTopics}`,
+    ];
+
+    if (stats.topicsUnlocked >= stats.totalTopics) {
+      resultLines.push('\u95A2\u897F\u5F01\u30DE\u30B9\u30BF\u30FC! You know Kansai-ben!');
+    } else {
+      resultLines.push('Come back to learn more Kansai-ben!');
+    }
+
+    Dialogue.show('Takoyaki', resultLines, () => {
+      kansaiGameState.inKansai = false;
+      kansaiGameState.lesson = null;
     });
   }
 

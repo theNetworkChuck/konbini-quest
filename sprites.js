@@ -558,6 +558,33 @@ const Sprites = (() => {
     'P': '#705040', '3': '#4a3020' // brown skirt, dark shoes
   };
 
+  // Kansai Dialect Coach NPC -- energetic Osaka character, tiger-stripe happi coat, headband
+  const npcKansaiCoach = `
+...RRRRRR...
+..RhRRRRhR..
+..RRRRRRRR..
+..sWEsWEs..
+..sSBSSBSs..
+...ssMs.....
+..TTYTTYTT..
+..TYTTTYTw..
+..TYTTTYTT..
+...TTTTTT...
+..22222222..
+..22.22.22..
+..22.22.22..
+...22..22...
+...GG..GG...
+...GG..GG...`;
+
+  const npcKansaiCoachPalette = {
+    'R': '#cc2222', 'h': '#ff4444', // red headband with highlight
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#d47070', 'B': '#ffaaaa', // expressive smile, blush
+    'T': '#1a1a2e', 'Y': '#f1c40f', 'w': '#fff', // tiger-stripe happi (black/gold)
+    '2': '#2c3e50', 'G': '#8b4513' // dark pants, wooden geta sandals
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
@@ -566,6 +593,7 @@ const Sprites = (() => {
     challenger:  { frames: [npcChallenger], palette: npcChallengerPalette },
     paymentcoach: { frames: [npcPaymentCoach], palette: npcPaymentCoachPalette },
     seasonalguide: { frames: [npcSeasonalGuide], palette: npcSeasonalGuidePalette },
+    kansaicoach: { frames: [npcKansaiCoach], palette: npcKansaiCoachPalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1246,6 +1274,22 @@ const Sprites = (() => {
     ctx.globalAlpha = 1;
   }
 
+  // Kansai dialect practice indicator (pulsing speech bubble with Osaka dot)
+  function drawKansaiBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 4) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (Osaka vibrant red-orange)
+    ctx.fillStyle = '#cc2222';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Speech lines icon (dialect)
+    ctx.fillStyle = '#f1c40f';
+    ctx.fillRect(x + 4, y - 12, 8, 2);
+    ctx.fillRect(x + 5, y - 9, 6, 2);
+    ctx.fillRect(x + 4, y - 6, 8, 1);
+    ctx.globalAlpha = 1;
+  }
+
   // Streak fire icon for HUD
   function drawStreakFire(ctx, x, y, streak) {
     // Flame base
@@ -1764,6 +1808,7 @@ const Sprites = (() => {
     drawChallengeBubble,
     drawPaymentBubble,
     drawSeasonalBubble,
+    drawKansaiBubble,
     drawStreakFire,
     drawStar,
     drawPixelMap,
