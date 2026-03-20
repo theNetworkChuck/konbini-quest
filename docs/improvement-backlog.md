@@ -27,7 +27,7 @@
 ### Batch 4: Deeper Japanese Content
 13. ~~**Payment Method Interactions**~~ ✅ - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
 14. ~~**Seasonal Items**~~ ✅ - Oden in winter, ice cream in summer. Teaches seasonal vocabulary.
-15. **Regional Dialects** - Kansai-ben clerk at one store as a bonus challenge.
+15. ~~**Regional Dialects**~~ -- Kansai-ben coach NPC teaches Osaka dialect as a bonus challenge.
 16. **Politeness Levels** - Show casual vs polite vs keigo versions of the same phrase.
 
 ### Batch 5: Advanced Mechanics
@@ -372,5 +372,32 @@
 - Unlocks after completing first store level (ensures player knows konbini basics first)
 - Star rating system: 完璧 (perfect ★★★), いいね (good ★★☆), もう少し (keep practicing ★☆☆)
 - All-seasons completion celebration: 全季節クリア! bonus message
+
+**Files modified:** sprites.js, npc.js, engine.js, game.js
+
+### 2026-03-20 -- #15 Regional Dialects (Kansai-ben)
+**Commit:** `e3e116c`
+
+**What was changed:**
+- New NPC "Takoyaki" the Kansai Dialect Coach added to Konbini Street at position (15, 14)
+- Custom pixel art sprite: red headband, black and gold tiger-stripe happi coat (Osaka festival style), wooden geta sandals
+- Pulsing red/gold speech-line bubble indicator appears above Takoyaki when player has completed 3+ store levels
+- 5 Kansai-ben dialect lessons covering essential Osaka vocabulary in konbini context:
+  1. **Kansai Greetings** - maido (hello), ookini (thank you), hona (see ya)
+  2. **Kansai Shopping Talk** - nanbo (how much), meccha ee (very good), akan (no good)
+  3. **Reactions & Feelings** - honma (really), kamahen (no problem), omoroi (interesting)
+  4. **Kansai Konbini Phrases** - ee (good/okay), iran (don't need), chau (wrong/no)
+  5. **Grammar Patterns** - ~hen negative form, ya/da copula swap, yarou/darou
+- Each lesson has 3 interactive quiz scenarios (15 total quiz exchanges)
+- Every question teaches the standard Japanese equivalent of a Kansai expression
+- Context explanations with each phrase: etymology, usage, and cultural notes
+- Kansai-flavored encouragements: seya! (that's right!), meccha ee! (great!), ookini! (well done!)
+- Wrong answer response uses ちゃうちゃう (chau chau = no no!)
+- ElevenLabs voice preloading for all Kansai Japanese phrases
+- Correct answers trigger sparkle particles + voice playback + variable reward rolls
+- Topic progression tracking: completed topics, star ratings, 5-topic unlock system
+- Unlocks after completing 3 store levels (requires solid standard Japanese base first)
+- Star rating: 完璧 (perfect), ええ感じ (not bad), もうちょい (keep at it)
+- All-topics completion message: 関西弁マスター! (Kansai-ben master!)
 
 **Files modified:** sprites.js, npc.js, engine.js, game.js
