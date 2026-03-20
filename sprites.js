@@ -1841,6 +1841,328 @@ const Sprites = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ INVENTORY BAG ICON (HUD) ============
+  function drawBagIcon(ctx, x, y, count, total, hasNew) {
+    // Small bag/shopping bag shape
+    ctx.fillStyle = '#8B6914';
+    // Bag body
+    ctx.fillRect(x, y + 3, 10, 7);
+    // Bag top flap
+    ctx.fillStyle = '#A67C1A';
+    ctx.fillRect(x + 1, y + 1, 8, 3);
+    // Handle
+    ctx.fillStyle = '#6B5010';
+    ctx.fillRect(x + 3, y, 4, 2);
+    ctx.fillRect(x + 3, y, 1, 1);
+    ctx.fillRect(x + 6, y, 1, 1);
+    // Items peek out
+    if (count > 0) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x + 2, y + 2, 2, 1);
+      ctx.fillStyle = '#e74c3c';
+      ctx.fillRect(x + 5, y + 2, 2, 1);
+    }
+    // "NEW" glow
+    if (hasNew) {
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(x + 8, y, 2, 2);
+    }
+  }
+
+  // ============ INVENTORY ITEM ICONS (16x16 pixel art) ============
+  function drawItemIcon(ctx, x, y, iconType) {
+    const s = 1; // pixel scale
+    ctx.save();
+    switch (iconType) {
+      case 'gum':
+        // Pack of gum - small rectangle
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(x + 4, y + 2, 8, 12);
+        ctx.fillStyle = '#2980b9';
+        ctx.fillRect(x + 4, y + 2, 8, 3);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 6, y + 6, 4, 2);
+        break;
+      case 'tea':
+        // Green tea bottle
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(x + 5, y + 4, 6, 10);
+        ctx.fillStyle = '#1e8449';
+        ctx.fillRect(x + 6, y + 1, 4, 4);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 7, y + 7, 2, 3);
+        ctx.fillStyle = '#d4ac0d';
+        ctx.fillRect(x + 5, y + 13, 6, 1);
+        break;
+      case 'onigiri':
+        // Triangle rice ball with nori
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 5, y + 2, 6, 4);
+        ctx.fillRect(x + 4, y + 5, 8, 3);
+        ctx.fillRect(x + 3, y + 7, 10, 3);
+        ctx.fillRect(x + 3, y + 9, 10, 2);
+        // Nori (seaweed)
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(x + 4, y + 8, 8, 4);
+        // Filling dot
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(x + 7, y + 5, 2, 2);
+        break;
+      case 'sandwich':
+        // Triangle sandwich
+        ctx.fillStyle = '#f5e6c8';
+        ctx.fillRect(x + 3, y + 3, 10, 10);
+        ctx.fillStyle = '#f9e4b7';
+        ctx.fillRect(x + 3, y + 3, 10, 2);
+        ctx.fillRect(x + 3, y + 11, 10, 2);
+        // Egg filling
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(x + 5, y + 5, 6, 2);
+        // Lettuce
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(x + 4, y + 7, 8, 2);
+        break;
+      case 'bento':
+        // Bento box from above
+        ctx.fillStyle = '#2c3e50';
+        ctx.fillRect(x + 2, y + 3, 12, 10);
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(x + 3, y + 4, 5, 4);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 3, y + 8, 5, 4);
+        ctx.fillStyle = '#f39c12';
+        ctx.fillRect(x + 9, y + 4, 4, 4);
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(x + 9, y + 8, 4, 4);
+        // Divider
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(x + 8, y + 3, 1, 10);
+        ctx.fillRect(x + 2, y + 8, 12, 1);
+        break;
+      case 'soup':
+        // Cup of soup
+        ctx.fillStyle = '#ecf0f1';
+        ctx.fillRect(x + 4, y + 4, 8, 8);
+        ctx.fillRect(x + 3, y + 5, 10, 6);
+        // Soup inside
+        ctx.fillStyle = '#e67e22';
+        ctx.fillRect(x + 5, y + 5, 6, 5);
+        // Steam
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillRect(x + 6, y + 2, 1, 2);
+        ctx.fillRect(x + 9, y + 1, 1, 3);
+        break;
+      case 'coffee':
+        // Coffee cup
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(x + 5, y + 4, 6, 9);
+        ctx.fillStyle = '#795548';
+        ctx.fillRect(x + 4, y + 4, 8, 2);
+        // Lid
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 4, y + 3, 8, 2);
+        // Handle
+        ctx.fillStyle = '#5d4037';
+        ctx.fillRect(x + 11, y + 6, 2, 4);
+        ctx.fillRect(x + 12, y + 7, 1, 2);
+        // Label
+        ctx.fillStyle = '#8d6e63';
+        ctx.fillRect(x + 6, y + 8, 4, 2);
+        break;
+      case 'chicken':
+        // Fried chicken drumstick
+        ctx.fillStyle = '#d4880f';
+        ctx.fillRect(x + 4, y + 3, 8, 6);
+        ctx.fillRect(x + 5, y + 2, 6, 8);
+        // Crispy bits
+        ctx.fillStyle = '#b8700a';
+        ctx.fillRect(x + 4, y + 4, 2, 2);
+        ctx.fillRect(x + 9, y + 5, 2, 2);
+        // Bone
+        ctx.fillStyle = '#f5e6c8';
+        ctx.fillRect(x + 6, y + 10, 3, 4);
+        ctx.fillRect(x + 5, y + 13, 5, 1);
+        break;
+      case 'beer':
+        // Beer can
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(x + 5, y + 2, 6, 12);
+        ctx.fillStyle = '#d4ac0d';
+        ctx.fillRect(x + 5, y + 2, 6, 3);
+        // Label
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(x + 6, y + 6, 4, 3);
+        // Tab
+        ctx.fillStyle = '#bdc3c7';
+        ctx.fillRect(x + 7, y + 1, 2, 2);
+        break;
+      case 'bread':
+        // Melon pan
+        ctx.fillStyle = '#f0c040';
+        ctx.fillRect(x + 3, y + 4, 10, 8);
+        ctx.fillRect(x + 4, y + 3, 8, 10);
+        // Cross-hatch pattern
+        ctx.fillStyle = '#d4a020';
+        ctx.fillRect(x + 5, y + 4, 1, 8);
+        ctx.fillRect(x + 8, y + 4, 1, 8);
+        ctx.fillRect(x + 11, y + 4, 1, 8);
+        ctx.fillRect(x + 3, y + 6, 10, 1);
+        ctx.fillRect(x + 3, y + 9, 10, 1);
+        break;
+      default:
+        // Generic item box
+        ctx.fillStyle = '#888';
+        ctx.fillRect(x + 3, y + 3, 10, 10);
+        ctx.fillStyle = '#aaa';
+        ctx.fillRect(x + 5, y + 5, 6, 6);
+    }
+    ctx.restore();
+  }
+
+  // ============ INVENTORY OVERLAY ============
+  function drawInventoryOverlay(ctx, canvasW, canvasH, items, total, time) {
+    // Darken background
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Card dimensions
+    const cardW = canvasW - 20;
+    const cardH = canvasH - 20;
+    const cardX = 10;
+    const cardY = 10;
+
+    // Card background
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#8B6914';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+    // Title
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillStyle = '#d4a020';
+    ctx.textAlign = 'center';
+    ctx.fillText('MY KONBINI BAG', canvasW / 2, cardY + 14);
+
+    // Japanese subtitle
+    ctx.font = '9px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('\u30B3\u30F3\u30D3\u30CB\u306E\u304A\u8CB7\u3044\u7269', canvasW / 2, cardY + 24);
+
+    // Count
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#888';
+    ctx.fillText(`${items.length}/${total} items`, canvasW / 2, cardY + 32);
+
+    ctx.textAlign = 'left';
+
+    // Item grid
+    const listY = cardY + 38;
+    const itemH = 22;
+    const maxVisible = 8;
+
+    if (items.length === 0) {
+      ctx.font = '6px "Press Start 2P"';
+      ctx.fillStyle = '#555';
+      ctx.textAlign = 'center';
+      ctx.fillText('Your bag is empty!', canvasW / 2, listY + 25);
+      ctx.fillText('Complete levels to', canvasW / 2, listY + 37);
+      ctx.fillText('collect konbini items.', canvasW / 2, listY + 49);
+      ctx.font = '8px "M PLUS Rounded 1c"';
+      ctx.fillStyle = '#666';
+      ctx.fillText('\u304A\u8CB7\u3044\u7269\u3092\u3057\u3088\u3046\uFF01', canvasW / 2, listY + 65);
+      ctx.textAlign = 'left';
+    } else {
+      // Store brand colors for item highlights
+      const storeColors = {
+        '7-Eleven': '#d4380d',
+        'Lawson': '#1a6fc4',
+        'FamilyMart': '#27ae60',
+      };
+
+      for (let i = 0; i < Math.min(items.length, maxVisible); i++) {
+        const item = items[i];
+        const iy = listY + i * itemH;
+
+        // Item row background (subtle)
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0)';
+        ctx.fillRect(cardX + 4, iy, cardW - 8, itemH - 1);
+
+        // Store color bar on left
+        ctx.fillStyle = storeColors[item.store] || '#555';
+        ctx.fillRect(cardX + 4, iy, 2, itemH - 1);
+
+        // Item icon
+        drawItemIcon(ctx, cardX + 8, iy + 2, item.icon);
+
+        // New indicator
+        if (item.isNew) {
+          const newAlpha = 0.5 + Math.sin(time * 4) * 0.5;
+          ctx.save();
+          ctx.globalAlpha = newAlpha;
+          ctx.fillStyle = '#FFD700';
+          ctx.font = '4px "Press Start 2P"';
+          ctx.fillText('NEW', cardX + 8, iy + 1);
+          ctx.restore();
+        }
+
+        // Japanese name
+        ctx.font = '8px "M PLUS Rounded 1c"';
+        ctx.fillStyle = '#fff';
+        const jpDisplay = item.jp.length > 12 ? item.jp.substring(0, 11) + '...' : item.jp;
+        ctx.fillText(jpDisplay, cardX + 26, iy + 9);
+
+        // Romaji + English
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#888';
+        const subText = `${item.romaji} = ${item.en}`;
+        const trimSub = subText.length > 30 ? subText.substring(0, 29) + '...' : subText;
+        ctx.fillText(trimSub, cardX + 26, iy + 17);
+      }
+
+      if (items.length > maxVisible) {
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText(`+ ${items.length - maxVisible} more...`, canvasW / 2, listY + maxVisible * itemH + 4);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    // Store legend at bottom
+    const legendY = cardY + cardH - 26;
+    ctx.font = '4px "Press Start 2P"';
+    let lx = cardX + 15;
+    const stores = [['7-Eleven', '#d4380d'], ['Lawson', '#1a6fc4'], ['FamilyMart', '#27ae60']];
+    for (const [name, color] of stores) {
+      ctx.fillStyle = color;
+      ctx.fillRect(lx, legendY, 4, 4);
+      ctx.fillText(name, lx + 6, legendY + 4);
+      lx += name.length * 4 + 14;
+    }
+
+    // Progress bar
+    const barX = cardX + 20;
+    const barY = cardY + cardH - 16;
+    const barW = cardW - 40;
+    const barH = 4;
+    const pct = total > 0 ? items.length / total : 0;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#d4a020';
+    ctx.fillRect(barX, barY, barW * pct, barH);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    // Close hint
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#888';
+    ctx.textAlign = 'center';
+    ctx.fillText('[B] Close', canvasW / 2, cardY + cardH - 4);
+    ctx.textAlign = 'left';
+  }
+
   return {
     T,
     drawPlayer,
@@ -1868,5 +2190,9 @@ const Sprites = (() => {
     drawRewardBanner,
     drawPhraseBookIcon,
     drawPhraseBookOverlay,
+    // Inventory
+    drawBagIcon,
+    drawItemIcon,
+    drawInventoryOverlay,
   };
 })();

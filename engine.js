@@ -367,6 +367,25 @@ const Engine = (() => {
       // Count text
       ctx.fillStyle = hasNew ? '#FFD700' : '#D2691E';
       ctx.fillText(phraseCount + '/' + phraseTotal, CANVAS_W - phraseW + 16, hudRightY + 9);
+      hudRightY += 14;
+    }
+
+    // Inventory bag indicator (top right, below phrase book)
+    const invCount = NPCs.getInventoryCount();
+    const invTotal = NPCs.getTotalItems();
+    if (invCount > 0 || mapIdx === 0) {
+      const invW = 42;
+      ctx.fillStyle = 'rgba(26,26,46,0.85)';
+      ctx.fillRect(CANVAS_W - invW - 2, hudRightY, invW, 12);
+      const hasNewInv = NPCs.hasNewInventoryItems();
+      ctx.strokeStyle = hasNewInv ? '#FFD700' : '#8B6914';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(CANVAS_W - invW - 2, hudRightY, invW, 12);
+      // Bag icon
+      Sprites.drawBagIcon(ctx, CANVAS_W - invW, hudRightY + 1, invCount, invTotal, hasNewInv);
+      // Count text
+      ctx.fillStyle = hasNewInv ? '#FFD700' : '#d4a020';
+      ctx.fillText(invCount + '/' + invTotal, CANVAS_W - invW + 14, hudRightY + 9);
     }
   }
 

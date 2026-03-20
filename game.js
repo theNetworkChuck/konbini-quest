@@ -41,6 +41,8 @@
     // Variable rewards
     rewardNotification: null, // {reward, timer} for bonus phrase drops
     phraseBookOpen: false,
+    // Inventory bag
+    inventoryOpen: false,
   };
 
   let audioInitialized = false;
@@ -152,6 +154,16 @@
       return;
     }
 
+    // Handle inventory overlay
+    if (state.inventoryOpen) {
+      if (Engine.inputB() || Engine.wasPressed('i')) {
+        NPCs.markInventoryViewed();
+        state.inventoryOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
     // Open stamp card with Tab key (on street map only)
     if (Engine.wasPressed('tab') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
       state.stampCardOpen = true;
@@ -162,6 +174,13 @@
     // Open phrase book with Q key (on street map only)
     if (Engine.wasPressed('q') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
       state.phraseBookOpen = true;
+      GameAudio.playSelect();
+      return;
+    }
+
+    // Open inventory with I key (on street map only)
+    if (Engine.wasPressed('i') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
+      state.inventoryOpen = true;
       GameAudio.playSelect();
       return;
     }
@@ -1973,6 +1992,9 @@
     NPCs.advanceStoreLevel(store);
     NPCs.incrementCompletedLevels();
 
+    // Add item to inventory bag
+    NPCs.addToInventory(level.id);
+
     // Award stamp based on performance
     // stars maps directly to stamp tier: 3=gold, 2=silver, 1=bronze
     const storeProgress = NPCs.getStoreProgress(store);
@@ -2141,7 +2163,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -2186,6 +2208,16 @@
         ctx, Engine.CANVAS_W, Engine.CANVAS_H,
         NPCs.getCollectedPhrases(),
         NPCs.getTotalBonusPhrases(),
+        state.time
+      );
+    }
+
+    // Inventory bag overlay
+    if (state.inventoryOpen) {
+      Sprites.drawInventoryOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        NPCs.getInventory(),
+        NPCs.getTotalItems(),
         state.time
       );
     }

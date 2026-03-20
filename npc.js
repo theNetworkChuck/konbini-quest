@@ -1751,6 +1751,70 @@ const NPCs = (() => {
     };
   }
 
+  // ============ INVENTORY SYSTEM ============
+  // Items the player "buys" at each level, with Japanese vocabulary
+  const KONBINI_ITEMS = [
+    // Level 1: Welcome at 7-Eleven (just entering, no purchase)
+    { levelId: 1, jp: 'ガム', romaji: 'Gamu', en: 'Gum', store: '7-Eleven', icon: 'gum', category: 'snack' },
+    // Level 2: Thank You at Lawson (leaving after buying something)
+    { levelId: 2, jp: 'お茶', romaji: 'Ocha', en: 'Green Tea', store: 'Lawson', icon: 'tea', category: 'drink' },
+    // Level 3: The Bag at FamilyMart
+    { levelId: 3, jp: 'おにぎり', romaji: 'Onigiri', en: 'Rice Ball', store: 'FamilyMart', icon: 'onigiri', category: 'food' },
+    // Level 4: Point Card at 7-Eleven
+    { levelId: 4, jp: 'サンドイッチ', romaji: 'Sandoicchi', en: 'Egg Sandwich', store: '7-Eleven', icon: 'sandwich', category: 'food' },
+    // Level 5: Heat It Up at Lawson (bento)
+    { levelId: 5, jp: 'お弁当', romaji: 'Obento', en: 'Bento Box', store: 'Lawson', icon: 'bento', category: 'food' },
+    // Level 6: Chopsticks at FamilyMart (soup)
+    { levelId: 6, jp: 'スープ', romaji: 'Suupu', en: 'Soup', store: 'FamilyMart', icon: 'soup', category: 'food' },
+    // Level 7: How Much at 7-Eleven
+    { levelId: 7, jp: 'コーヒー', romaji: 'Koohii', en: 'Coffee', store: '7-Eleven', icon: 'coffee', category: 'drink' },
+    // Level 8: Where Is It at Lawson (onigiri)
+    { levelId: 8, jp: 'ツナマヨおにぎり', romaji: 'Tuna mayo onigiri', en: 'Tuna Mayo Onigiri', store: 'Lawson', icon: 'onigiri', category: 'food' },
+    // Level 9: Famichiki at FamilyMart
+    { levelId: 9, jp: 'ファミチキ', romaji: 'Famichiki', en: 'Famichiki (Fried Chicken)', store: 'FamilyMart', icon: 'chicken', category: 'food' },
+    // Level 10: Full Checkout at 7-Eleven (bento + more)
+    { levelId: 10, jp: '幕の内弁当', romaji: 'Makunouchi bento', en: 'Makunouchi Bento', store: '7-Eleven', icon: 'bento', category: 'food' },
+    // Level 11: Age Check at Lawson (beer)
+    { levelId: 11, jp: 'ビール', romaji: 'Biiru', en: 'Beer', store: 'Lawson', icon: 'beer', category: 'drink' },
+    // Level 12: Master at FamilyMart (full shopping)
+    { levelId: 12, jp: 'メロンパン', romaji: 'Meronpan', en: 'Melon Bread', store: 'FamilyMart', icon: 'bread', category: 'food' },
+  ];
+
+  // Player's collected inventory
+  const inventory = [];
+
+  function addToInventory(levelId) {
+    const item = KONBINI_ITEMS.find(i => i.levelId === levelId);
+    if (!item) return;
+    // Don't add duplicates
+    if (inventory.some(i => i.levelId === levelId)) return;
+    inventory.push({
+      ...item,
+      acquiredAt: Date.now(),
+      isNew: true,
+    });
+  }
+
+  function getInventory() {
+    return inventory;
+  }
+
+  function getInventoryCount() {
+    return inventory.length;
+  }
+
+  function getTotalItems() {
+    return KONBINI_ITEMS.length;
+  }
+
+  function markInventoryViewed() {
+    inventory.forEach(i => { i.isNew = false; });
+  }
+
+  function hasNewInventoryItems() {
+    return inventory.some(i => i.isNew);
+  }
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -1836,5 +1900,13 @@ const NPCs = (() => {
     getNextPolitenessLesson,
     completePolitenessLesson,
     getPolitenessStats,
+    // Inventory system
+    KONBINI_ITEMS,
+    addToInventory,
+    getInventory,
+    getInventoryCount,
+    getTotalItems,
+    markInventoryViewed,
+    hasNewInventoryItems,
   };
 })();
