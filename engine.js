@@ -386,6 +386,25 @@ const Engine = (() => {
       // Count text
       ctx.fillStyle = hasNewInv ? '#FFD700' : '#d4a020';
       ctx.fillText(invCount + '/' + invTotal, CANVAS_W - invW + 14, hudRightY + 9);
+      hudRightY += 14;
+    }
+
+    // Achievement trophy indicator (top right, below inventory)
+    const achCount = NPCs.getAchievementCount();
+    const achTotal = NPCs.getTotalAchievements();
+    if (achCount > 0 || mapIdx === 0) {
+      const achW = 48;
+      ctx.fillStyle = 'rgba(26,26,46,0.85)';
+      ctx.fillRect(CANVAS_W - achW - 2, hudRightY, achW, 12);
+      const hasNewAch = NPCs.hasNewAchievements();
+      ctx.strokeStyle = hasNewAch ? '#FFD700' : '#D4AF37';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(CANVAS_W - achW - 2, hudRightY, achW, 12);
+      // Trophy icon
+      Sprites.drawTrophyIcon(ctx, CANVAS_W - achW, hudRightY + 1, achCount, achTotal, hasNewAch);
+      // Count text
+      ctx.fillStyle = hasNewAch ? '#FFD700' : '#D4AF37';
+      ctx.fillText(achCount + '/' + achTotal, CANVAS_W - achW + 14, hudRightY + 9);
     }
   }
 

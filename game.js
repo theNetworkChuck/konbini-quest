@@ -43,6 +43,10 @@
     phraseBookOpen: false,
     // Inventory bag
     inventoryOpen: false,
+    // Achievement badges
+    achievementOpen: false,
+    achievementNotification: null, // {achievement, timer}
+    achievementQueue: [], // queued unlock notifications
   };
 
   let audioInitialized = false;
@@ -134,6 +138,30 @@
       }
     }
 
+    // Update achievement notification timer & queue
+    if (state.achievementNotification) {
+      state.achievementNotification.timer -= dt;
+      if (state.achievementNotification.timer <= 0) {
+        state.achievementNotification = null;
+        // Show next queued achievement
+        if (state.achievementQueue.length > 0) {
+          const next = state.achievementQueue.shift();
+          state.achievementNotification = { achievement: next, timer: 4.0 };
+          GameAudio.playLevelComplete();
+        }
+      }
+    }
+
+    // Handle achievement overlay
+    if (state.achievementOpen) {
+      if (Engine.inputB() || Engine.wasPressed('g')) {
+        NPCs.markAchievementsViewed();
+        state.achievementOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
     // Handle phrase book overlay
     if (state.phraseBookOpen) {
       if (Engine.inputB()) {
@@ -181,6 +209,13 @@
     // Open inventory with I key (on street map only)
     if (Engine.wasPressed('i') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
       state.inventoryOpen = true;
+      GameAudio.playSelect();
+      return;
+    }
+
+    // Open achievements with G key (on street map only)
+    if (Engine.wasPressed('g') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
+      state.achievementOpen = true;
       GameAudio.playSelect();
       return;
     }
@@ -562,6 +597,7 @@
     ], () => {
       state.inReview = false;
       state.reviewPhrases = [];
+      setTimeout(() => triggerAchievementCheck(), 300);
     });
   }
 
@@ -787,6 +823,7 @@
     Dialogue.show('Hana', resultLines, () => {
       challengeGameState.inChallenge = false;
       challengeGameState.challengePhrases = [];
+      setTimeout(() => triggerAchievementCheck(), 300);
     });
   }
 
@@ -990,6 +1027,7 @@
     Dialogue.show('Reiko', resultLines, () => {
       paymentGameState.inPayment = false;
       paymentGameState.scenario = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
     });
   }
 
@@ -1188,6 +1226,7 @@
     Dialogue.show('Obaa-chan', resultLines, () => {
       seasonalGameState.inSeasonal = false;
       seasonalGameState.lesson = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
     });
   }
 
@@ -1390,6 +1429,7 @@
     Dialogue.show('Takoyaki', resultLines, () => {
       kansaiGameState.inKansai = false;
       kansaiGameState.lesson = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
     });
   }
 
@@ -1592,6 +1632,7 @@
     Dialogue.show('Keiko', resultLines, () => {
       politenessGameState.inPoliteness = false;
       politenessGameState.lesson = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
     });
   }
 
@@ -1977,6 +2018,23 @@
     }
   }
 
+  // ============ ACHIEVEMENT CHECK HELPER ============
+  function triggerAchievementCheck() {
+    const justUnlocked = NPCs.checkAchievements();
+    if (justUnlocked.length > 0) {
+      // Queue all unlocked achievements for notification
+      for (const ach of justUnlocked) {
+        if (!state.achievementNotification) {
+          state.achievementNotification = { achievement: ach, timer: 4.0 };
+          GameAudio.playLevelComplete();
+          Engine.spawnStarBurst();
+        } else {
+          state.achievementQueue.push(ach);
+        }
+      }
+    }
+  }
+
   function finishLevel() {
     const store = state.currentInteractionStore;
     const level = state.currentInteractionLevel;
@@ -2030,6 +2088,8 @@
       state.interacting = false;
       state.currentInteractionStore = null;
       state.currentInteractionLevel = null;
+      // Check for achievement unlocks after level completion
+      setTimeout(() => triggerAchievementCheck(), 500);
     });
   }
 
@@ -2163,7 +2223,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -2219,6 +2279,24 @@
         NPCs.getInventory(),
         NPCs.getTotalItems(),
         state.time
+      );
+    }
+
+    // Achievement gallery overlay
+    if (state.achievementOpen) {
+      Sprites.drawAchievementOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        NPCs.getAllAchievements(),
+        state.time
+      );
+    }
+
+    // Achievement unlock notification banner
+    if (state.achievementNotification) {
+      Sprites.drawAchievementBanner(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        state.achievementNotification.achievement,
+        state.achievementNotification.timer
       );
     }
 
@@ -2308,7 +2386,23 @@
       totalBonusPhrases: NPCs.getTotalBonusPhrases(),
       // ElevenLabs voice system
       voiceStatus: GameAudio.getVoiceStatus(),
+      // Achievement badges
+      achievementOpen: state.achievementOpen,
+      achievementNotification: !!state.achievementNotification,
+      achievementsUnlocked: NPCs.getAchievementCount(),
+      achievementsTotal: NPCs.getTotalAchievements(),
     });
+  };
+
+  // Testing hook: open/close achievement gallery
+  window.toggleAchievements = () => {
+    state.achievementOpen = !state.achievementOpen;
+  };
+
+  // Testing hook: force unlock an achievement by ID
+  window.testAchievement = (id) => {
+    // Manually trigger the check which will unlock any earned ones
+    triggerAchievementCheck();
   };
 
   // Testing hook: open/close stamp card

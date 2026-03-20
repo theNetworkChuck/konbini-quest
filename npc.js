@@ -1815,6 +1815,149 @@ const NPCs = (() => {
     return inventory.some(i => i.isNew);
   }
 
+  // ============ ACHIEVEMENT BADGES SYSTEM ============
+  // Achievement definitions with conditions checked against game state
+  const ACHIEVEMENTS = [
+    // Store Milestones
+    { id: 'first_purchase', name: 'First Purchase', nameJp: '初めてのお買い物', icon: 'bag',
+      desc: 'Complete your first store level', tier: 'bronze',
+      check: () => completedLevelsCount >= 1 },
+    { id: 'seven_fan', name: '7-Eleven Fan', nameJp: 'セブン大好き', icon: 'seven',
+      desc: 'Complete all 7-Eleven levels', tier: 'silver',
+      check: () => isStoreComplete('7-Eleven') },
+    { id: 'lawson_regular', name: 'Lawson Regular', nameJp: 'ローソン常連', icon: 'lawson',
+      desc: 'Complete all Lawson levels', tier: 'silver',
+      check: () => isStoreComplete('Lawson') },
+    { id: 'famima_friend', name: 'FamiMa Friend', nameJp: 'ファミマの友達', icon: 'famima',
+      desc: 'Complete all FamilyMart levels', tier: 'silver',
+      check: () => isStoreComplete('FamilyMart') },
+    { id: 'konbini_master', name: 'Konbini Master', nameJp: 'コンビニマスター', icon: 'crown',
+      desc: 'Complete all 12 store levels', tier: 'gold',
+      check: () => isStoreComplete('7-Eleven') && isStoreComplete('Lawson') && isStoreComplete('FamilyMart') },
+
+    // Star Excellence
+    { id: 'star_collector', name: 'Star Collector', nameJp: 'スターコレクター', icon: 'star',
+      desc: 'Earn 10 total stars', tier: 'bronze',
+      check: () => getTotalStars() >= 10 },
+    { id: 'perfectionist', name: 'Perfectionist', nameJp: '完璧主義者', icon: 'sparkle',
+      desc: 'Earn 30 stars (all perfect)', tier: 'gold',
+      check: () => getTotalStars() >= 30 },
+
+    // Collection Achievements
+    { id: 'stamp_starter', name: 'Stamp Starter', nameJp: 'スタンプ初心者', icon: 'stamp',
+      desc: 'Collect 5 stamps', tier: 'bronze',
+      check: () => getTotalStamps().total >= 5 },
+    { id: 'stamp_king', name: 'Stamp King', nameJp: 'スタンプ王', icon: 'stamp',
+      desc: 'Collect all 15 stamps', tier: 'gold',
+      check: () => getTotalStamps().total >= 15 },
+    { id: 'phrase_hunter', name: 'Phrase Hunter', nameJp: 'フレーズハンター', icon: 'book',
+      desc: 'Collect 10 bonus phrases', tier: 'silver',
+      check: () => getCollectedCount() >= 10 },
+    { id: 'phrase_master', name: 'Phrase Encyclopedia', nameJp: 'フレーズ百科', icon: 'book',
+      desc: 'Collect all 20 bonus phrases', tier: 'gold',
+      check: () => getCollectedCount() >= 20 },
+    { id: 'full_bag', name: 'Full Bag', nameJp: '買い物上手', icon: 'bag',
+      desc: 'Collect all 12 konbini items', tier: 'gold',
+      check: () => getInventoryCount() >= 12 },
+
+    // Challenge Achievements
+    { id: 'challenger', name: 'Challenger', nameJp: 'チャレンジャー', icon: 'fire',
+      desc: 'Complete your first challenge', tier: 'bronze',
+      check: () => getChallengeState().challengesCompleted >= 1 },
+    { id: 'streak_3', name: 'Hot Streak', nameJp: '連勝中', icon: 'fire',
+      desc: 'Reach a 3-challenge streak', tier: 'bronze',
+      check: () => getChallengeState().bestStreak >= 3 },
+    { id: 'streak_10', name: 'On Fire', nameJp: '絶好調', icon: 'fire',
+      desc: 'Reach a 10-challenge streak', tier: 'gold',
+      check: () => getChallengeState().bestStreak >= 10 },
+
+    // NPC Specialist Achievements
+    { id: 'payment_pro', name: 'Payment Pro', nameJp: 'お支払いのプロ', icon: 'card',
+      desc: 'Complete all 6 payment scenarios', tier: 'silver',
+      check: () => getPaymentStats().completed >= 6 },
+    { id: 'season_expert', name: 'Four Seasons', nameJp: '四季マスター', icon: 'leaf',
+      desc: 'Complete all 4 seasonal lessons', tier: 'silver',
+      check: () => getSeasonalStats().completed >= 4 },
+    { id: 'kansai_speaker', name: 'Kansai Speaker', nameJp: '関西弁使い', icon: 'speech',
+      desc: 'Complete all 5 Kansai lessons', tier: 'silver',
+      check: () => getKansaiStats().completed >= 5 },
+    { id: 'keigo_master', name: 'Keigo Master', nameJp: '敬語マスター', icon: 'bow',
+      desc: 'Complete all 5 politeness lessons', tier: 'gold',
+      check: () => getPolitenessStats().completed >= 5 },
+
+    // Learning Achievements
+    { id: 'review_student', name: 'Review Student', nameJp: '復習の生徒', icon: 'pencil',
+      desc: 'Complete 5 review sessions', tier: 'bronze',
+      check: () => getReviewStats().totalReviews >= 5 },
+    { id: 'memory_master', name: 'Memory Master', nameJp: '記憶の達人', icon: 'brain',
+      desc: 'Master 20 phrases (mastery 4+)', tier: 'gold',
+      check: () => getReviewStats().mastered >= 20 },
+  ];
+
+  // Unlocked achievement IDs
+  const unlockedAchievements = new Set();
+  // Newly unlocked (not yet dismissed by player)
+  const newAchievements = [];
+  // Best streak tracking for achievements (challenge state.streak is session-only)
+  let bestStreakEver = 0;
+
+  function checkAchievements() {
+    const justUnlocked = [];
+    for (const ach of ACHIEVEMENTS) {
+      if (unlockedAchievements.has(ach.id)) continue;
+      try {
+        if (ach.check()) {
+          unlockedAchievements.add(ach.id);
+          newAchievements.push(ach.id);
+          justUnlocked.push(ach);
+        }
+      } catch (e) {
+        // Silently skip if check fails
+      }
+    }
+    return justUnlocked;
+  }
+
+  function getUnlockedAchievements() {
+    return ACHIEVEMENTS.filter(a => unlockedAchievements.has(a.id));
+  }
+
+  function getAchievementCount() {
+    return unlockedAchievements.size;
+  }
+
+  function getTotalAchievements() {
+    return ACHIEVEMENTS.length;
+  }
+
+  function getAllAchievements() {
+    return ACHIEVEMENTS.map(a => ({
+      ...a,
+      unlocked: unlockedAchievements.has(a.id),
+      isNew: newAchievements.includes(a.id),
+    }));
+  }
+
+  function popNewAchievement() {
+    if (newAchievements.length === 0) return null;
+    const id = newAchievements.shift();
+    return ACHIEVEMENTS.find(a => a.id === id) || null;
+  }
+
+  function hasNewAchievements() {
+    return newAchievements.length > 0;
+  }
+
+  function markAchievementsViewed() {
+    newAchievements.length = 0;
+  }
+
+  function updateBestStreak(streak) {
+    if (streak > bestStreakEver) bestStreakEver = streak;
+  }
+
+
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -1908,5 +2051,16 @@ const NPCs = (() => {
     getTotalItems,
     markInventoryViewed,
     hasNewInventoryItems,
+    // Achievement badges
+    ACHIEVEMENTS,
+    checkAchievements,
+    getUnlockedAchievements,
+    getAchievementCount,
+    getTotalAchievements,
+    getAllAchievements,
+    popNewAchievement,
+    hasNewAchievements,
+    markAchievementsViewed,
+    updateBestStreak,
   };
 })();

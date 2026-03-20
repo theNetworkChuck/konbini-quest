@@ -2163,6 +2163,359 @@ const Sprites = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ ACHIEVEMENT BADGES ============
+  const TIER_COLORS = {
+    bronze: { bg: '#8B5E3C', border: '#CD7F32', text: '#FFD4A8', glow: '#CD7F32' },
+    silver: { bg: '#6A6A7A', border: '#C0C0C0', text: '#E8E8F0', glow: '#C0C0C0' },
+    gold:   { bg: '#7A6420', border: '#FFD700', text: '#FFF8DC', glow: '#FFD700' },
+  };
+
+  // Draw a small 8x8 achievement icon based on type
+  function drawAchievementIcon(ctx, x, y, icon, tier, size) {
+    const s = size || 8;
+    const tc = TIER_COLORS[tier] || TIER_COLORS.bronze;
+    const half = Math.floor(s / 2);
+
+    switch (icon) {
+      case 'bag':
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(x + 1, y, s - 2, 1);
+        ctx.fillRect(x, y + 1, s, s - 2);
+        ctx.fillStyle = tc.text;
+        ctx.fillRect(x + 3, y + 2, 2, 1);
+        break;
+      case 'seven':
+        ctx.fillStyle = '#d4380d';
+        ctx.fillRect(x + 1, y + 1, s - 2, 2);
+        ctx.fillRect(x + 4, y + 3, 2, s - 4);
+        break;
+      case 'lawson':
+        ctx.fillStyle = '#1a6fc4';
+        ctx.fillRect(x + 2, y, 1, s);
+        ctx.fillRect(x + 2, y + s - 2, s - 3, 2);
+        break;
+      case 'famima':
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(x + 1, y + 1, s - 2, 2);
+        ctx.fillRect(x + 1, y + 3, 2, 2);
+        ctx.fillRect(x + 1, y + 5, s - 2, 2);
+        break;
+      case 'crown':
+        ctx.fillStyle = '#FFD700';
+        ctx.fillRect(x, y + 3, s, s - 4);
+        ctx.fillRect(x, y + 1, 2, 2);
+        ctx.fillRect(x + half - 1, y, 2, 2);
+        ctx.fillRect(x + s - 2, y + 1, 2, 2);
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(x + 2, y + 5, 1, 1);
+        ctx.fillRect(x + s - 3, y + 5, 1, 1);
+        break;
+      case 'star':
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(x + 3, y, 2, 2);
+        ctx.fillRect(x + 1, y + 2, 6, 2);
+        ctx.fillRect(x + 2, y + 4, 4, 2);
+        ctx.fillRect(x + 1, y + 6, 2, 2);
+        ctx.fillRect(x + 5, y + 6, 2, 2);
+        break;
+      case 'sparkle':
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(x + half, y, 1, s);
+        ctx.fillRect(x, y + half, s, 1);
+        ctx.fillRect(x + 1, y + 1, 1, 1);
+        ctx.fillRect(x + s - 2, y + 1, 1, 1);
+        ctx.fillRect(x + 1, y + s - 2, 1, 1);
+        ctx.fillRect(x + s - 2, y + s - 2, 1, 1);
+        break;
+      case 'stamp':
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+        ctx.fillStyle = '#FFB7C5';
+        ctx.fillRect(x + 2, y + 2, s - 4, s - 4);
+        break;
+      case 'book':
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(x, y + 1, 2, s - 2);
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(x + 2, y, s - 3, s);
+        ctx.fillStyle = tc.text;
+        ctx.fillRect(x + 4, y + 2, 2, 1);
+        ctx.fillRect(x + 4, y + 4, 3, 1);
+        break;
+      case 'fire':
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(x + 2, y, 3, 2);
+        ctx.fillRect(x + 1, y + 2, 5, 3);
+        ctx.fillStyle = '#f39c12';
+        ctx.fillRect(x + 2, y + 2, 3, 2);
+        ctx.fillRect(x + 2, y + 5, 3, 2);
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(x + 3, y + 4, 2, 3);
+        break;
+      case 'card':
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(x, y + 1, s, s - 2);
+        ctx.fillStyle = '#1a6fc4';
+        ctx.fillRect(x + 1, y + 2, s - 2, 2);
+        ctx.fillStyle = tc.text;
+        ctx.fillRect(x + 1, y + 5, 3, 1);
+        break;
+      case 'leaf':
+        ctx.fillStyle = '#27ae60';
+        ctx.fillRect(x + 3, y, 3, 2);
+        ctx.fillRect(x + 2, y + 2, 4, 2);
+        ctx.fillRect(x + 1, y + 4, 4, 2);
+        ctx.fillStyle = '#e67e22';
+        ctx.fillRect(x + 4, y + 5, 2, 2);
+        break;
+      case 'speech':
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(x + 1, y, s - 2, s - 3);
+        ctx.fillRect(x, y + 1, s, s - 5);
+        ctx.fillRect(x + 1, y + s - 3, 2, 2);
+        ctx.fillStyle = tc.text;
+        ctx.fillRect(x + 2, y + 2, 2, 1);
+        ctx.fillRect(x + 2, y + 4, 3, 1);
+        break;
+      case 'bow':
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(x + 2, y, 3, 3);
+        ctx.fillRect(x + 1, y + 3, 5, 2);
+        ctx.fillRect(x + 2, y + 5, 3, 3);
+        ctx.fillStyle = '#f5d0a9';
+        ctx.fillRect(x + 3, y + 1, 1, 1);
+        break;
+      case 'pencil':
+        ctx.fillStyle = '#f1c40f';
+        ctx.fillRect(x + 5, y, 2, 5);
+        ctx.fillRect(x + 3, y + 3, 2, 3);
+        ctx.fillRect(x + 1, y + 5, 2, 2);
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(x, y + 7, 2, 1);
+        break;
+      case 'brain':
+        ctx.fillStyle = '#e8a0c0';
+        ctx.fillRect(x + 1, y, s - 2, 2);
+        ctx.fillRect(x, y + 2, s, 3);
+        ctx.fillRect(x + 1, y + 5, s - 2, 2);
+        ctx.fillStyle = '#d080a0';
+        ctx.fillRect(x + half, y + 1, 1, 5);
+        break;
+      default:
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(x + 1, y + 1, s - 2, s - 2);
+    }
+  }
+
+  // Draw the achievement trophy icon for HUD
+  function drawTrophyIcon(ctx, x, y, count, total, hasNew) {
+    // Trophy shape
+    ctx.fillStyle = hasNew ? '#FFD700' : '#D4AF37';
+    // Cup body
+    ctx.fillRect(x + 2, y, 6, 2);
+    ctx.fillRect(x + 1, y + 2, 8, 4);
+    ctx.fillRect(x + 2, y + 6, 6, 1);
+    // Handles
+    ctx.fillRect(x, y + 2, 1, 3);
+    ctx.fillRect(x + 9, y + 2, 1, 3);
+    // Base
+    ctx.fillRect(x + 3, y + 7, 4, 1);
+    ctx.fillRect(x + 2, y + 8, 6, 1);
+    // Shimmer
+    ctx.fillStyle = '#FFF8DC';
+    ctx.fillRect(x + 3, y + 3, 1, 1);
+  }
+
+  // Draw achievement unlock banner (toast notification)
+  function drawAchievementBanner(ctx, canvasW, canvasH, achievement, timer) {
+    if (!achievement) return;
+    const tc = TIER_COLORS[achievement.tier] || TIER_COLORS.bronze;
+
+    // Slide in from top
+    const maxT = 4.0;
+    const slideIn = Math.min(1, timer / 0.3);
+    const slideOut = timer < 0.5 ? timer / 0.5 : 1;
+    const alpha = Math.min(slideIn, slideOut);
+    const yOffset = (1 - alpha) * -30;
+
+    const bannerW = canvasW - 16;
+    const bannerH = 28;
+    const bannerX = 8;
+    const bannerY = 30 + yOffset;
+
+    // Glow effect
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.fillStyle = tc.glow;
+    ctx.fillRect(bannerX - 1, bannerY - 1, bannerW + 2, bannerH + 2);
+
+    ctx.globalAlpha = alpha;
+
+    // Banner background
+    ctx.fillStyle = 'rgba(10,10,30,0.95)';
+    ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+
+    // Border
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+
+    // Icon
+    drawAchievementIcon(ctx, bannerX + 4, bannerY + 4, achievement.icon, achievement.tier, 8);
+
+    // "ACHIEVEMENT UNLOCKED" header
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = tc.border;
+    ctx.textAlign = 'left';
+    ctx.fillText('ACHIEVEMENT UNLOCKED!', bannerX + 16, bannerY + 9);
+
+    // Achievement name
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(achievement.name, bannerX + 16, bannerY + 18);
+
+    // Japanese name
+    ctx.font = '8px "M PLUS Rounded 1c"';
+    ctx.fillStyle = tc.text;
+    ctx.fillText(achievement.nameJp, bannerX + 16, bannerY + 26);
+
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'left';
+  }
+
+  // Draw the achievement gallery overlay
+  function drawAchievementOverlay(ctx, canvasW, canvasH, achievements, time) {
+    // Darken background
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Card
+    const cardW = canvasW - 16;
+    const cardH = canvasH - 16;
+    const cardX = 8;
+    const cardY = 8;
+
+    ctx.fillStyle = '#0d0d1e';
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#D4AF37';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+    // Title
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'center';
+    ctx.fillText('ACHIEVEMENTS', canvasW / 2, cardY + 13);
+
+    // Japanese subtitle
+    ctx.font = '9px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('\u5B9F\u7E3E\u30D0\u30C3\u30B8', canvasW / 2, cardY + 23);
+
+    // Count
+    const unlocked = achievements.filter(a => a.unlocked).length;
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#888';
+    ctx.fillText(`${unlocked}/${achievements.length} unlocked`, canvasW / 2, cardY + 31);
+
+    ctx.textAlign = 'left';
+
+    // Achievement grid — 2 columns
+    const startY = cardY + 36;
+    const colW = Math.floor((cardW - 8) / 2);
+    const rowH = 26;
+    const maxRows = 7;
+
+    achievements.forEach((ach, i) => {
+      if (i >= maxRows * 2) return; // max 14 visible
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const ax = cardX + 4 + col * colW;
+      const ay = startY + row * rowH;
+
+      const tc = TIER_COLORS[ach.tier] || TIER_COLORS.bronze;
+
+      if (ach.unlocked) {
+        // Unlocked: colored card
+        ctx.fillStyle = 'rgba(40,40,60,0.9)';
+        ctx.fillRect(ax, ay, colW - 2, rowH - 2);
+        ctx.strokeStyle = tc.border;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ax, ay, colW - 2, rowH - 2);
+
+        // NEW indicator
+        if (ach.isNew) {
+          const pulse = 0.6 + 0.4 * Math.sin(time * 6);
+          ctx.globalAlpha = pulse;
+          ctx.fillStyle = '#FFD700';
+          ctx.font = '4px "Press Start 2P"';
+          ctx.fillText('NEW', ax + colW - 18, ay + 7);
+          ctx.globalAlpha = 1;
+        }
+
+        // Icon
+        drawAchievementIcon(ctx, ax + 3, ay + 3, ach.icon, ach.tier, 8);
+
+        // Name
+        ctx.font = '4px "Press Start 2P"';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(ach.name, ax + 14, ay + 9);
+
+        // Japanese name
+        ctx.font = '7px "M PLUS Rounded 1c"';
+        ctx.fillStyle = tc.text;
+        ctx.fillText(ach.nameJp, ax + 14, ay + 18);
+
+        // Tier dot
+        ctx.fillStyle = tc.border;
+        ctx.fillRect(ax + colW - 6, ay + rowH - 6, 3, 3);
+      } else {
+        // Locked: dark, mysterious
+        ctx.fillStyle = 'rgba(20,20,30,0.8)';
+        ctx.fillRect(ax, ay, colW - 2, rowH - 2);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ax, ay, colW - 2, rowH - 2);
+
+        // Lock icon (question mark)
+        ctx.fillStyle = '#444';
+        ctx.font = '6px "Press Start 2P"';
+        ctx.fillText('?', ax + 5, ay + 12);
+
+        // Hidden description
+        ctx.font = '4px "Press Start 2P"';
+        ctx.fillStyle = '#555';
+        ctx.fillText(ach.desc, ax + 14, ay + 9);
+
+        // Tier hint
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#444';
+        const tierLabel = ach.tier.charAt(0).toUpperCase() + ach.tier.slice(1);
+        ctx.fillText(tierLabel, ax + 14, ay + 18);
+      }
+    });
+
+    // Progress bar at bottom
+    const barY = cardY + cardH - 14;
+    const barW = cardW - 16;
+    const barX = cardX + 8;
+    const progress = unlocked / achievements.length;
+
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(barX, barY, barW, 6);
+    ctx.fillStyle = progress >= 1 ? '#FFD700' : '#D4AF37';
+    ctx.fillRect(barX, barY, barW * progress, 6);
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, 6);
+
+    // Close hint
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#666';
+    ctx.textAlign = 'center';
+    ctx.fillText('[B] Close', canvasW / 2, cardY + cardH - 2);
+    ctx.textAlign = 'left';
+  }
+
   return {
     T,
     drawPlayer,
@@ -2194,5 +2547,10 @@ const Sprites = (() => {
     drawBagIcon,
     drawItemIcon,
     drawInventoryOverlay,
+    // Achievement badges
+    drawAchievementIcon,
+    drawTrophyIcon,
+    drawAchievementBanner,
+    drawAchievementOverlay,
   };
 })();
