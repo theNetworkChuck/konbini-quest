@@ -28,7 +28,7 @@
 13. ~~**Payment Method Interactions**~~ ✅ - Full payment flow: "How would you like to pay?" → Cash/Card/IC card responses with proper keigo.
 14. ~~**Seasonal Items**~~ ✅ - Oden in winter, ice cream in summer. Teaches seasonal vocabulary.
 15. ~~**Regional Dialects**~~ -- Kansai-ben coach NPC teaches Osaka dialect as a bonus challenge.
-16. **Politeness Levels** - Show casual vs polite vs keigo versions of the same phrase.
+16. ~~**Politeness Levels**~~ -- Politeness coach NPC teaches casual/polite/keigo escalation for konbini phrases.
 
 ### Batch 5: Advanced Mechanics
 17. **Mini-map** - Small map in corner showing store locations and completion status.
@@ -372,6 +372,31 @@
 - Unlocks after completing first store level (ensures player knows konbini basics first)
 - Star rating system: 完璧 (perfect ★★★), いいね (good ★★☆), もう少し (keep practicing ★☆☆)
 - All-seasons completion celebration: 全季節クリア! bonus message
+
+**Files modified:** sprites.js, npc.js, engine.js, game.js
+
+### 2026-03-20 -- #16 Politeness Levels
+**Commit:** `f62df90`
+
+**What was changed:**
+- New NPC "Keiko" the Politeness Coach added to Konbini Street at position (6, 14)
+- Custom pixel art sprite: refined woman in navy kimono with gold obi sash, dark upswept hair, white tabi socks
+- Pulsing navy-purple bubble indicator with gold up-arrow and triple-line icon (symbolizing three levels)
+- 5 complete politeness level lessons covering konbini phrases at all three formality levels:
+  1. **Greeting Politeness** - irasshaimase casual vs keigo, three levels of arigatou, gomen vs sumimasen vs moushiwake gozaimasen
+  2. **Making Requests** - ohashi wo otsuke shimasu ka (humble keigo pattern), onegai shimasu vs onegai itashimasu, daijoubu desu vs kekkou de gozaimasu
+  3. **Having & Existing** - point card omochi desu ka (honorific forms), receipt irimasu ka vs go-nyuuyou, bento atatame masu ka patterns
+  4. **Payment Politeness** - de gozaimasu (keigo desu), natural payment levels at konbini, shoushou omachi kudasai vs chotto matte
+  5. **The desu/masu System** - i-adjective + desu pattern, verb stem + masu pattern, special keigo verbs (meshiagaru)
+- Each lesson has 3 interactive quizzes (15 total quiz exchanges)
+- Every question teaches how the same phrase changes across casual/polite/keigo levels
+- Grammar pattern explanations: o + verb stem + shimasu (humble), verb stem + masu (polite), de gozaimasu (keigo desu)
+- ElevenLabs voice preloading for all politeness-level Japanese phrases
+- Correct answers trigger sparkle particles + voice playback + variable reward rolls
+- Topic progression tracking: completed topics, star ratings, 5-topic unlock system
+- Unlocks after completing 2 store levels
+- Star rating: kanpeki (perfect), jouzu (well done), mou sukoshi (keep practicing)
+- All-topics completion: keigo masutaa!
 
 **Files modified:** sprites.js, npc.js, engine.js, game.js
 
