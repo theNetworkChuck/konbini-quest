@@ -31,7 +31,7 @@
 16. ~~**Politeness Levels**~~ -- Politeness coach NPC teaches casual/polite/keigo escalation for konbini phrases.
 
 ### Batch 5: Advanced Mechanics
-17. **Mini-map** - Small map in corner showing store locations and completion status.
+17. ~~**Mini-map**~~ ✅ - Small map in corner showing store locations and completion status.
 18. **Inventory System** - Items you "buy" appear in a bag. Review what you purchased with Japanese labels.
 19. **Achievement Badges** - "First Purchase", "Point Card Pro", "Konbini Master" etc.
 20. **Sound Design** - Ambient konbini BGM, register beeps, bag rustling.
@@ -426,3 +426,21 @@
 - All-topics completion message: 関西弁マスター! (Kansai-ben master!)
 
 **Files modified:** sprites.js, npc.js, engine.js, game.js
+
+### 2026-03-20 -- #17 Mini-map ✅
+**Commit:** `edfd93f`
+
+**What was added:**
+- Pixel-art mini-map overlay in the bottom-left corner of the screen (street map only)
+- Shows the entire 20x18 street layout at 3px-per-tile scale with simplified tile coloring
+- All 3 stores rendered in their brand colors: 7-Eleven (#d4380d), Lawson (#1a6fc4), FamilyMart (#27ae60)
+- Player position shown as blinking red/white dot that tracks movement in real-time
+- Store completion indicators: gold checkmark for completed stores, pulsing white dot for available interactions
+- Road, sidewalk, grass, trees, fence, benches, street lamps, and vending machines all color-coded
+- Semi-transparent dark background (85% opacity) with subtle border
+- "MAP" label above the mini-map for clarity
+- Automatically hidden during dialogue, stamp card overlay, and phrase book overlay
+- Only renders on the street map (map 0) — not inside stores
+- renderMiniMap() function added to engine.js, called from game.js render pipeline after HUD
+
+**Files modified:** engine.js, game.js
