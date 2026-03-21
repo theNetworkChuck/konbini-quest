@@ -2708,6 +2708,238 @@ const Sprites = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ CULTURAL NOTES ============
+
+  // Scroll/book icon for HUD
+  function drawCulturalNoteIcon(ctx, x, y, count, total, hasNew, time) {
+    const w = 40, h = 12;
+    // Background
+    ctx.fillStyle = 'rgba(26,26,46,0.85)';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = hasNew ? '#e8a930' : '#8e6c24';
+    if (hasNew) {
+      const pulse = Math.sin(time * 4) * 0.3 + 0.7;
+      ctx.strokeStyle = `rgba(232,169,48,${pulse})`;
+    }
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, w, h);
+    // Scroll icon (small book)
+    ctx.fillStyle = '#e8a930';
+    ctx.fillRect(x + 3, y + 2, 6, 8);
+    ctx.fillStyle = '#d4920a';
+    ctx.fillRect(x + 3, y + 2, 1, 8);
+    ctx.fillRect(x + 5, y + 3, 3, 1);
+    ctx.fillRect(x + 5, y + 5, 3, 1);
+    ctx.fillRect(x + 5, y + 7, 2, 1);
+    // Count text
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#e8a930';
+    ctx.fillText(`${count}/${total}`, x + 12, y + 9);
+  }
+
+  // Cultural note popup banner (appears after correct answers)
+  function drawCulturalNoteBanner(ctx, canvasW, canvasH, note, timer) {
+    if (!note) return;
+
+    // Slide in from top, pause, slide out
+    let alpha = 1;
+    const maxT = 6.0;
+    if (timer > maxT - 0.5) alpha = (maxT - timer) / 0.5; // fade out at end
+    if (timer > maxT) return;
+    const slideIn = timer < 0.4 ? timer / 0.4 : 1;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+    const bannerW = 230;
+    const bannerH = 68;
+    const bannerX = (canvasW - bannerW) / 2;
+    const bannerY = 4 + (1 - slideIn) * -40;
+
+    // Dark background with golden border (scroll aesthetic)
+    ctx.fillStyle = 'rgba(30,22,10,0.94)';
+    ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+
+    // Double border for scroll feel
+    ctx.strokeStyle = '#8e6c24';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bannerX + 1, bannerY + 1, bannerW - 2, bannerH - 2);
+    ctx.strokeStyle = '#d4a830';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bannerX + 3, bannerY + 3, bannerW - 6, bannerH - 6);
+
+    // Header: "Did you know?" with torii gate accent
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#d4a830';
+    ctx.textAlign = 'center';
+    ctx.fillText('DID YOU KNOW?', canvasW / 2, bannerY + 12);
+
+    // Decorative line
+    ctx.strokeStyle = '#8e6c24';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(bannerX + 20, bannerY + 15);
+    ctx.lineTo(bannerX + bannerW - 20, bannerY + 15);
+    ctx.stroke();
+
+    // Title: Japanese + English
+    ctx.font = '9px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#f0d080';
+    ctx.fillText(note.titleJp, canvasW / 2, bannerY + 25);
+
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#e8a930';
+    ctx.fillText(note.titleEn, canvasW / 2, bannerY + 33);
+
+    // Body text (word-wrapped)
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#c0a060';
+    ctx.textAlign = 'left';
+    const maxWidth = bannerW - 20;
+    const words = note.textEn.split(' ');
+    let line = '';
+    let lineY = bannerY + 42;
+    const lineH = 7;
+    let lineCount = 0;
+    for (let i = 0; i < words.length; i++) {
+      const test = line + (line ? ' ' : '') + words[i];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, bannerX + 10, lineY);
+        line = words[i];
+        lineY += lineH;
+        lineCount++;
+        if (lineCount >= 3) { line += '...'; break; }
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, bannerX + 10, lineY);
+
+    // Dismiss hint
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#887040';
+    ctx.font = '4px "Press Start 2P"';
+    ctx.fillText('[A] Dismiss', canvasW / 2, bannerY + bannerH - 5);
+
+    ctx.textAlign = 'left';
+    ctx.restore();
+  }
+
+  // Full cultural notes collection overlay (opened with [C])
+  function drawCulturalNotesOverlay(ctx, canvasW, canvasH, notes, time) {
+    // Semi-transparent background
+    ctx.fillStyle = 'rgba(20,15,5,0.92)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    const cardW = canvasW - 20;
+    const cardH = canvasH - 10;
+    const cardX = 10;
+    const cardY = 5;
+
+    // Scroll/parchment background
+    ctx.fillStyle = '#1e1608';
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#d4a830';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cardX + 1, cardY + 1, cardW - 2, cardH - 2);
+    ctx.strokeStyle = '#8e6c24';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cardX + 3, cardY + 3, cardW - 6, cardH - 6);
+
+    // Title
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillStyle = '#d4a830';
+    ctx.textAlign = 'center';
+    ctx.fillText('CULTURAL NOTES', canvasW / 2, cardY + 16);
+
+    // Japanese subtitle
+    ctx.font = '10px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#a08040';
+    ctx.fillText('\u6587\u5316\u30CE\u30FC\u30C8', canvasW / 2, cardY + 28);
+
+    // Count
+    const seenCount = notes.filter(n => n.seen).length;
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#887040';
+    ctx.fillText(`${seenCount}/${notes.length} discovered`, canvasW / 2, cardY + 36);
+
+    // Decorative line
+    ctx.strokeStyle = '#8e6c24';
+    ctx.beginPath();
+    ctx.moveTo(cardX + 15, cardY + 39);
+    ctx.lineTo(cardX + cardW - 15, cardY + 39);
+    ctx.stroke();
+
+    // Notes grid (2 columns)
+    const colW = (cardW - 30) / 2;
+    const rowH = 22;
+    const startY = cardY + 44;
+    const maxRows = 8;
+
+    for (let i = 0; i < notes.length && i < maxRows * 2; i++) {
+      const note = notes[i];
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const nx = cardX + 10 + col * (colW + 10);
+      const ny = startY + row * rowH;
+
+      if (note.seen) {
+        // Discovered note
+        ctx.fillStyle = 'rgba(40,30,10,0.8)';
+        ctx.fillRect(nx, ny, colW, rowH - 2);
+        ctx.strokeStyle = '#8e6c24';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(nx, ny, colW, rowH - 2);
+
+        // Japanese title
+        ctx.font = '8px "M PLUS Rounded 1c"';
+        ctx.fillStyle = '#f0d080';
+        ctx.textAlign = 'left';
+        ctx.fillText(note.titleJp, nx + 3, ny + 9);
+
+        // English title
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#c0a060';
+        let enTitle = note.titleEn;
+        if (ctx.measureText(enTitle).width > colW - 6) {
+          enTitle = enTitle.substring(0, 14) + '...';
+        }
+        ctx.fillText(enTitle, nx + 3, ny + 17);
+      } else {
+        // Undiscovered note (locked)
+        ctx.fillStyle = 'rgba(20,15,5,0.6)';
+        ctx.fillRect(nx, ny, colW, rowH - 2);
+        ctx.strokeStyle = '#443010';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(nx, ny, colW, rowH - 2);
+
+        // Question mark
+        ctx.font = '8px "Press Start 2P"';
+        ctx.fillStyle = '#443010';
+        ctx.textAlign = 'center';
+        ctx.fillText('???', nx + colW / 2, ny + 12);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    // Rotating tip at bottom
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#887040';
+    ctx.textAlign = 'center';
+    const cultureTips = [
+      'Cultural notes appear during gameplay!',
+      'Play more levels to discover new notes.',
+      'Understanding culture deepens language!',
+      'Konbini culture is uniquely Japanese.',
+    ];
+    const tipIdx = Math.floor(time / 5) % cultureTips.length;
+    ctx.fillText(cultureTips[tipIdx], canvasW / 2, cardY + cardH - 12);
+
+    // Close hint
+    ctx.fillText('[B] Close  [C] Close', canvasW / 2, cardY + cardH - 4);
+    ctx.textAlign = 'left';
+  }
+
   return {
     T,
     drawPlayer,
@@ -2747,5 +2979,9 @@ const Sprites = (() => {
     // Mistake journal
     drawJournalIcon,
     drawMistakeJournalOverlay,
+    // Cultural notes
+    drawCulturalNoteIcon,
+    drawCulturalNoteBanner,
+    drawCulturalNotesOverlay,
   };
 })();

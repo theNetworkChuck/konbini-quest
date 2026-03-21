@@ -422,6 +422,15 @@ const Engine = (() => {
       Sprites.drawJournalIcon(ctx, CANVAS_W - jrnW, hudRightY + 2, mistakeCount, hasNewMist, Date.now() / 1000);
       ctx.fillStyle = hasNewMist ? '#FF6666' : '#aa5555';
       ctx.fillText(String(mistakeCount), CANVAS_W - jrnW + 20, hudRightY + 9);
+      hudRightY += 14;
+    }
+
+    // Cultural notes indicator (top right, below mistake journal)
+    if (mapIdx === 0) {
+      const notesSeen = NPCs.getSeenNoteCount();
+      const notesTotal = NPCs.getTotalNoteCount();
+      const hasNewN = NPCs.hasNewNotes();
+      Sprites.drawCulturalNoteIcon(ctx, CANVAS_W - 42, hudRightY, notesSeen, notesTotal, hasNewN, Date.now() / 1000);
     }
   }
 

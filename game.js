@@ -49,6 +49,9 @@
     achievementQueue: [], // queued unlock notifications
     // Mistake journal
     mistakeJournalOpen: false,
+    // Cultural notes
+    culturalNotesOpen: false,
+    culturalNoteNotification: null, // {note, timer}
   };
 
   let audioInitialized = false;
@@ -173,6 +176,32 @@
       }
     }
 
+    // Update cultural note notification timer
+    if (state.culturalNoteNotification) {
+      state.culturalNoteNotification.timer -= dt;
+      if (state.culturalNoteNotification.timer <= 0) {
+        state.culturalNoteNotification = null;
+      }
+    }
+
+    // Handle cultural notes overlay
+    if (state.culturalNotesOpen) {
+      if (Engine.inputB() || Engine.wasPressed('c')) {
+        NPCs.markNotesViewed();
+        state.culturalNotesOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
+    // Handle cultural note banner dismissal
+    if (state.culturalNoteNotification) {
+      if (Engine.inputA()) {
+        state.culturalNoteNotification = null;
+        GameAudio.playSelect();
+      }
+    }
+
     // Handle mistake journal overlay
     if (state.mistakeJournalOpen) {
       if (Engine.inputB() || Engine.wasPressed('j')) {
@@ -254,6 +283,13 @@
     // Open mistake journal with J key (on street map only)
     if (Engine.wasPressed('j') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
       state.mistakeJournalOpen = true;
+      GameAudio.playSelect();
+      return;
+    }
+
+    // Open cultural notes with C key (on street map only)
+    if (Engine.wasPressed('c') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
+      state.culturalNotesOpen = true;
       GameAudio.playSelect();
       return;
     }
@@ -402,6 +438,8 @@
               state.greetingShown = true;
               Dialogue.show('Clerk', 'いらっしゃいませ！', () => {
                 GameAudio.speakJapanese('いらっしゃいませ');
+                // Try showing a cultural note on store entry
+                tryCulturalNote('store_entry');
               });
             }
           }, 600);
@@ -1763,6 +1801,16 @@
     }
   }
 
+  // Try showing a cultural note based on context
+  function tryCulturalNote(contextTag) {
+    // Don't show if another notification is active
+    if (state.culturalNoteNotification || state.rewardNotification || state.achievementNotification) return;
+    const note = NPCs.getCulturalNote(contextTag);
+    if (note) {
+      state.culturalNoteNotification = { note, timer: 6.0 };
+    }
+  }
+
   // Track which display mode transitions the player has seen
   const seenModeTransitions = {};
 
@@ -2112,6 +2160,9 @@
       // Roll for variable reward (bonus phrase drop)
       tryVariableReward();
 
+      // Try showing a cultural note (context based on store type)
+      tryCulturalNote('checkout');
+
       const explanation = interaction.correctExplanation || 'Correct!';
       Dialogue.show('', explanation, () => {
         // Move to next interaction in this level
@@ -2228,6 +2279,8 @@
       state.currentInteractionLevel = null;
       // Check for achievement unlocks after level completion
       setTimeout(() => triggerAchievementCheck(), 500);
+      // Try showing a cultural note after completing a level
+      setTimeout(() => tryCulturalNote('general'), 1500);
     });
   }
 
@@ -2361,7 +2414,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -2435,6 +2488,24 @@
         ctx, Engine.CANVAS_W, Engine.CANVAS_H,
         NPCs.getMistakeJournal(),
         state.time
+      );
+    }
+
+    // Cultural notes collection overlay
+    if (state.culturalNotesOpen) {
+      Sprites.drawCulturalNotesOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        NPCs.getAllCulturalNotes(),
+        state.time
+      );
+    }
+
+    // Cultural note popup banner
+    if (state.culturalNoteNotification) {
+      Sprites.drawCulturalNoteBanner(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        state.culturalNoteNotification.note,
+        state.culturalNoteNotification.timer
       );
     }
 

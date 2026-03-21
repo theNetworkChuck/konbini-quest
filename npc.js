@@ -268,6 +268,213 @@ const NPCs = (() => {
       .slice(0, max || 5);
   }
 
+  // ============ CULTURAL NOTES ============
+  // Brief cultural context notes that appear during gameplay
+  const CULTURAL_NOTES = [
+    {
+      id: 'money_tray',
+      titleJp: 'お金のトレー',
+      titleEn: 'The Money Tray',
+      textEn: 'Place cash on the small tray (kashi-zara), never hand it directly. It keeps the transaction clean and avoids touching hands -- a sign of respect.',
+      textJp: 'カシ皿',
+      context: ['payment', 'store_entry'],
+      icon: 'tray',
+    },
+    {
+      id: 'irasshaimase',
+      titleJp: 'いらっしゃいませ',
+      titleEn: 'The Welcome Ritual',
+      textEn: 'Clerks say this to every customer. You do NOT need to reply -- it is a ritual greeting, not a personal hello. A small nod is plenty.',
+      textJp: 'いらっしゃいませ',
+      context: ['store_entry', 'greeting'],
+      icon: 'bow',
+    },
+    {
+      id: 'both_hands',
+      titleJp: '両手で渡す',
+      titleEn: 'Use Both Hands',
+      textEn: 'In Japan, giving and receiving items with both hands shows respect. Watch how clerks hold your bag or change with two hands.',
+      textJp: '両手で',
+      context: ['payment', 'checkout'],
+      icon: 'hands',
+    },
+    {
+      id: 'bag_charge',
+      titleJp: 'レジ袋有料化',
+      titleEn: 'Bag Charge Law',
+      textEn: 'Since July 2020, all plastic bags cost 3-5 yen. Most locals carry a reusable bag (mai-baggu). Saying "fukuro wa kekkou desu" saves money and plastic!',
+      textJp: 'マイバッグ',
+      context: ['bag', 'checkout'],
+      icon: 'bag',
+    },
+    {
+      id: 'point_card',
+      titleJp: 'ポイントカード',
+      titleEn: 'Point Cards',
+      textEn: 'Clerks always ask about point cards (T-Point, Ponta, dPoint). Saying "nai desu" (I don\'t have one) is perfectly fine and very common for tourists.',
+      textJp: 'ポイントカード',
+      context: ['checkout', 'store_entry'],
+      icon: 'card',
+    },
+    {
+      id: 'eating_inside',
+      titleJp: '店内飲食',
+      titleEn: 'No Eating in Aisles',
+      textEn: 'Do not eat while walking through the store. Some konbini have a designated eat-in corner (ito-in) with tables -- use that, or eat outside.',
+      textJp: 'イートイン',
+      context: ['general'],
+      icon: 'food',
+    },
+    {
+      id: 'quiet_atmosphere',
+      titleJp: '静かな店内',
+      titleEn: 'Keep It Quiet',
+      textEn: 'Konbini are calm, quiet spaces. Speaking loudly on the phone or shouting across aisles is considered rude. Match the soft atmosphere!',
+      textJp: '静かに',
+      context: ['general', 'store_entry'],
+      icon: 'quiet',
+    },
+    {
+      id: 'heated_food',
+      titleJp: '温めますか？',
+      titleEn: 'Heating Your Bento',
+      textEn: 'Clerks ask "atatame-masuka?" (shall I heat this?) for bento and onigiri. They have microwaves behind the counter. Say "onegai shimasu" for yes!',
+      textJp: '温めますか',
+      context: ['food', 'checkout'],
+      icon: 'food',
+    },
+    {
+      id: 'chopsticks',
+      titleJp: 'お箸の確認',
+      titleEn: 'Chopsticks Check',
+      textEn: 'Clerks ask "ohashi wa otsukai desu ka?" for chopsticks. They also offer spoons (supuun) and forks (fooku). One set per item is standard.',
+      textJp: 'お箸',
+      context: ['food', 'checkout'],
+      icon: 'food',
+    },
+    {
+      id: 'age_verification',
+      titleJp: '年齢確認',
+      titleEn: 'Age Verification Screen',
+      textEn: 'Buying alcohol or tobacco? Touch the screen that says "I am over 20" (hatachi ijou). The legal age in Japan is 20, not 18 or 21.',
+      textJp: '20歳以上',
+      context: ['payment', 'checkout'],
+      icon: 'card',
+    },
+    {
+      id: 'store_chime',
+      titleJp: '入店メロディー',
+      titleEn: 'The Door Chime',
+      textEn: 'Each konbini chain has a unique door chime melody. 7-Eleven, Lawson, and FamilyMart all have different tunes -- regulars can identify the store by sound alone!',
+      textJp: 'メロディー',
+      context: ['store_entry'],
+      icon: 'music',
+    },
+    {
+      id: 'receipt',
+      titleJp: 'レシート',
+      titleEn: 'The Receipt Ritual',
+      textEn: 'Clerks hand you the receipt carefully. You can politely decline by saying "daijoubu desu" with a small wave, or accept it -- either is fine.',
+      textJp: 'レシート',
+      context: ['checkout', 'payment'],
+      icon: 'tray',
+    },
+    {
+      id: 'coin_counting',
+      titleJp: '小銭を数える',
+      titleEn: 'Counting Coins is OK',
+      textEn: 'Taking time to count exact change is perfectly acceptable and even appreciated in Japan. Clerks will wait patiently -- no rush!',
+      textJp: '小銭',
+      context: ['payment'],
+      icon: 'tray',
+    },
+    {
+      id: 'arigatou_timing',
+      titleJp: 'ありがとうの\'タイミング',
+      titleEn: 'When to Say Thanks',
+      textEn: 'Say "arigatou gozaimasu" when you receive your bag -- not when entering. A quick bow of the head is a nice touch that clerks appreciate.',
+      textJp: 'ありがとうございます',
+      context: ['checkout', 'greeting'],
+      icon: 'bow',
+    },
+    {
+      id: 'oshibori',
+      titleJp: 'おしぼり',
+      titleEn: 'Hot Towels at Konbini',
+      textEn: 'Some konbini include a small wet towel (oshibori) with hot food purchases. It is for cleaning your hands before eating -- a uniquely Japanese touch!',
+      textJp: 'おしぼり',
+      context: ['food'],
+      icon: 'food',
+    },
+    {
+      id: 'konbini_atm',
+      titleJp: 'コンビニATM',
+      titleEn: 'Konbini ATMs',
+      textEn: 'Japanese konbini have ATMs that accept international cards -- a lifesaver for tourists! 7-Eleven\'s "Seven Bank" ATM is the most reliable for foreign cards.',
+      textJp: 'ATM',
+      context: ['general', 'payment'],
+      icon: 'card',
+    },
+  ];
+
+  const seenCulturalNotes = new Set();
+  let newNoteCount = 0;
+  let lastNoteTime = 0; // prevent note spam
+
+  function getCulturalNote(contextTag) {
+    const now = Date.now();
+    // Don't show notes more than once every 45 seconds
+    if (now - lastNoteTime < 45000) return null;
+
+    // Find unseen notes matching the context, or any unseen note
+    let candidates = CULTURAL_NOTES.filter(
+      n => !seenCulturalNotes.has(n.id) && n.context.includes(contextTag)
+    );
+    if (candidates.length === 0) {
+      candidates = CULTURAL_NOTES.filter(n => !seenCulturalNotes.has(n.id));
+    }
+    if (candidates.length === 0) return null; // all seen
+
+    // 40% chance to show a note (keeps them feeling special, not spammy)
+    if (Math.random() > 0.40) return null;
+
+    const note = candidates[Math.floor(Math.random() * candidates.length)];
+    seenCulturalNotes.add(note.id);
+    newNoteCount++;
+    lastNoteTime = now;
+    return note;
+  }
+
+  function forceGetCulturalNote(contextTag) {
+    // Always return a note (for the overlay browse)
+    let candidates = CULTURAL_NOTES.filter(n => n.context.includes(contextTag));
+    if (candidates.length === 0) candidates = CULTURAL_NOTES;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function getAllCulturalNotes() {
+    return CULTURAL_NOTES.map(n => ({
+      ...n,
+      seen: seenCulturalNotes.has(n.id),
+    }));
+  }
+
+  function getSeenNoteCount() {
+    return seenCulturalNotes.size;
+  }
+
+  function getTotalNoteCount() {
+    return CULTURAL_NOTES.length;
+  }
+
+  function hasNewNotes() {
+    return newNoteCount > 0;
+  }
+
+  function markNotesViewed() {
+    newNoteCount = 0;
+  }
+
   // ============ CHALLENGE / STREAK SYSTEM ============
   // Session-only streak tracking (in-memory only, resets on page reload)
   const challengeState = {
@@ -2130,5 +2337,13 @@ const NPCs = (() => {
     hasNewMistakes,
     markMistakesViewed,
     getTopMistakes,
+    // Cultural notes
+    CULTURAL_NOTES,
+    getCulturalNote,
+    getAllCulturalNotes,
+    getSeenNoteCount,
+    getTotalNoteCount,
+    hasNewNotes,
+    markNotesViewed,
   };
 })();
