@@ -2516,6 +2516,198 @@ const Sprites = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ MISTAKE JOURNAL OVERLAY ============
+  // Pixel-art journal icon for HUD
+  function drawJournalIcon(ctx, x, y, count, hasNew, time) {
+    // Open book shape in red/dark red
+    ctx.fillStyle = '#8B2020';
+    ctx.fillRect(x, y, 10, 8);
+    ctx.fillStyle = '#B33030';
+    ctx.fillRect(x + 1, y + 1, 4, 6);
+    ctx.fillRect(x + 6, y + 1, 3, 6);
+    // Spine
+    ctx.fillStyle = '#5A1010';
+    ctx.fillRect(x + 5, y, 1, 8);
+    // Page lines
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(x + 2, y + 2, 2, 1);
+    ctx.fillRect(x + 2, y + 4, 2, 1);
+    ctx.fillRect(x + 7, y + 2, 2, 1);
+    ctx.fillRect(x + 7, y + 4, 2, 1);
+    // X mark (mistakes)
+    ctx.fillStyle = '#FF4444';
+    ctx.fillRect(x + 3, y + 5, 1, 1);
+    ctx.fillRect(x + 4, y + 6, 1, 1);
+
+    // Count badge
+    if (count > 0) {
+      ctx.font = '5px "Press Start 2P"';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'right';
+      ctx.fillText(String(count), x + 18, y + 7);
+      ctx.textAlign = 'left';
+    }
+
+    // New indicator glow
+    if (hasNew) {
+      const alpha = 0.4 + Math.sin(time * 4) * 0.4;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#FF4444';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x - 1, y - 1, 12, 10);
+      ctx.restore();
+    }
+  }
+
+  function drawMistakeJournalOverlay(ctx, canvasW, canvasH, mistakes, time) {
+    // Darken background
+    ctx.fillStyle = 'rgba(0,0,0,0.88)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Card dimensions
+    const cardW = canvasW - 16;
+    const cardH = canvasH - 16;
+    const cardX = 8;
+    const cardY = 8;
+
+    // Card background (dark red tint for mistake theme)
+    ctx.fillStyle = '#1a0a0a';
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#8B2020';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+    // Inner border accent
+    ctx.strokeStyle = 'rgba(180,50,50,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cardX + 2, cardY + 2, cardW - 4, cardH - 4);
+
+    // Title
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillStyle = '#FF6666';
+    ctx.textAlign = 'center';
+    ctx.fillText('MISTAKE JOURNAL', canvasW / 2, cardY + 13);
+
+    // Japanese subtitle
+    ctx.font = '9px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#aa6666';
+    ctx.fillText('\u9593\u9055\u3044\u30CE\u30FC\u30C8', canvasW / 2, cardY + 23);
+
+    // Count
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#777';
+    ctx.fillText(mistakes.length + ' mistakes recorded', canvasW / 2, cardY + 31);
+    ctx.textAlign = 'left';
+
+    if (mistakes.length === 0) {
+      // Empty state
+      ctx.font = '6px "Press Start 2P"';
+      ctx.fillStyle = '#555';
+      ctx.textAlign = 'center';
+      ctx.fillText('No mistakes yet!', canvasW / 2, cardY + 55);
+      ctx.fillText('Keep practicing and', canvasW / 2, cardY + 67);
+      ctx.fillText('your errors will', canvasW / 2, cardY + 79);
+      ctx.fillText('show up here.', canvasW / 2, cardY + 91);
+      ctx.font = '8px "M PLUS Rounded 1c"';
+      ctx.fillStyle = '#666';
+      ctx.fillText('\u5931\u6557\u306F\u6210\u529F\u306E\u3082\u3068\uFF01', canvasW / 2, cardY + 110);
+      ctx.font = '5px "Press Start 2P"';
+      ctx.fillStyle = '#555';
+      ctx.fillText('Mistakes are the path to success!', canvasW / 2, cardY + 120);
+      ctx.textAlign = 'left';
+    } else {
+      // Mistake list
+      const listY = cardY + 36;
+      const entryH = 28;
+      const maxVisible = Math.floor((cardH - 56) / entryH);
+
+      for (let i = 0; i < Math.min(mistakes.length, maxVisible); i++) {
+        const m = mistakes[i];
+        const ey = listY + i * entryH;
+
+        // Entry row background
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(139,32,32,0.12)' : 'rgba(0,0,0,0)';
+        ctx.fillRect(cardX + 3, ey, cardW - 6, entryH - 1);
+
+        // Repeat count badge (left side)
+        if (m.count > 1) {
+          ctx.fillStyle = '#8B2020';
+          ctx.fillRect(cardX + 4, ey + 2, 10, 8);
+          ctx.font = '5px "Press Start 2P"';
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.fillText('x' + m.count, cardX + 9, ey + 8);
+          ctx.textAlign = 'left';
+        }
+
+        const textX = m.count > 1 ? cardX + 16 : cardX + 6;
+
+        // Clerk's question (what was asked)
+        ctx.font = '7px "M PLUS Rounded 1c"';
+        ctx.fillStyle = '#ccc';
+        const clerkLine = m.clerkJp.length > 28 ? m.clerkJp.substring(0, 27) + '...' : m.clerkJp;
+        ctx.fillText(clerkLine, textX, ey + 8);
+
+        // Wrong answer (in red) and correct answer (in green)
+        ctx.font = '5px "Press Start 2P"';
+        // Red X + wrong choice
+        ctx.fillStyle = '#FF4444';
+        ctx.fillText('\u2718', textX, ey + 16);
+        ctx.fillStyle = '#cc6666';
+        const wrongText = (m.chosenText || '').length > 16 ? m.chosenText.substring(0, 15) + '..' : m.chosenText;
+        ctx.fillText(wrongText, textX + 7, ey + 16);
+
+        // Green check + correct answer
+        const midX = textX + 7 + Math.max(wrongText.length * 4.5, 50);
+        if (midX < cardX + cardW - 10) {
+          ctx.fillStyle = '#44CC44';
+          ctx.fillText('\u2714', midX, ey + 16);
+          ctx.fillStyle = '#88cc88';
+          const correctText = (m.correctText || '').length > 14 ? m.correctText.substring(0, 13) + '..' : m.correctText;
+          ctx.fillText(correctText, midX + 7, ey + 16);
+        }
+
+        // Source tag (small, right-aligned)
+        if (m.source) {
+          ctx.font = '4px "Press Start 2P"';
+          ctx.fillStyle = '#666';
+          ctx.textAlign = 'right';
+          ctx.fillText(m.source, cardX + cardW - 5, ey + 8);
+          ctx.textAlign = 'left';
+        }
+
+        // Subtle separator line
+        ctx.fillStyle = 'rgba(139,32,32,0.25)';
+        ctx.fillRect(cardX + 6, ey + entryH - 1, cardW - 12, 1);
+      }
+
+      if (mistakes.length > maxVisible) {
+        ctx.font = '5px "Press Start 2P"';
+        ctx.fillStyle = '#666';
+        ctx.textAlign = 'center';
+        ctx.fillText('+ ' + (mistakes.length - maxVisible) + ' more...', canvasW / 2, listY + maxVisible * entryH + 6);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    // Motivational tip at bottom
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#aa6666';
+    ctx.textAlign = 'center';
+    const tips = [
+      'Review your mistakes to learn faster!',
+      'Patterns reveal what to study next.',
+      'Repeated mistakes = priority review!',
+      'Making mistakes means you are trying!',
+    ];
+    const tipIdx = Math.floor(time / 5) % tips.length;
+    ctx.fillText(tips[tipIdx], canvasW / 2, cardY + cardH - 12);
+
+    // Close hint
+    ctx.fillText('[B] Close  [J] Close', canvasW / 2, cardY + cardH - 4);
+    ctx.textAlign = 'left';
+  }
+
   return {
     T,
     drawPlayer,
@@ -2552,5 +2744,8 @@ const Sprites = (() => {
     drawTrophyIcon,
     drawAchievementBanner,
     drawAchievementOverlay,
+    // Mistake journal
+    drawJournalIcon,
+    drawMistakeJournalOverlay,
   };
 })();

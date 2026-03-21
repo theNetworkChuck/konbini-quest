@@ -207,6 +207,67 @@ const NPCs = (() => {
     return { total, mastered, learning, due: getReviewPhrases(99).length };
   }
 
+  // ============ MISTAKE JOURNAL ============
+  // Records every wrong answer with full context for review
+  // Each entry: { clerkJp, clerkEn, chosenText, correctText, correctEn, source, timestamp, count }
+  const mistakeJournal = [];
+  let newMistakeCount = 0; // unviewed mistakes
+
+  function recordMistake(entry) {
+    // Check if this exact mistake already exists (same clerk line + same wrong choice)
+    const existing = mistakeJournal.find(
+      m => m.clerkJp === entry.clerkJp && m.chosenText === entry.chosenText
+    );
+    if (existing) {
+      existing.count++;
+      existing.timestamp = Date.now();
+      // Move to front (most recent)
+      const idx = mistakeJournal.indexOf(existing);
+      if (idx > 0) {
+        mistakeJournal.splice(idx, 1);
+        mistakeJournal.unshift(existing);
+      }
+    } else {
+      mistakeJournal.unshift({
+        clerkJp: entry.clerkJp || '',
+        clerkEn: entry.clerkEn || '',
+        chosenText: entry.chosenText || '',
+        correctText: entry.correctText || '',
+        correctEn: entry.correctEn || '',
+        source: entry.source || 'Store', // Store, Review, Challenge, Payment, etc.
+        timestamp: Date.now(),
+        count: 1,
+      });
+    }
+    newMistakeCount++;
+    // Cap journal at 50 entries
+    if (mistakeJournal.length > 50) mistakeJournal.length = 50;
+  }
+
+  function getMistakeJournal() {
+    return mistakeJournal;
+  }
+
+  function getMistakeCount() {
+    return mistakeJournal.length;
+  }
+
+  function hasNewMistakes() {
+    return newMistakeCount > 0;
+  }
+
+  function markMistakesViewed() {
+    newMistakeCount = 0;
+  }
+
+  // Get top repeated mistakes (most-missed phrases)
+  function getTopMistakes(max) {
+    return mistakeJournal
+      .slice()
+      .sort((a, b) => b.count - a.count)
+      .slice(0, max || 5);
+  }
+
   // ============ CHALLENGE / STREAK SYSTEM ============
   // Session-only streak tracking (in-memory only, resets on page reload)
   const challengeState = {
@@ -2062,5 +2123,12 @@ const NPCs = (() => {
     hasNewAchievements,
     markAchievementsViewed,
     updateBestStreak,
+    // Mistake journal
+    recordMistake,
+    getMistakeJournal,
+    getMistakeCount,
+    hasNewMistakes,
+    markMistakesViewed,
+    getTopMistakes,
   };
 })();

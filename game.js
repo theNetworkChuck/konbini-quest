@@ -47,6 +47,8 @@
     achievementOpen: false,
     achievementNotification: null, // {achievement, timer}
     achievementQueue: [], // queued unlock notifications
+    // Mistake journal
+    mistakeJournalOpen: false,
   };
 
   let audioInitialized = false;
@@ -171,6 +173,16 @@
       }
     }
 
+    // Handle mistake journal overlay
+    if (state.mistakeJournalOpen) {
+      if (Engine.inputB() || Engine.wasPressed('j')) {
+        NPCs.markMistakesViewed();
+        state.mistakeJournalOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
     // Handle achievement overlay
     if (state.achievementOpen) {
       if (Engine.inputB() || Engine.wasPressed('g')) {
@@ -235,6 +247,13 @@
     // Open achievements with G key (on street map only)
     if (Engine.wasPressed('g') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
       state.achievementOpen = true;
+      GameAudio.playSelect();
+      return;
+    }
+
+    // Open mistake journal with J key (on street map only)
+    if (Engine.wasPressed('j') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
+      state.mistakeJournalOpen = true;
       GameAudio.playSelect();
       return;
     }
@@ -584,6 +603,17 @@
       GameAudio.playWrong();
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
 
+      // Record in mistake journal
+      const correctOpt = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOpt ? (correctOpt.text || correctOpt.textJp || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: 'Review',
+      });
+
       const explanation = interaction.wrongExplanation || 'Not quite...';
       Dialogue.show('Sensei', [
         'もう一回！ Let\'s review that...',
@@ -786,6 +816,17 @@
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
+
+      // Record in mistake journal
+      const correctOptChallenge = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOptChallenge ? (correctOptChallenge.text || correctOptChallenge.textJp || '') : '',
+        correctEn: correctOptChallenge ? (correctOptChallenge.en || '') : '',
+        source: 'Challenge',
+      });
 
       if (challengeGameState.isSurvival) {
         challengeGameState.survivalFailed = true;
@@ -1006,6 +1047,17 @@
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
 
+      // Record in mistake journal
+      const correctOptPayment = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOptPayment ? (correctOptPayment.text || correctOptPayment.textJp || '') : '',
+        correctEn: correctOptPayment ? (correctOptPayment.en || '') : '',
+        source: 'Payment',
+      });
+
       const explanation = interaction.wrongExplanation || 'Not quite...';
       Dialogue.show('Reiko', [
         'もう一回！ Try again!',
@@ -1205,6 +1257,17 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+
+      // Record in mistake journal
+      const correctOptSeasonal = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOptSeasonal ? (correctOptSeasonal.text || correctOptSeasonal.textJp || '') : '',
+        correctEn: correctOptSeasonal ? (correctOptSeasonal.en || '') : '',
+        source: 'Seasonal',
+      });
 
       const explanation = interaction.wrongExplanation || 'Not quite...';
       Dialogue.show('Obaa-chan', [
@@ -1410,6 +1473,17 @@
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
 
+      // Record in mistake journal
+      const correctOptKansai = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOptKansai ? (correctOptKansai.text || correctOptKansai.textJp || '') : '',
+        correctEn: correctOptKansai ? (correctOptKansai.en || '') : '',
+        source: 'Kansai',
+      });
+
       const explanation = interaction.wrongExplanation || 'Not quite...';
       Dialogue.show('Takoyaki', [
         '\u3061\u3083\u3046\u3061\u3083\u3046! That\'s not it!',
@@ -1613,6 +1687,17 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+
+      // Record in mistake journal
+      const correctOptPoliteness = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOptPoliteness ? (correctOptPoliteness.text || correctOptPoliteness.textJp || '') : '',
+        correctEn: correctOptPoliteness ? (correctOptPoliteness.en || '') : '',
+        source: 'Politeness',
+      });
 
       const explanation = interaction.wrongExplanation || 'Not quite...';
       Dialogue.show('Keiko', [
@@ -1919,6 +2004,17 @@
       GameAudio.playWrong();
       state.interactionMistakes++;
 
+      // Record in mistake journal
+      const correctOptListening = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOptListening ? (correctOptListening.text || correctOptListening.textJp || '') : '',
+        correctEn: correctOptListening ? (correctOptListening.en || '') : '',
+        source: 'Listening',
+      });
+
       // Track mistake for spaced repetition
       if (state.currentInteractionLevel) {
         NPCs.trackPhrase(
@@ -2036,6 +2132,17 @@
           false
         );
       }
+
+      // Record in mistake journal
+      const correctOpt = interaction.options.find(o => o.correct);
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOpt ? (correctOpt.text || correctOpt.textJp || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: state.enteredStore || 'Store',
+      });
 
       const explanation = interaction.wrongExplanation || 'Not quite...';
       Dialogue.show('', explanation, () => {
@@ -2254,7 +2361,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -2318,6 +2425,15 @@
       Sprites.drawAchievementOverlay(
         ctx, Engine.CANVAS_W, Engine.CANVAS_H,
         NPCs.getAllAchievements(),
+        state.time
+      );
+    }
+
+    // Mistake journal overlay
+    if (state.mistakeJournalOpen) {
+      Sprites.drawMistakeJournalOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        NPCs.getMistakeJournal(),
         state.time
       );
     }

@@ -405,6 +405,23 @@ const Engine = (() => {
       // Count text
       ctx.fillStyle = hasNewAch ? '#FFD700' : '#D4AF37';
       ctx.fillText(achCount + '/' + achTotal, CANVAS_W - achW + 14, hudRightY + 9);
+      hudRightY += 14;
+    }
+
+    // Mistake journal indicator (top right, below achievements)
+    const mistakeCount = NPCs.getMistakeCount();
+    if (mistakeCount > 0 || mapIdx === 0) {
+      const jrnW = 40;
+      ctx.fillStyle = 'rgba(26,10,10,0.85)';
+      ctx.fillRect(CANVAS_W - jrnW - 2, hudRightY, jrnW, 12);
+      const hasNewMist = NPCs.hasNewMistakes();
+      ctx.strokeStyle = hasNewMist ? '#FF4444' : '#8B2020';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(CANVAS_W - jrnW - 2, hudRightY, jrnW, 12);
+      // Journal icon + count
+      Sprites.drawJournalIcon(ctx, CANVAS_W - jrnW, hudRightY + 2, mistakeCount, hasNewMist, Date.now() / 1000);
+      ctx.fillStyle = hasNewMist ? '#FF6666' : '#aa5555';
+      ctx.fillText(String(mistakeCount), CANVAS_W - jrnW + 20, hudRightY + 9);
     }
   }
 
