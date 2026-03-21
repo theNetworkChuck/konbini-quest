@@ -38,7 +38,7 @@
 
 ### Batch 6: Advanced Learning
 21. ~~**Mistake Journal**~~ ✅ - Track wrong answers, show them in a review section.
-22. **Cultural Notes** - Brief cultural context popups (money tray etiquette, bowing, etc.)
+22. ~~**Cultural Notes**~~ -- Brief cultural context popups (money tray etiquette, bowing, etc.)
 23. **Speed Round** - Timed mode where clerk fires rapid questions. Tests recall under pressure.
 24. **Pronunciation Guide** - Show pitch accent patterns for key phrases.
 
@@ -543,3 +543,35 @@
 **Why it matters for learning:** Research shows that tracking and reviewing errors is one of the most effective metacognitive strategies for language acquisition. The mistake journal transforms wrong answers from frustrating dead-ends into targeted study material, helping players identify their personal weak spots and focus review time where it matters most.
 
 **Files modified:** npc.js, sprites.js, engine.js, game.js
+
+### 2026-03-21 -- #22 Cultural Notes
+**Commit:** `9601fc8`
+
+**What was added:**
+- **16 Cultural Notes** covering authentic konbini etiquette and customs:
+  - Money tray etiquette (kashi-zara) -- place cash on the tray, never hand directly
+  - The irasshaimase greeting ritual -- no reply needed, just a nod
+  - Both-hands rule -- giving/receiving with both hands shows respect
+  - Bag charge law (2020) -- 3-5 yen per bag, bring your mai-baggu
+  - Point cards (T-Point, Ponta, dPoint) -- "nai desu" is fine for tourists
+  - No eating in aisles -- use the eat-in corner or eat outside
+  - Quiet atmosphere -- match the soft, calm environment
+  - Heated food ("atatame-masuka?") -- clerks microwave bento for you
+  - Chopsticks check ("ohashi wa otsukai desu ka?")
+  - Age verification -- legal age is 20, not 18 or 21
+  - Door chime melodies -- each chain has a unique tune
+  - Receipt ritual -- "daijoubu desu" to politely decline
+  - Coin counting is OK -- take your time, clerks are patient
+  - Arigatou timing -- say thanks when receiving your bag, not when entering
+  - Oshibori (hot towels) -- included with some hot food purchases
+  - Konbini ATMs -- 7-Eleven's "Seven Bank" accepts international cards
+- **Golden scroll-themed popup banners** slide in from top during gameplay with "DID YOU KNOW?" header, Japanese + English title, word-wrapped explanation text, and [A] dismiss hint
+- **Context-aware triggers**: notes appear after store entry greetings (store_entry context), correct quiz answers (checkout context), and level completion (general context)
+- **Smart rate limiting**: 40% chance per trigger, 45-second cooldown between notes, no duplicates
+- **Collection overlay** via [C] key: full-screen golden parchment-themed grid showing all 16 notes in 2 columns. Discovered notes show Japanese + English titles; undiscovered show "???"
+- **HUD icon**: golden scroll icon with count badge (e.g., "0/16") in top-right stack below mistake journal. Pulses when new notes are discovered
+- All notes have context tags for relevant triggering (payment, store_entry, checkout, food, general, greeting)
+
+**Why it matters for learning:** Language learning without cultural context produces speakers who are technically correct but socially awkward. These notes teach the invisible rules that make the difference between a tourist and someone who truly understands Japanese konbini culture -- exactly the kind of knowledge that impresses Japanese people.
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js (532 lines added)
