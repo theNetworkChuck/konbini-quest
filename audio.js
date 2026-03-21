@@ -23,6 +23,12 @@ const GameAudio = (() => {
   function toggleMute() {
     muted = !muted;
     if (masterGain) masterGain.gain.value = muted ? 0 : 0.5;
+    // Stop ambient loops when muting (they check `muted` on restart)
+    if (muted) {
+      stopKonbiniBGM();
+      stopStreetAmbience();
+      stopRainAmbience();
+    }
     return muted;
   }
 
@@ -462,6 +468,246 @@ const GameAudio = (() => {
     };
   }
 
+  // === KONBINI AMBIENT BGM SYSTEM ===
+  // Gentle lo-fi muzak loop for store interiors — inspired by real konbini background music
+  let bgmGain = null;
+  let bgmNodes = [];
+  let bgmActive = false;
+  let bgmInterval = null;
+
+  function startKonbiniBGM() {
+    if (!ctx || muted || bgmActive) return;
+    resume();
+    bgmActive = true;
+    bgmGain = ctx.createGain();
+    bgmGain.gain.value = 0;
+    bgmGain.connect(masterGain);
+
+    // Soft pad chord (warm, muzak-like background)
+    // Uses detuned sine waves for a gentle, dreamy quality
+    const chords = [
+      [261.6, 329.6, 392.0, 523.3],  // C major
+      [293.7, 370.0, 440.0, 523.3],  // Dm7-ish
+      [349.2, 440.0, 523.3, 659.3],  // F major
+      [392.0, 493.9, 587.3, 784.0],  // G major
+    ];
+    let chordIdx = 0;
+
+    function playChord() {
+      if (!ctx || !bgmActive) return;
+      const chord = chords[chordIdx % chords.length];
+      chordIdx++;
+      const now = ctx.currentTime;
+
+      chord.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq + (Math.random() - 0.5) * 1.5; // slight detune for warmth
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.025, now + 0.8);
+        g.gain.exponentialRampToValueAtTime(0.018, now + 2.5);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 4.0);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start(now);
+        osc.stop(now + 4.2);
+      });
+
+      // Gentle melody note on top (pentatonic scale for that elevator-music feel)
+      const melodyNotes = [523.3, 587.3, 659.3, 784.0, 880.0, 784.0, 659.3, 587.3];
+      const melodyNote = melodyNotes[chordIdx % melodyNotes.length];
+      const melOsc = ctx.createOscillator();
+      const melGain = ctx.createGain();
+      melOsc.type = 'triangle';
+      melOsc.frequency.value = melodyNote;
+      melGain.gain.setValueAtTime(0.0001, now + 0.3);
+      melGain.gain.exponentialRampToValueAtTime(0.03, now + 0.6);
+      melGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.5);
+      melOsc.connect(melGain);
+      melGain.connect(bgmGain);
+      melOsc.start(now + 0.3);
+      melOsc.stop(now + 2.7);
+    }
+
+    // Fade BGM in gently
+    bgmGain.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 3);
+
+    // Play first chord, then repeat every 4 seconds
+    playChord();
+    bgmInterval = setInterval(playChord, 4000);
+  }
+
+  function stopKonbiniBGM() {
+    if (!bgmActive) return;
+    bgmActive = false;
+    if (bgmInterval) {
+      clearInterval(bgmInterval);
+      bgmInterval = null;
+    }
+    if (bgmGain && ctx) {
+      bgmGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5);
+      setTimeout(() => { bgmGain = null; }, 2000);
+    }
+  }
+
+  function isBGMPlaying() { return bgmActive; }
+
+  // === REGISTER / SCANNER BEEP ===
+  // Barcode scanner beep sound — that classic konbini "pi!" sound
+  function playRegisterBeep() {
+    if (!ctx || muted) return; resume();
+    const t = ctx.currentTime;
+    // Sharp high-pitched beep (like a real barcode scanner)
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(2400, t);
+    osc.frequency.exponentialRampToValueAtTime(2200, t + 0.08);
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
+  // Double beep for item scan confirmation
+  function playItemScan() {
+    if (!ctx || muted) return; resume();
+    const t = ctx.currentTime;
+    // First beep
+    playNote(2400, t, 0.06, 'sine', 0.15);
+    // Second beep (slightly lower)
+    playNote(2200, t + 0.1, 0.08, 'sine', 0.15);
+  }
+
+  // === BAG RUSTLING / ITEM SOUNDS ===
+  // Plastic bag rustling — synthesized with filtered noise bursts
+  function playBagRustle() {
+    if (!ctx || muted) return; resume();
+    const t = ctx.currentTime;
+
+    // Create multiple short noise bursts for crinkle texture
+    for (let i = 0; i < 4; i++) {
+      const osc = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const g = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 3000 + Math.random() * 4000;
+      filter.type = 'bandpass';
+      filter.frequency.value = 4000 + Math.random() * 3000;
+      filter.Q.value = 2 + Math.random() * 3;
+      const offset = i * 0.08 + Math.random() * 0.04;
+      const dur = 0.04 + Math.random() * 0.04;
+      g.gain.setValueAtTime(0.0001, t + offset);
+      g.gain.exponentialRampToValueAtTime(0.04, t + offset + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + offset + dur);
+      osc.connect(filter);
+      filter.connect(g);
+      g.connect(masterGain);
+      osc.start(t + offset);
+      osc.stop(t + offset + dur + 0.02);
+    }
+  }
+
+  // === CASH REGISTER KA-CHING ===
+  // Classic cash register sound for purchase completion
+  function playCashRegister() {
+    if (!ctx || muted) return; resume();
+    const t = ctx.currentTime;
+    // Register drawer "ka" — percussive hit
+    playNote(600, t, 0.04, 'square', 0.12);
+    playNote(400, t + 0.02, 0.05, 'square', 0.08);
+    // "Ching" — bright metallic ring
+    playNote(2093, t + 0.08, 0.3, 'sine', 0.12);
+    playNote(2637, t + 0.10, 0.25, 'sine', 0.10);
+    playNote(3136, t + 0.12, 0.4, 'sine', 0.08);
+    // Slight bell decay
+    playNote(2093, t + 0.15, 0.5, 'triangle', 0.04);
+  }
+
+  // === COIN DROP SOUND ===
+  // Coins being placed on the counter/tray
+  function playCoinDrop() {
+    if (!ctx || muted) return; resume();
+    const t = ctx.currentTime;
+    // Multiple small metallic "clinks"
+    const clinks = [3520, 4186, 3729, 4698];
+    clinks.forEach((freq, i) => {
+      const offset = i * 0.06 + Math.random() * 0.03;
+      playNote(freq, t + offset, 0.08, 'sine', 0.06 + Math.random() * 0.03);
+    });
+  }
+
+  // === STREET AMBIENCE ===
+  // Subtle urban background for overworld map — distant traffic hum + occasional sounds
+  let streetGain = null;
+  let streetNodes = [];
+  let streetActive = false;
+
+  function startStreetAmbience() {
+    if (!ctx || muted || streetActive) return;
+    resume();
+    streetActive = true;
+    streetGain = ctx.createGain();
+    streetGain.gain.value = 0;
+    streetGain.connect(masterGain);
+
+    // Low frequency hum (distant traffic)
+    const hum = ctx.createOscillator();
+    const humFilter = ctx.createBiquadFilter();
+    const humGain = ctx.createGain();
+    hum.type = 'sawtooth';
+    hum.frequency.value = 80;
+    humFilter.type = 'lowpass';
+    humFilter.frequency.value = 120;
+    humFilter.Q.value = 0.7;
+    humGain.gain.value = 0.012;
+    hum.connect(humFilter);
+    humFilter.connect(humGain);
+    humGain.connect(streetGain);
+    hum.start();
+    streetNodes.push({ osc: hum });
+
+    // Mid-range city texture (wind between buildings)
+    const wind = ctx.createOscillator();
+    const windFilter = ctx.createBiquadFilter();
+    const windGain = ctx.createGain();
+    wind.type = 'sawtooth';
+    wind.frequency.value = 300 + Math.random() * 100;
+    windFilter.type = 'bandpass';
+    windFilter.frequency.value = 350;
+    windFilter.Q.value = 0.3;
+    windGain.gain.value = 0.005;
+    wind.connect(windFilter);
+    windFilter.connect(windGain);
+    windGain.connect(streetGain);
+    wind.start();
+    streetNodes.push({ osc: wind });
+
+    // Fade in gently
+    streetGain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 2);
+  }
+
+  function stopStreetAmbience() {
+    if (!ctx || !streetActive) return;
+    streetActive = false;
+    if (streetGain) {
+      streetGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.5);
+    }
+    const nodesToClean = [...streetNodes];
+    streetNodes = [];
+    setTimeout(() => {
+      nodesToClean.forEach(n => {
+        try { n.osc.stop(); } catch(e) {}
+      });
+      streetGain = null;
+    }, 2000);
+  }
+
+  function isStreetPlaying() { return streetActive; }
+
   if (typeof speechSynthesis !== 'undefined') {
     speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
   }
@@ -475,5 +721,10 @@ const GameAudio = (() => {
     playSlidingDoor, playSlidingDoorClose,
     startRainAmbience, stopRainAmbience, isRainPlaying,
     preloadCommonPhrases, fetchVoiceAudio, getVoiceStatus,
+    // Sound Design additions
+    startKonbiniBGM, stopKonbiniBGM, isBGMPlaying,
+    playRegisterBeep, playItemScan,
+    playBagRustle, playCashRegister, playCoinDrop,
+    startStreetAmbience, stopStreetAmbience, isStreetPlaying,
   };
 })();

@@ -82,9 +82,28 @@
       } else if (Engine.getWeatherType() !== 'rain' && GameAudio.isRainPlaying()) {
         GameAudio.stopRainAmbience();
       }
-    } else if (GameAudio.isRainPlaying()) {
-      // Stop rain when entering a store
-      GameAudio.stopRainAmbience();
+      // Street ambience on overworld (when not raining — rain takes precedence)
+      if (Engine.getWeatherType() !== 'rain' && !GameAudio.isStreetPlaying()) {
+        GameAudio.startStreetAmbience();
+      } else if (Engine.getWeatherType() === 'rain' && GameAudio.isStreetPlaying()) {
+        GameAudio.stopStreetAmbience();
+      }
+      // Stop store BGM when on street
+      if (GameAudio.isBGMPlaying()) {
+        GameAudio.stopKonbiniBGM();
+      }
+    } else {
+      // Inside a store
+      if (GameAudio.isRainPlaying()) {
+        GameAudio.stopRainAmbience();
+      }
+      if (GameAudio.isStreetPlaying()) {
+        GameAudio.stopStreetAmbience();
+      }
+      // Start konbini BGM inside stores
+      if (!GameAudio.isBGMPlaying()) {
+        GameAudio.startKonbiniBGM();
+      }
     }
 
     if (state.phase === 'title') {
@@ -739,6 +758,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       challengeGameState.challengeCorrect++;
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
@@ -957,6 +977,8 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
+      setTimeout(() => GameAudio.playCoinDrop(), 200); // coin sound for payment
       Engine.spawnSparkles();
       paymentGameState.correct++;
 
@@ -1158,6 +1180,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       seasonalGameState.correct++;
 
@@ -1360,6 +1383,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       kansaiGameState.correct++;
 
@@ -1563,6 +1587,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       politenessGameState.correct++;
 
@@ -1856,6 +1881,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
 
       // Speak the player's correct Japanese response
@@ -1969,6 +1995,7 @@
       // Correct!
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
 
       // Speak the player's correct Japanese response aloud
@@ -2063,6 +2090,10 @@
     const tierNames = { 3: 'GOLD', 2: 'SILVER', 1: 'BRONZE' };
     const tierJp = { 3: '\u91D1', 2: '\u9280', 1: '\u9285' };
     const stampMsg = `${tierJp[stars]}\u30B9\u30BF\u30F3\u30D7 ${tierNames[stars]} STAMP!`;
+
+    // Sound Design: cash register ka-ching + bag rustle for purchase completion
+    GameAudio.playCashRegister();
+    setTimeout(() => GameAudio.playBagRustle(), 400);
 
     GameAudio.playLevelComplete();
     GameAudio.playStar();
