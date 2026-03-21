@@ -37,7 +37,7 @@
 20. ~~**Sound Design**~~ ✅ - Ambient konbini BGM, register beeps, bag rustling.
 
 ### Batch 6: Advanced Learning
-21. **Mistake Journal** - Track wrong answers, show them in a review section.
+21. ~~**Mistake Journal**~~ ✅ - Track wrong answers, show them in a review section.
 22. **Cultural Notes** - Brief cultural context popups (money tray etiquette, bowing, etc.)
 23. **Speed Round** - Timed mode where clerk fires rapid questions. Tests recall under pressure.
 24. **Pronunciation Guide** - Show pitch accent patterns for key phrases.
@@ -524,3 +524,22 @@
 - Mute toggle → stops all ambient loops
 
 **Files modified:** audio.js, game.js
+
+### 2026-03-21 — #21 Mistake Journal ✅
+**Commit:** `038d67d`
+
+**What was added:**
+- **Mistake Tracking System** (npc.js): `recordMistake()` function captures wrong answers with full context — clerk's Japanese/English question, player's wrong choice, correct answer, and source location. Smart deduplication: repeated mistakes on the same clerk question increment a count and move to front of list. Capped at 50 entries to keep things manageable.
+- **Journal Overlay** (sprites.js): Full-screen dark red themed overlay showing all recorded mistakes. Each entry displays: the clerk's Japanese question, wrong answer marked with red ✗, correct answer marked with green ✓, repeat count badges for frequently missed items, and source tags (Main Store, Review, Challenge, Payment, Seasonal, Kansai, Politeness, Listening).
+- **Empty State**: Shows encouraging message "No mistakes yet!" with Japanese proverb 「失敗は成功のもと！」("Mistakes are the path to success!"). Rotating motivational tips at the bottom.
+- **HUD Icon** (engine.js): Red-themed mistake journal indicator in top-right HUD stack (below achievements) showing current mistake count. Pulsing red border animation when new mistakes are recorded.
+- **Full Game Integration** (game.js): 
+  - [J] key opens/closes journal overlay from street map
+  - [B] key also closes the overlay
+  - Mistakes automatically recorded from ALL 8 wrong-answer handlers: main store, spaced repetition review, daily challenge, payment interactions, seasonal items, Kansai dialect, politeness levels, and listening comprehension
+  - Minimap hidden while journal is open
+  - Marks mistakes as viewed when closing overlay (clears "new" indicator)
+
+**Why it matters for learning:** Research shows that tracking and reviewing errors is one of the most effective metacognitive strategies for language acquisition. The mistake journal transforms wrong answers from frustrating dead-ends into targeted study material, helping players identify their personal weak spots and focus review time where it matters most.
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js
