@@ -34,7 +34,7 @@
 17. ~~**Mini-map**~~ ✅ - Small map in corner showing store locations and completion status.
 18. ~~**Inventory System**~~ -- Items you "buy" appear in a bag. Review what you purchased with Japanese labels.
 19. ~~**Achievement Badges**~~ ✅ - "First Purchase", "Point Card Pro", "Konbini Master" etc.
-20. **Sound Design** - Ambient konbini BGM, register beeps, bag rustling.
+20. ~~**Sound Design**~~ ✅ - Ambient konbini BGM, register beeps, bag rustling.
 
 ### Batch 6: Advanced Learning
 21. **Mistake Journal** - Track wrong answers, show them in a review section.
@@ -500,3 +500,27 @@
 - Overlay hidden during dialogue and other overlays; mini-map also hidden when open
 
 **Files modified:** npc.js, sprites.js, engine.js, game.js
+
+### 2026-03-21 — #20 Sound Design ✅
+**Commit:** `a355a2b`
+
+**What was added:**
+- **Konbini BGM System**: Gentle lo-fi muzak loop with warm chord progressions (C→Dm7→F→G) and pentatonic melody notes. Uses detuned sine waves for dreamy, authentic konbini elevator-music feel. Auto-starts when entering any store, auto-stops when leaving.
+- **Register/Scanner Beep**: Sharp "ピッ" barcode scanner sound plays on each correct answer during store interactions. Adds satisfying feedback that reinforces the konbini shopping experience.
+- **Item Scan Double-Beep**: Two-tone confirmation beep for scanned items.
+- **Bag Rustling**: Synthesized plastic bag crinkle sounds (filtered noise bursts) play when completing a level/purchase. Multiple randomized bursts create realistic texture.
+- **Cash Register Ka-Ching**: Classic register sound with percussive "ka" hit followed by bright metallic ring. Plays on purchase completion alongside bag rustle.
+- **Coin Drop Sound**: Metallic clink sounds for payment-related correct answers, simulating coins on the counter tray.
+- **Street Ambience**: Subtle urban background for overworld — distant traffic hum (filtered low-frequency oscillator) plus city wind texture. Auto-plays when not raining.
+- All ambient sounds properly integrate with the mute toggle and weather system (rain takes precedence over street ambience on overworld).
+- All sounds use Web Audio API oscillator synthesis — no external audio files needed.
+
+**Sound trigger points:**
+- Entering store → stop rain/street ambience, start konbini BGM
+- Leaving store → stop BGM, start street ambience (or rain if raining)
+- Correct answer in store → register beep alongside correct chime
+- Payment correct answer → coin drop + register beep
+- Level complete → cash register ka-ching + bag rustle + level complete fanfare
+- Mute toggle → stops all ambient loops
+
+**Files modified:** audio.js, game.js
