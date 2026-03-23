@@ -627,7 +627,7 @@
 **Files modified:** npc.js, sprites.js, engine.js, game.js (762 lines added)
 
 ### 2026-03-23 -- #25 Save/Load System
-**Commit:** `pending`
+**Commit:** `6debd2b`
 
 **What was added:**
 - **Full game state persistence** via localStorage -- all progress survives page reload, browser close, and device restart
