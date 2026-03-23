@@ -1115,7 +1115,7 @@ const Engine = (() => {
   }
 
   // ============ TITLE SCREEN ============
-  function renderTitle() {
+  function renderTitle(hasSave, titleMenuIdx) {
     // Dark background
     ctx.fillStyle = '#0a0a1e';
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -1143,32 +1143,73 @@ const Engine = (() => {
     ctx.font = '12px "Press Start 2P"';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#e74c3c';
-    ctx.fillText('KONBINI', CANVAS_W / 2, 55);
+    ctx.fillText('KONBINI', CANVAS_W / 2, 50);
     ctx.fillStyle = '#f39c12';
-    ctx.fillText('QUEST', CANVAS_W / 2, 75);
+    ctx.fillText('QUEST', CANVAS_W / 2, 68);
 
     // Japanese subtitle
     ctx.font = '14px "M PLUS Rounded 1c"';
     ctx.fillStyle = '#fff';
-    ctx.fillText('コンビニクエスト', CANVAS_W / 2, 95);
+    ctx.fillText('コンビニクエスト', CANVAS_W / 2, 86);
 
     // Version tag
     ctx.font = '6px "Press Start 2P"';
     ctx.fillStyle = '#888';
-    ctx.fillText('v2 - RPG Edition', CANVAS_W / 2, 108);
+    ctx.fillText('v2 - RPG Edition', CANVAS_W / 2, 99);
 
     // Player sprite
     const pf = Math.floor(time * 2) % 2;
-    Sprites.drawPlayer(ctx, CANVAS_W / 2 - 8, 118, 'down', pf);
+    Sprites.drawPlayer(ctx, CANVAS_W / 2 - 8, 105, 'down', pf);
 
-    // Blinking prompt
-    if (Math.sin(time * 3) > 0) {
+    if (hasSave) {
+      // Menu options: Continue / New Game
+      const menuItems = ['CONTINUE', 'NEW GAME'];
+      const menuY = 140;
       ctx.font = '7px "Press Start 2P"';
-      ctx.fillStyle = '#fff';
-      ctx.fillText('PRESS A TO START', CANVAS_W / 2, 155);
+      for (let i = 0; i < menuItems.length; i++) {
+        const isSelected = (titleMenuIdx || 0) === i;
+        if (isSelected) {
+          ctx.fillStyle = '#f39c12';
+          // Blinking arrow
+          if (Math.sin(time * 5) > -0.3) {
+            ctx.fillText('>', CANVAS_W / 2 - 52, menuY + i * 14);
+          }
+        } else {
+          ctx.fillStyle = '#aaa';
+        }
+        ctx.fillText(menuItems[i], CANVAS_W / 2, menuY + i * 14);
+      }
+    } else {
+      // Blinking prompt (no save)
+      if (Math.sin(time * 3) > 0) {
+        ctx.font = '7px "Press Start 2P"';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('PRESS A TO START', CANVAS_W / 2, 145);
+      }
     }
 
     ctx.textAlign = 'left';
+  }
+
+  // Save indicator -- brief flash when game auto-saves
+  let saveIndicatorTimer = 0;
+  function showSaveIndicator() {
+    saveIndicatorTimer = 2.0; // show for 2 seconds
+  }
+  function updateSaveIndicator(dt) {
+    if (saveIndicatorTimer > 0) saveIndicatorTimer -= dt;
+  }
+  function renderSaveIndicator() {
+    if (saveIndicatorTimer <= 0) return;
+    const alpha = saveIndicatorTimer > 1.5 ? 1 : saveIndicatorTimer / 1.5;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = '5px "Press Start 2P"';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#4ade80';
+    ctx.fillText('SAVED', CANVAS_W - 4, CANVAS_H - 4);
+    ctx.textAlign = 'left';
+    ctx.restore();
   }
 
   return {
@@ -1196,5 +1237,7 @@ const Engine = (() => {
     renderMiniMap,
     // Title
     renderTitle,
+    // Save indicator
+    showSaveIndicator, updateSaveIndicator, renderSaveIndicator,
   };
 })();

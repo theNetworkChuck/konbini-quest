@@ -2541,6 +2541,260 @@ const NPCs = (() => {
     return npcDef.dialogues[idx];
   }
 
+  // ============ SAVE / LOAD SYSTEM ============
+  // Persist all game progress to localStorage so nothing is lost on page reload
+  const SAVE_KEY = 'konbiniquest_save_v1';
+  const SAVE_VERSION = 1;
+
+  function getFullState() {
+    return {
+      version: SAVE_VERSION,
+      savedAt: Date.now(),
+      // Core store progress
+      progress: {
+        '7-Eleven': { ...progress['7-Eleven'], completed: [...progress['7-Eleven'].completed], stars: { ...progress['7-Eleven'].stars } },
+        'Lawson': { ...progress['Lawson'], completed: [...progress['Lawson'].completed], stars: { ...progress['Lawson'].stars } },
+        'FamilyMart': { ...progress['FamilyMart'], completed: [...progress['FamilyMart'].completed], stars: { ...progress['FamilyMart'].stars } },
+      },
+      // Spaced repetition
+      phraseTracker: JSON.parse(JSON.stringify(phraseTracker)),
+      completedLevelsCount,
+      // Mistake journal
+      mistakeJournal: mistakeJournal.map(m => ({ ...m })),
+      // Cultural notes
+      seenCulturalNotes: [...seenCulturalNotes],
+      // Challenge state (save best stats, reset session streak)
+      challengeState: {
+        bestStreak: challengeState.bestStreak,
+        challengesCompleted: challengeState.challengesCompleted,
+      },
+      // Variable rewards -- collected bonus phrases
+      collectedPhrases: JSON.parse(JSON.stringify(collectedPhrases)),
+      totalRewardsGiven,
+      // Stamp cards
+      stampCards: JSON.parse(JSON.stringify(stampCards)),
+      // Payment practice
+      paymentState: {
+        practicesCompleted: paymentState.practicesCompleted,
+        scenariosCompleted: [...paymentState.scenariosCompleted],
+      },
+      // Seasonal items
+      seasonalState: {
+        lessonsCompleted: seasonalState.lessonsCompleted,
+        seasonsCompleted: [...seasonalState.seasonsCompleted],
+      },
+      // Kansai dialect
+      kansaiState: {
+        lessonsCompleted: kansaiState.lessonsCompleted,
+        topicsCompleted: [...kansaiState.topicsCompleted],
+      },
+      // Politeness levels
+      politenessState: {
+        lessonsCompleted: politenessState.lessonsCompleted,
+        topicsCompleted: [...politenessState.topicsCompleted],
+      },
+      // Inventory
+      inventory: inventory.map(i => ({ levelId: i.levelId, acquiredAt: i.acquiredAt })),
+      // Achievements
+      unlockedAchievements: [...unlockedAchievements],
+      bestStreakEver,
+      // Speed round stats
+      speedRoundState: {
+        roundsCompleted: speedRoundState.roundsCompleted,
+        bestScore: speedRoundState.bestScore,
+        bestTime: speedRoundState.bestTime === Infinity ? null : speedRoundState.bestTime,
+        totalCorrect: speedRoundState.totalCorrect,
+        totalAttempted: speedRoundState.totalAttempted,
+      },
+      // Pronunciation guide
+      pitchGuideState: {
+        lessonsViewed: [...pitchGuideState.lessonsViewed],
+        quizCorrect: pitchGuideState.quizCorrect,
+        quizTotal: pitchGuideState.quizTotal,
+      },
+    };
+  }
+
+  function loadFullState(data) {
+    if (!data || data.version !== SAVE_VERSION) return false;
+    try {
+      // Core store progress
+      if (data.progress) {
+        for (const store of ['7-Eleven', 'Lawson', 'FamilyMart']) {
+          if (data.progress[store]) {
+            progress[store].current = data.progress[store].current || 0;
+            progress[store].completed = data.progress[store].completed || [];
+            progress[store].stars = data.progress[store].stars || {};
+          }
+        }
+      }
+      // Spaced repetition
+      if (data.phraseTracker) {
+        for (const key of Object.keys(data.phraseTracker)) {
+          phraseTracker[key] = data.phraseTracker[key];
+        }
+      }
+      if (typeof data.completedLevelsCount === 'number') {
+        completedLevelsCount = data.completedLevelsCount;
+      }
+      // Mistake journal
+      if (Array.isArray(data.mistakeJournal)) {
+        mistakeJournal.length = 0;
+        data.mistakeJournal.forEach(m => mistakeJournal.push(m));
+      }
+      // Cultural notes
+      if (Array.isArray(data.seenCulturalNotes)) {
+        seenCulturalNotes.clear();
+        data.seenCulturalNotes.forEach(id => seenCulturalNotes.add(id));
+      }
+      // Challenge state
+      if (data.challengeState) {
+        challengeState.bestStreak = data.challengeState.bestStreak || 0;
+        challengeState.challengesCompleted = data.challengeState.challengesCompleted || 0;
+      }
+      // Variable rewards
+      if (data.collectedPhrases) {
+        for (const key of Object.keys(data.collectedPhrases)) {
+          collectedPhrases[key] = data.collectedPhrases[key];
+          // Mark all loaded phrases as not-new
+          collectedPhrases[key].isNew = false;
+        }
+      }
+      if (typeof data.totalRewardsGiven === 'number') {
+        totalRewardsGiven = data.totalRewardsGiven;
+      }
+      // Stamp cards
+      if (data.stampCards) {
+        for (const store of ['7-Eleven', 'Lawson', 'FamilyMart']) {
+          if (data.stampCards[store]) {
+            stampCards[store].stamps = data.stampCards[store].stamps || [0, 0, 0, 0];
+            stampCards[store].masterStamp = data.stampCards[store].masterStamp || false;
+          }
+        }
+        // Sync lastStampCount
+        const { total } = getTotalStamps();
+        lastStampCount = total;
+      }
+      // Payment practice
+      if (data.paymentState) {
+        paymentState.practicesCompleted = data.paymentState.practicesCompleted || 0;
+        paymentState.scenariosCompleted = data.paymentState.scenariosCompleted || [];
+      }
+      // Seasonal items
+      if (data.seasonalState) {
+        seasonalState.lessonsCompleted = data.seasonalState.lessonsCompleted || 0;
+        seasonalState.seasonsCompleted = data.seasonalState.seasonsCompleted || [];
+      }
+      // Kansai dialect
+      if (data.kansaiState) {
+        kansaiState.lessonsCompleted = data.kansaiState.lessonsCompleted || 0;
+        kansaiState.topicsCompleted = data.kansaiState.topicsCompleted || [];
+      }
+      // Politeness levels
+      if (data.politenessState) {
+        politenessState.lessonsCompleted = data.politenessState.lessonsCompleted || 0;
+        politenessState.topicsCompleted = data.politenessState.topicsCompleted || [];
+      }
+      // Inventory
+      if (Array.isArray(data.inventory)) {
+        inventory.length = 0;
+        data.inventory.forEach(saved => {
+          const item = KONBINI_ITEMS.find(i => i.levelId === saved.levelId);
+          if (item) {
+            inventory.push({
+              ...item,
+              acquiredAt: saved.acquiredAt || Date.now(),
+              isNew: false,
+            });
+          }
+        });
+      }
+      // Achievements
+      if (Array.isArray(data.unlockedAchievements)) {
+        unlockedAchievements.clear();
+        data.unlockedAchievements.forEach(id => unlockedAchievements.add(id));
+      }
+      if (typeof data.bestStreakEver === 'number') {
+        bestStreakEver = data.bestStreakEver;
+      }
+      // Speed round
+      if (data.speedRoundState) {
+        speedRoundState.roundsCompleted = data.speedRoundState.roundsCompleted || 0;
+        speedRoundState.bestScore = data.speedRoundState.bestScore || 0;
+        speedRoundState.bestTime = data.speedRoundState.bestTime != null ? data.speedRoundState.bestTime : Infinity;
+        speedRoundState.totalCorrect = data.speedRoundState.totalCorrect || 0;
+        speedRoundState.totalAttempted = data.speedRoundState.totalAttempted || 0;
+      }
+      // Pronunciation guide
+      if (data.pitchGuideState) {
+        pitchGuideState.lessonsViewed = new Set(data.pitchGuideState.lessonsViewed || []);
+        pitchGuideState.quizCorrect = data.pitchGuideState.quizCorrect || 0;
+        pitchGuideState.quizTotal = data.pitchGuideState.quizTotal || 0;
+      }
+      return true;
+    } catch (e) {
+      console.warn('Failed to load save data:', e);
+      return false;
+    }
+  }
+
+  function saveGame() {
+    try {
+      const data = getFullState();
+      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.warn('Failed to save game:', e);
+      return false;
+    }
+  }
+
+  function loadGame() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      return loadFullState(data);
+    } catch (e) {
+      console.warn('Failed to load game:', e);
+      return false;
+    }
+  }
+
+  function hasSaveData() {
+    try {
+      return localStorage.getItem(SAVE_KEY) !== null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function deleteSaveData() {
+    try {
+      localStorage.removeItem(SAVE_KEY);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function getSaveInfo() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return {
+        savedAt: data.savedAt,
+        completedLevels: data.completedLevelsCount || 0,
+        totalStars: Object.values(data.progress || {}).reduce((sum, p) => {
+          return sum + Object.values(p.stars || {}).reduce((s, v) => s + v, 0);
+        }, 0),
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
   return {
     npcDefs,
     storeLevels,
@@ -2663,5 +2917,11 @@ const NPCs = (() => {
     buildPitchQuiz,
     getPronunciationStats,
     recordPitchResult,
+    // Save / Load system
+    saveGame,
+    loadGame,
+    hasSaveData,
+    deleteSaveData,
+    getSaveInfo,
   };
 })();

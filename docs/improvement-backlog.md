@@ -40,7 +40,13 @@
 21. ~~**Mistake Journal**~~ ✅ - Track wrong answers, show them in a review section.
 22. ~~**Cultural Notes**~~ -- Brief cultural context popups (money tray etiquette, bowing, etc.)
 23. ~~**Speed Round**~~ ✅ - Timed mode where clerk fires rapid questions. Tests recall under pressure.
-24. **Pronunciation Guide** - Show pitch accent patterns for key phrases.
+24. ~~**Pronunciation Guide**~~ ✅ - Show pitch accent patterns for key phrases.
+
+### Batch 7: Persistence & Quality of Life
+25. ~~**Save/Load System**~~ ✅ - Persist all game progress to localStorage. Auto-save after level completion, NPC interactions, and store exits. Title screen shows CONTINUE/NEW GAME menu when save data exists. Green "SAVED" indicator flashes on screen. Serializes all 16 state systems (progress, spaced repetition, stamps, inventory, achievements, etc.).
+26. **Conversation Practice Mode** - Free-form conversation NPC where player picks from a scenario (buying coffee, asking for directions to bathroom, etc.) and plays through a full multi-turn conversation. More immersive than single-question quizzes.
+27. **Onomatopoeia Lesson** - Teach common konbini sound words: pipi (register beep), gacha (capsule machine), paka (opening a bento). Japanese onomatopoeia is essential for natural speech.
+28. **Night Shift Mode** - Different NPCs and dialogue appear at night (time-of-day already exists). Drunk salaryman, late-night snack vocabulary, midnight konbini culture.
 
 ## Research Notes
 - Flow Theory: 7 key elements for educational game engagement - learning goals, immediate feedback, adaptive challenge, control/autonomy, concentration, rewards, sensory immersion
@@ -598,3 +604,51 @@
 **Why it matters for learning:** Timed recall is one of the most effective techniques for moving vocabulary from recognition to true fluency. When learners must retrieve Japanese phrases under pressure, it builds the kind of automatic recall needed for real konbini conversations — where the clerk won't wait 30 seconds for you to remember the right response. The competitive element (beating your own score) creates intrinsic motivation to keep practicing.
 
 **Files modified:** npc.js, sprites.js, engine.js, game.js (537 lines added)
+
+### 2026-03-23 -- #24 Pronunciation Guide
+**Commit:** `925ab4f`
+
+**What was added:**
+- **Akiko NPC (音子 = "sound child")** — new purple-haired, purple-dressed Pronunciation Guide on Konbini Street at position (3, 12)
+- **12 key konbini phrases** with complete mora-by-mora pitch accent data based on Tokyo standard dialect:
+  - いらっしゃいませ (heiban), おはし (atamadaka), おつり (odaka), お弁当 (nakadaka), レジ袋 (heiban), ポイントカード (nakadaka), あたため (nakadaka), 大丈夫 (heiban), おねがいします (heiban), ありがとう (odaka), すみません (heiban), いただきます (nakadaka)
+- **Visual pitch diagrams**: H/L dots connected by lines showing exact pitch contour for each phrase
+- **All 4 accent types** covered: 平板 (heiban), 頭高 (atamadaka), 中高 (nakadaka), 尾高 (odaka)
+- **Lesson mode**: Browse phrases with [A], replay audio with [Space], close with [B]
+- **Quiz mode [P]**: 3-question quiz identifying accent patterns from 3 choices using [1/2/3] keys
+- Wrong answers recorded to mistake journal; correct answers trigger playCorrect sound
+- Purple-themed overlay UI (dark purple background, pink accents) matching Akiko's design
+- Pronunciation bubble indicator with musical note icon above Akiko when ready
+- Requires completing 1 store level to activate
+- Stats tracking: lessons viewed, quiz attempts, correct answers
+
+**Why it matters for learning:** Pitch accent is the single biggest factor separating "textbook Japanese" from natural-sounding speech. Most learners never practice it because it's invisible in written text. This feature makes pitch patterns visible and quizzable, building the kind of prosodic awareness that makes Japanese people genuinely impressed by a learner's pronunciation.
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js (762 lines added)
+
+### 2026-03-23 -- #25 Save/Load System
+**Commit:** `pending`
+
+**What was added:**
+- **Full game state persistence** via localStorage -- all progress survives page reload, browser close, and device restart
+- **16 state systems serialized**: store progress (levels, stars), spaced repetition tracker (phrase mastery, intervals, correct streaks), mistake journal (wrong answers with context), cultural notes (seen notes), challenge stats (best streak, completed count), variable rewards (collected bonus phrases), stamp cards (tier per level per store), payment practice progress, seasonal lesson progress, Kansai dialect progress, politeness lesson progress, inventory bag (items collected per level), achievement badges (unlocked set), speed round stats (best score, total attempts), pronunciation guide state (lessons viewed, quiz stats)
+- **Auto-save triggers** at every meaningful checkpoint:
+  - After completing any store level (finishLevel)
+  - After finishing review sessions (Review Sensei)
+  - After completing daily challenges (Challenge Master)
+  - After payment practice (Reiko)
+  - After seasonal lessons (Obaa-chan)
+  - After Kansai dialect lessons (Takoyaki)
+  - After politeness lessons (Keiko)
+  - After speed rounds (Hayate)
+  - When exiting any store back to the street
+- **Green "SAVED" indicator** flashes in bottom-right corner for 2 seconds after each auto-save, then fades out
+- **Title screen menu** when save data exists: CONTINUE (default, highlighted gold) / NEW GAME options with arrow-key navigation and blinking cursor
+- **New Game clears save data** to prevent stale state from interfering
+- **Save info API** (getSaveInfo) returns saved timestamp, completed levels, and total stars for potential future use
+- **Error handling**: graceful fallback if localStorage is unavailable or corrupted; save version field for future migration
+- **Round-trip tested**: save -> reload -> load -> verify all state matches exactly
+
+**Why it matters:** This was the single most impactful quality-of-life improvement possible. Before this change, ALL progress was lost every time the page reloaded. Players who completed levels, earned stamps, collected phrases, or made progress through any NPC interaction would lose everything. Now the game auto-saves silently at every checkpoint, and the Pokemon-style CONTINUE/NEW GAME menu makes it feel like a real game cartridge. This removes the #1 barrier to long-term engagement with the learning content.
+
+**Files modified:** npc.js, engine.js, game.js (~400 lines added)

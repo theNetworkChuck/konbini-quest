@@ -52,10 +52,24 @@
     // Cultural notes
     culturalNotesOpen: false,
     culturalNoteNotification: null, // {note, timer}
+    // Title menu (save/load)
+    titleMenuIdx: 0,
+    hasSaveData: false,
   };
 
   let audioInitialized = false;
   let lastTimestamp = 0;
+
+  // Check for save data on startup
+  state.hasSaveData = NPCs.hasSaveData();
+
+  // Auto-save helper: saves game and shows indicator
+  function autoSave() {
+    if (NPCs.saveGame()) {
+      Engine.showSaveIndicator();
+      state.hasSaveData = true;
+    }
+  }
 
   // ============ GAME LOOP ============
   function gameLoop(timestamp) {
@@ -76,6 +90,7 @@
     Engine.updateFade(dt);
     Engine.updateDoorAnimation(dt);
     Engine.updateParticles(dt);
+    Engine.updateSaveIndicator(dt);
     Dialogue.update(dt);
 
     // Update weather only on street (map 0) — indoors has no weather
@@ -118,23 +133,58 @@
     }
   }
 
+  function initAudio() {
+    if (!audioInitialized) {
+      GameAudio.init();
+      GameAudio.resume();
+      GameAudio.preloadCommonPhrases();
+      audioInitialized = true;
+    }
+  }
+
+  function startPlaying() {
+    state.phase = 'playing';
+    state.currentMap = 0;
+    state.player.x = 10;
+    state.player.y = 10;
+    state.player.dir = 'down';
+    Engine.initWeather();
+    NPCs.initNPCWalking();
+    Engine.startFadeIn();
+  }
+
   function updateTitle() {
-    if (Engine.inputA() || Engine.inputB()) {
-      if (!audioInitialized) {
-        GameAudio.init();
-        GameAudio.resume();
-        GameAudio.preloadCommonPhrases();
-        audioInitialized = true;
+    if (state.hasSaveData) {
+      // Menu navigation: up/down to switch between CONTINUE and NEW GAME
+      const dir = Engine.inputDir();
+      if (dir === 'up' && state.titleMenuIdx > 0) {
+        state.titleMenuIdx = 0;
+        GameAudio.playMove && GameAudio.playMove();
+      } else if (dir === 'down' && state.titleMenuIdx < 1) {
+        state.titleMenuIdx = 1;
+        GameAudio.playMove && GameAudio.playMove();
       }
-      GameAudio.playSelect();
-      state.phase = 'playing';
-      state.currentMap = 0;
-      state.player.x = 10;
-      state.player.y = 10;
-      state.player.dir = 'down';
-      Engine.initWeather();
-      NPCs.initNPCWalking();
-      Engine.startFadeIn();
+
+      if (Engine.inputA()) {
+        initAudio();
+        GameAudio.playSelect();
+        if (state.titleMenuIdx === 0) {
+          // CONTINUE: load save data
+          NPCs.loadGame();
+          startPlaying();
+        } else {
+          // NEW GAME: delete save, fresh start
+          NPCs.deleteSaveData();
+          startPlaying();
+        }
+      }
+    } else {
+      // No save data: any button starts a new game
+      if (Engine.inputA() || Engine.inputB()) {
+        initAudio();
+        GameAudio.playSelect();
+        startPlaying();
+      }
     }
   }
 
@@ -490,6 +540,9 @@
         state.player.walking = false;
         state.greetingShown = false;
 
+        // Auto-save when leaving a store
+        autoSave();
+
         Engine.startFadeIn();
       });
     }
@@ -726,6 +779,7 @@
       state.inReview = false;
       state.reviewPhrases = [];
       setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
     });
   }
 
@@ -964,6 +1018,7 @@
       challengeGameState.inChallenge = false;
       challengeGameState.challengePhrases = [];
       setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
     });
   }
 
@@ -1181,6 +1236,7 @@
       paymentGameState.inPayment = false;
       paymentGameState.scenario = null;
       setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
     });
   }
 
@@ -1392,6 +1448,7 @@
       seasonalGameState.inSeasonal = false;
       seasonalGameState.lesson = null;
       setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
     });
   }
 
@@ -1607,6 +1664,7 @@
       kansaiGameState.inKansai = false;
       kansaiGameState.lesson = null;
       setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
     });
   }
 
@@ -1822,6 +1880,7 @@
       politenessGameState.inPoliteness = false;
       politenessGameState.lesson = null;
       setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
     });
   }
 
@@ -2104,6 +2163,7 @@
       speedGameState.showingResult = false;
       speedGameState.phrases = [];
       setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
     });
   }
 
@@ -2783,6 +2843,8 @@
       setTimeout(() => triggerAchievementCheck(), 500);
       // Try showing a cultural note after completing a level
       setTimeout(() => tryCulturalNote('general'), 1500);
+      // Auto-save after completing a level
+      autoSave();
     });
   }
 
@@ -2877,7 +2939,7 @@
     ctx.fillRect(0, 0, Engine.CANVAS_W, Engine.CANVAS_H);
 
     if (state.phase === 'title') {
-      Engine.renderTitle();
+      Engine.renderTitle(state.hasSaveData, state.titleMenuIdx);
       return;
     }
 
@@ -3122,6 +3184,9 @@
 
     // Fade overlay (always on top)
     Engine.renderFade();
+
+    // Save indicator (very top layer)
+    Engine.renderSaveIndicator();
   }
 
   // ============ STAMP NOTIFICATION RENDER ============
