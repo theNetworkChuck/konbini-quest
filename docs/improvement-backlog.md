@@ -39,7 +39,7 @@
 ### Batch 6: Advanced Learning
 21. ~~**Mistake Journal**~~ ✅ - Track wrong answers, show them in a review section.
 22. ~~**Cultural Notes**~~ -- Brief cultural context popups (money tray etiquette, bowing, etc.)
-23. **Speed Round** - Timed mode where clerk fires rapid questions. Tests recall under pressure.
+23. ~~**Speed Round**~~ ✅ - Timed mode where clerk fires rapid questions. Tests recall under pressure.
 24. **Pronunciation Guide** - Show pitch accent patterns for key phrases.
 
 ## Research Notes
@@ -575,3 +575,26 @@
 **Why it matters for learning:** Language learning without cultural context produces speakers who are technically correct but socially awkward. These notes teach the invisible rules that make the difference between a tourist and someone who truly understands Japanese konbini culture -- exactly the kind of knowledge that impresses Japanese people.
 
 **Files modified:** npc.js, sprites.js, engine.js, game.js (532 lines added)
+
+### 2026-03-21 -- #23 Speed Round
+**Commit:** `6449420`
+
+**What was added:**
+- **Hayate NPC (速い)** — sporty new character with blue jacket + orange headband sprite on Konbini Street. Name means "fast" — perfect for the speed challenge master.
+- **5-question rapid-fire quiz**: Hayate pulls from the player's tracked phrases and tests recall under time pressure. Each question has 8 seconds on the clock.
+- **Animated countdown timer bar**: Renders above the dialogue box, transitions green→yellow→red as time runs out, with pulsing urgency animation when below 25%.
+- **Timeout mechanic**: Running out of time counts as a wrong answer with 「時間切れ!」("Time's up!") message — keeps the pressure real.
+- **Quick encouragements**: Between questions, brief Japanese praise flashes (正解! いいね! 速い! バッチリ!) then immediately moves to next question — no momentum-killing pauses.
+- **Japanese performance ratings** at round end:
+  - 5/5: 電光石火 (Lightning Speed)
+  - 4/5: 速い！(Fast!)
+  - 3/5: まあまあ (So-so)
+  - 0-2/5: もっと練習しよう (Let's practice more)
+- **Persistent stats tracking**: Best score, total elapsed time, and rounds completed stored in NPC state.
+- **45-second cooldown** between rounds prevents spamming, requires 4+ tracked phrases to activate.
+- **Full system integration**: Works with spaced repetition weighting, records to mistake journal on wrong answers, checks achievement thresholds after each round.
+- **Speed bubble indicator**: Animated ⚡ bubble above Hayate when a speed round is available.
+
+**Why it matters for learning:** Timed recall is one of the most effective techniques for moving vocabulary from recognition to true fluency. When learners must retrieve Japanese phrases under pressure, it builds the kind of automatic recall needed for real konbini conversations — where the clerk won't wait 30 seconds for you to remember the right response. The competitive element (beating your own score) creates intrinsic motivation to keep practicing.
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js (537 lines added)

@@ -108,6 +108,16 @@ const NPCs = (() => {
       ]
     },
 
+    // Pronunciation Guide NPC (pitch accent coach)
+    { map: 0, x: 3, y: 12, type: 'pronunciationguide', name: 'Akiko', dir: 'right',
+      isPronunciationGuide: true,
+      dialogues: [
+        "音 (oto) means sound! I'm Akiko, your pronunciation coach.",
+        "Japanese uses pitch accent -- small rises and falls make all the difference!",
+        "Master the melody of konbini phrases and sound truly natural!"
+      ]
+    },
+
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
       isClerk: true },
@@ -2292,6 +2302,236 @@ const NPCs = (() => {
     return { score, bestScore: speedRoundState.bestScore };
   }
 
+  // ============ PRONUNCIATION GUIDE (PITCH ACCENT) ============
+  // Each phrase has: japanese text, romaji, english meaning,
+  // mora breakdown with pitch (H=high, L=low), accent type, and tip
+  // Pitch data sourced from standard Tokyo dialect (NHK accent dictionary conventions)
+  const PITCH_ACCENT_PHRASES = [
+    // --- Essential Greetings ---
+    {
+      japanese: 'いらっしゃいませ',
+      romaji: 'irasshaimase',
+      english: 'Welcome!',
+      mora: ['い','らっ','しゃい','ま','せ'],
+      pitch: ['L','H','H','H','L'],
+      accentType: 'nakadaka',
+      accentNum: 4,
+      tip: 'Pitch rises on the second mora and drops on the last. You don\'t need to reply -- just nod!',
+      context: 'greeting'
+    },
+    {
+      japanese: 'ありがとうございます',
+      romaji: 'arigatou gozaimasu',
+      english: 'Thank you very much',
+      mora: ['あ','り','が','とう','ご','ざい','ま','す'],
+      pitch: ['L','H','L','L','L','L','L','L'],
+      accentType: 'atamadaka',
+      accentNum: 2,
+      tip: 'The pitch peaks at り then falls. English speakers often stress the wrong syllable -- keep it short and even!',
+      context: 'checkout'
+    },
+    {
+      japanese: 'すみません',
+      romaji: 'sumimasen',
+      english: 'Excuse me / Sorry',
+      mora: ['す','み','ま','せ','ん'],
+      pitch: ['L','H','H','H','L'],
+      accentType: 'nakadaka',
+      accentNum: 4,
+      tip: 'Rises on み and stays high until dropping at ん. Very useful for getting a clerk\'s attention!',
+      context: 'general'
+    },
+    {
+      japanese: 'おねがいします',
+      romaji: 'onegaishimasu',
+      english: 'Please',
+      mora: ['お','ね','がい','し','ま','す'],
+      pitch: ['L','H','H','H','L','L'],
+      accentType: 'nakadaka',
+      accentNum: 4,
+      tip: 'Pitch drops after し. This is the most versatile polite request -- use it everywhere!',
+      context: 'checkout'
+    },
+    // --- Store Interactions ---
+    {
+      japanese: 'ください',
+      romaji: 'kudasai',
+      english: 'Please (give me)',
+      mora: ['く','だ','さい'],
+      pitch: ['L','H','H'],
+      accentType: 'heiban',
+      accentNum: 0,
+      tip: 'Flat pattern -- stays high after the rise. Point at what you want and say これをください!',
+      context: 'checkout'
+    },
+    {
+      japanese: 'だいじょうぶです',
+      romaji: 'daijoubu desu',
+      english: 'It\'s fine / No thank you',
+      mora: ['だい','じょう','ぶ','で','す'],
+      pitch: ['L','H','H','L','L'],
+      accentType: 'nakadaka',
+      accentNum: 3,
+      tip: 'The magic phrase for politely declining anything -- bags, heating, receipts. Pitch peaks at ぶ.',
+      context: 'checkout'
+    },
+    {
+      japanese: 'ふくろはいりません',
+      romaji: 'fukuro wa irimasen',
+      english: 'I don\'t need a bag',
+      mora: ['ふ','く','ろ','は','い','り','ま','せ','ん'],
+      pitch: ['L','H','H','L','L','H','H','H','L'],
+      accentType: 'nakadaka',
+      accentNum: 3,
+      tip: 'ふくろ drops after ろ. Since 2020, bags cost 3-5 yen -- learn this to save money!',
+      context: 'bag'
+    },
+    {
+      japanese: 'おはしおつかいですか',
+      romaji: 'ohashi otsukai desu ka',
+      english: 'Will you use chopsticks?',
+      mora: ['お','は','し','お','つ','かい','で','す','か'],
+      pitch: ['L','H','L','L','H','H','L','L','L'],
+      accentType: 'nakadaka',
+      accentNum: 2,
+      tip: 'Two separate words joined. おはし peaks at は. Say はい or いいえ to respond.',
+      context: 'checkout'
+    },
+    // --- Payment ---
+    {
+      japanese: 'おあたためしますか',
+      romaji: 'oatatame shimasu ka',
+      english: 'Shall I heat it up?',
+      mora: ['お','あ','た','た','め','し','ま','す','か'],
+      pitch: ['L','H','H','H','L','L','H','L','L'],
+      accentType: 'nakadaka',
+      accentNum: 4,
+      tip: 'Clerks ask this for bentos and onigiri. Peak at ため, then drops. はい or いいえ to answer.',
+      context: 'food'
+    },
+    {
+      japanese: 'ポイントカードはお持ちですか',
+      romaji: 'pointo kaado wa omochi desu ka',
+      english: 'Do you have a point card?',
+      mora: ['ポイ','ン','ト','カー','ド','は','お','も','ち','で','す','か'],
+      pitch: ['L','H','H','L','L','L','L','H','H','L','L','L'],
+      accentType: 'nakadaka',
+      accentNum: 3,
+      tip: 'The feared point card question! ポイント peaks at ン. Say ないです if you don\'t have one.',
+      context: 'pointcard'
+    },
+    // --- Useful Responses ---
+    {
+      japanese: 'はい',
+      romaji: 'hai',
+      english: 'Yes',
+      mora: ['はい'],
+      pitch: ['H'],
+      accentType: 'atamadaka',
+      accentNum: 1,
+      tip: 'Short and high-pitched. The most common word you\'ll use at any konbini!',
+      context: 'general'
+    },
+    {
+      japanese: 'いいえ',
+      romaji: 'iie',
+      english: 'No',
+      mora: ['いい','え'],
+      pitch: ['H','L'],
+      accentType: 'atamadaka',
+      accentNum: 1,
+      tip: 'Starts high, drops immediately. In konbini, だいじょうぶです is more natural than a flat いいえ.',
+      context: 'general'
+    },
+  ];
+
+  // Pronunciation guide state
+  const pitchGuideState = {
+    lessonsViewed: new Set(),
+    quizCorrect: 0,
+    quizTotal: 0,
+    lastInteraction: 0,
+  };
+
+  function isPronunciationReady() {
+    // Available after completing at least 1 store level
+    return completedLevelsCount >= 1;
+  }
+
+  function getNextPitchLesson() {
+    // Return the next unviewed lesson, cycling through all
+    for (let i = 0; i < PITCH_ACCENT_PHRASES.length; i++) {
+      if (!pitchGuideState.lessonsViewed.has(i)) {
+        return { index: i, phrase: PITCH_ACCENT_PHRASES[i] };
+      }
+    }
+    // All viewed -- pick one to review (least recently studied)
+    const idx = pitchGuideState.lessonsViewed.size % PITCH_ACCENT_PHRASES.length;
+    return { index: idx, phrase: PITCH_ACCENT_PHRASES[idx] };
+  }
+
+  function buildPitchQuiz() {
+    // Build a 3-question quiz on pitch patterns
+    const questions = [];
+    const indices = [];
+    for (let i = 0; i < PITCH_ACCENT_PHRASES.length; i++) indices.push(i);
+    // Shuffle
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    // Pick up to 3
+    const accentNames = {
+      'heiban': '平板 (Heiban) - Flat',
+      'atamadaka': '頭高 (Atamadaka) - Head-high',
+      'nakadaka': '中高 (Nakadaka) - Mid-high',
+      'odaka': '尾高 (Odaka) - Tail-high'
+    };
+    const allTypes = ['heiban', 'atamadaka', 'nakadaka', 'odaka'];
+    for (let q = 0; q < Math.min(3, indices.length); q++) {
+      const phrase = PITCH_ACCENT_PHRASES[indices[q]];
+      const correctLabel = accentNames[phrase.accentType];
+      // Build wrong choices from other types
+      const wrongTypes = allTypes.filter(t => t !== phrase.accentType);
+      const wrongLabels = wrongTypes.map(t => accentNames[t]);
+      // Shuffle wrong choices and pick 2
+      for (let i = wrongLabels.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [wrongLabels[i], wrongLabels[j]] = [wrongLabels[j], wrongLabels[i]];
+      }
+      const choices = [correctLabel, wrongLabels[0], wrongLabels[1]];
+      // Shuffle choices
+      for (let i = choices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [choices[i], choices[j]] = [choices[j], choices[i]];
+      }
+      questions.push({
+        phrase,
+        correctAnswer: correctLabel,
+        choices
+      });
+    }
+    return questions;
+  }
+
+  function getPronunciationStats() {
+    return {
+      lessonsViewed: pitchGuideState.lessonsViewed.size,
+      totalLessons: PITCH_ACCENT_PHRASES.length,
+      quizCorrect: pitchGuideState.quizCorrect,
+      quizTotal: pitchGuideState.quizTotal,
+    };
+  }
+
+  function recordPitchResult(lessonIdx, wasCorrect) {
+    pitchGuideState.lessonsViewed.add(lessonIdx);
+    if (wasCorrect !== undefined) {
+      pitchGuideState.quizTotal++;
+      if (wasCorrect) pitchGuideState.quizCorrect++;
+    }
+    pitchGuideState.lastInteraction = Date.now();
+  }
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -2416,5 +2656,12 @@ const NPCs = (() => {
     buildSpeedRoundQuiz,
     getSpeedRoundStats,
     recordSpeedRoundResult,
+    // Pronunciation guide
+    PITCH_ACCENT_PHRASES,
+    isPronunciationReady,
+    getNextPitchLesson,
+    buildPitchQuiz,
+    getPronunciationStats,
+    recordPitchResult,
   };
 })();

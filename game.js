@@ -211,6 +211,20 @@
       return;
     }
 
+    // Handle pronunciation guide overlay
+    if (pitchGuideState.active) {
+      // Check for key presses
+      if (Engine.inputA()) { handlePitchGuideInput('a'); return; }
+      if (Engine.inputB()) { handlePitchGuideInput('b'); return; }
+      if (Engine.wasPressed('p')) { handlePitchGuideInput('p'); return; }
+      if (Engine.wasPressed(' ')) { handlePitchGuideInput(' '); return; }
+      if (Engine.wasPressed('1')) { handlePitchGuideInput('1'); return; }
+      if (Engine.wasPressed('2')) { handlePitchGuideInput('2'); return; }
+      if (Engine.wasPressed('3')) { handlePitchGuideInput('3'); return; }
+      if (Engine.wasPressed('escape')) { handlePitchGuideInput('Escape'); return; }
+      return;
+    }
+
     // Handle cultural note banner dismissal
     if (state.culturalNoteNotification) {
       if (Engine.inputA()) {
@@ -538,6 +552,11 @@
     // Check if this is the Speed Round Coach NPC
     if (npc.isSpeedCoach) {
       interactWithSpeedCoach(npc);
+      return;
+    }
+    // Check if this is the Pronunciation Guide NPC
+    if (npc.isPronunciationGuide) {
+      interactWithPronunciationGuide(npc);
       return;
     }
     const dialogue = NPCs.getStreetDialogue(npc);
@@ -2088,6 +2107,185 @@
     });
   }
 
+  // ============ PRONUNCIATION GUIDE ============
+  const pitchGuideState = {
+    active: false,
+    currentPhrase: null,
+    currentIndex: -1,
+    inQuiz: false,
+    quizQuestions: [],
+    quizIdx: 0,
+    quizCorrect: 0,
+    selectedChoice: -1,
+    showingResult: false,
+  };
+
+  function interactWithPronunciationGuide(npc) {
+    if (!NPCs.isPronunciationReady()) {
+      Dialogue.show('Akiko', [
+        '\u97f3 (oto) means sound! I\'m Akiko, the Pronunciation Coach!',
+        'Complete a store level first, then I\'ll teach you pitch accent.',
+        'Japanese melody is key to sounding natural! \u304c\u3093\u3070\u3063\u3066!'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getPronunciationStats();
+    const lesson = NPCs.getNextPitchLesson();
+    const introLines = stats.lessonsViewed === 0
+      ? [
+          '\u97f3 (oto) means sound! I\'m Akiko!',
+          'Japanese uses PITCH ACCENT -- the melody of words.',
+          'Each mora (sound unit) has a HIGH or LOW pitch.',
+          'Getting this right makes you sound truly Japanese!',
+          'Let me show you the pattern for a key konbini phrase...'
+        ]
+      : [
+          `\u304a\u304b\u3048\u308a! Studied ${stats.lessonsViewed}/${stats.totalLessons} phrases.`,
+          stats.quizTotal > 0
+            ? `Quiz accuracy: ${stats.quizCorrect}/${stats.quizTotal} correct!`
+            : 'Try quiz mode [P] to test your pitch knowledge!',
+          'Let me show you the next phrase...'
+        ];
+
+    Dialogue.show('Akiko', introLines, () => {
+      // Play the phrase audio
+      GameAudio.speakJapanese(lesson.phrase.japanese);
+      // Enter pronunciation overlay mode
+      pitchGuideState.active = true;
+      pitchGuideState.currentPhrase = lesson.phrase;
+      pitchGuideState.currentIndex = lesson.index;
+      pitchGuideState.inQuiz = false;
+      NPCs.recordPitchResult(lesson.index);
+    });
+  }
+
+  function startPitchQuiz() {
+    const questions = NPCs.buildPitchQuiz();
+    pitchGuideState.inQuiz = true;
+    pitchGuideState.quizQuestions = questions;
+    pitchGuideState.quizIdx = 0;
+    pitchGuideState.quizCorrect = 0;
+    pitchGuideState.selectedChoice = -1;
+    pitchGuideState.showingResult = false;
+  }
+
+  function handlePitchGuideInput(key) {
+    if (!pitchGuideState.active) return false;
+
+    if (!pitchGuideState.inQuiz) {
+      // Lesson mode
+      if (key === 'a' || key === 'ArrowRight') {
+        // Next phrase
+        const next = NPCs.getNextPitchLesson();
+        pitchGuideState.currentPhrase = next.phrase;
+        pitchGuideState.currentIndex = next.index;
+        NPCs.recordPitchResult(next.index);
+        GameAudio.speakJapanese(next.phrase.japanese);
+        return true;
+      }
+      if (key === 'b' || key === 'Escape') {
+        pitchGuideState.active = false;
+        return true;
+      }
+      if (key === 'p') {
+        // Enter quiz mode
+        startPitchQuiz();
+        // Play first question audio
+        if (pitchGuideState.quizQuestions.length > 0) {
+          GameAudio.speakJapanese(pitchGuideState.quizQuestions[0].phrase.japanese);
+        }
+        return true;
+      }
+      // Replay audio with space
+      if (key === ' ') {
+        GameAudio.speakJapanese(pitchGuideState.currentPhrase.japanese);
+        return true;
+      }
+      return true;
+    }
+
+    // Quiz mode
+    if (pitchGuideState.showingResult) {
+      if (key === 'a' || key === ' ') {
+        pitchGuideState.quizIdx++;
+        pitchGuideState.showingResult = false;
+        pitchGuideState.selectedChoice = -1;
+        if (pitchGuideState.quizIdx >= pitchGuideState.quizQuestions.length) {
+          // Quiz complete
+          const correct = pitchGuideState.quizCorrect;
+          const total = pitchGuideState.quizQuestions.length;
+          pitchGuideState.inQuiz = false;
+          GameAudio.playLevelComplete();
+
+          const pct = correct / total;
+          let rating;
+          if (pct >= 1.0) rating = '\u5b8c\u74a7! Perfect pitch ear!';
+          else if (pct >= 0.66) rating = '\u3044\u3044\u306d! Good hearing!';
+          else rating = '\u3082\u3046\u4e00\u56de! Try again!';
+
+          Dialogue.show('Akiko', [
+            `Quiz complete: ${correct}/${total} correct!`,
+            rating,
+            'Keep studying patterns to sound more natural!'
+          ], () => {
+            pitchGuideState.active = false;
+            setTimeout(() => triggerAchievementCheck(), 300);
+          });
+          return true;
+        }
+        // Play next question audio
+        GameAudio.speakJapanese(pitchGuideState.quizQuestions[pitchGuideState.quizIdx].phrase.japanese);
+        return true;
+      }
+      return true;
+    }
+
+    // Selecting answer: 1, 2, 3 keys or arrow keys + A
+    const q = pitchGuideState.quizQuestions[pitchGuideState.quizIdx];
+    if (!q) return true;
+
+    if (key === '1' || key === '2' || key === '3') {
+      const choiceIdx = parseInt(key) - 1;
+      if (choiceIdx < q.choices.length) {
+        const isCorrect = q.choices[choiceIdx] === q.correctAnswer;
+        pitchGuideState.selectedChoice = choiceIdx;
+        pitchGuideState.showingResult = true;
+        NPCs.recordPitchResult(
+          NPCs.PITCH_ACCENT_PHRASES.indexOf(q.phrase),
+          isCorrect
+        );
+        if (isCorrect) {
+          pitchGuideState.quizCorrect++;
+          GameAudio.playCorrect();
+        } else {
+          NPCs.recordMistake(
+            q.phrase.japanese,
+            q.phrase.english,
+            q.choices[choiceIdx],
+            q.correctAnswer,
+            'Pitch Quiz'
+          );
+        }
+      }
+      return true;
+    }
+
+    if (key === 'b' || key === 'Escape') {
+      pitchGuideState.inQuiz = false;
+      pitchGuideState.active = false;
+      return true;
+    }
+
+    // Replay audio with space
+    if (key === ' ') {
+      GameAudio.speakJapanese(q.phrase.japanese);
+      return true;
+    }
+
+    return true;
+  }
+
   // ============ VARIABLE REWARD TRIGGER ============
   // Called after any correct answer to roll for a bonus phrase reward
   function tryVariableReward() {
@@ -2718,7 +2916,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !pitchGuideState.active && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -2822,6 +3020,89 @@
         state.culturalNoteNotification.note,
         state.culturalNoteNotification.timer
       );
+    }
+
+    // Pronunciation guide overlay
+    if (pitchGuideState.active) {
+      if (pitchGuideState.inQuiz) {
+        // Quiz mode rendering
+        const q = pitchGuideState.quizQuestions[pitchGuideState.quizIdx];
+        if (q) {
+          // Draw the phrase with pitch diagram
+          Sprites.drawPronunciationOverlay(
+            ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+            q.phrase,
+            pitchGuideState.quizIdx + 1,
+            pitchGuideState.quizQuestions.length
+          );
+          // Draw quiz choices on top
+          const panelW = Math.min(Engine.CANVAS_W - 20, 320);
+          const px = (Engine.CANVAS_W - panelW) / 2;
+          const py = 20;
+          const panelH = Engine.CANVAS_H - 40;
+
+          // Override title to say QUIZ
+          ctx.fillStyle = '#4a1a6b';
+          ctx.fillRect(px, py, panelW, 22);
+          ctx.font = '10px monospace';
+          ctx.fillStyle = '#f39c12';
+          const qTitle = `PITCH QUIZ  Q${pitchGuideState.quizIdx + 1}/${pitchGuideState.quizQuestions.length}`;
+          const qtW = ctx.measureText(qTitle).width;
+          ctx.fillText(qTitle, px + (panelW - qtW) / 2, py + 15);
+
+          // Question label
+          ctx.font = '8px monospace';
+          ctx.fillStyle = '#ccc';
+          const qLabel = 'What pitch accent pattern is this?';
+          const qlW = ctx.measureText(qLabel).width;
+          ctx.fillText(qLabel, px + (panelW - qlW) / 2, py + panelH - 75);
+
+          // Draw choices
+          for (let i = 0; i < q.choices.length; i++) {
+            const cy = py + panelH - 60 + i * 16;
+            const choiceText = `[${i + 1}] ${q.choices[i]}`;
+
+            if (pitchGuideState.showingResult) {
+              const isCorrect = q.choices[i] === q.correctAnswer;
+              const isSelected = i === pitchGuideState.selectedChoice;
+              if (isCorrect) {
+                ctx.fillStyle = '#2ecc71';
+              } else if (isSelected) {
+                ctx.fillStyle = '#e74c3c';
+              } else {
+                ctx.fillStyle = '#555';
+              }
+            } else {
+              ctx.fillStyle = '#fff';
+            }
+            ctx.fillText(choiceText, px + 16, cy);
+          }
+
+          // Show result text
+          if (pitchGuideState.showingResult) {
+            const wasRight = q.choices[pitchGuideState.selectedChoice] === q.correctAnswer;
+            ctx.font = '8px monospace';
+            ctx.fillStyle = wasRight ? '#2ecc71' : '#e74c3c';
+            const resultText = wasRight ? '\u6b63\u89e3! Correct! [A] Next' : '\u6b8b\u5ff5... Wrong! [A] Next';
+            const rtW = ctx.measureText(resultText).width;
+            ctx.fillText(resultText, px + (panelW - rtW) / 2, py + panelH - 8);
+          } else {
+            ctx.font = '7px monospace';
+            ctx.fillStyle = '#666';
+            const hint2 = '[1/2/3] Choose  [Space] Replay audio  [B] Quit';
+            const h2W = ctx.measureText(hint2).width;
+            ctx.fillText(hint2, px + (panelW - h2W) / 2, py + panelH - 8);
+          }
+        }
+      } else {
+        // Lesson mode rendering
+        Sprites.drawPronunciationOverlay(
+          ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+          pitchGuideState.currentPhrase,
+          pitchGuideState.currentIndex + 1,
+          NPCs.PITCH_ACCENT_PHRASES.length
+        );
+      }
     }
 
     // Achievement unlock notification banner

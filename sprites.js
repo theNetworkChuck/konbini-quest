@@ -640,6 +640,33 @@ const Sprites = (() => {
     'T': '#FFD600', // yellow stopwatch/lightning accent on chest
   };
 
+  // Pronunciation Guide NPC - Akiko (music/sound theme, purple & pink)
+  const npcPronunciationGuide = `
+....HHHH....
+...HhHhHH...
+..HhHhHhHH..
+..sWEsWEs...
+..sSSSSSs...
+...ssMss....
+..PPPPPPPP..
+..PPNPPNPP..
+..PPNNPPPP..
+...PPPPPP...
+..PPPPPPPp..
+..PP.PP.PP..
+..PP.PP.PP..
+...PP..PP...
+...WW..WW...
+...WW..WW...`;
+
+  const npcPronunciationGuidePalette = {
+    'H': '#4a1a6b', 'h': '#6b2fa0', // purple hair (sound/music theme)
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#c06080', 'B': '#f0a0a0', // pink smile
+    'P': '#9b59b6', 'p': '#7d3c98', // purple dress/top
+    'N': '#e91e9b', // hot pink musical note accent
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
@@ -651,6 +678,7 @@ const Sprites = (() => {
     kansaicoach: { frames: [npcKansaiCoach], palette: npcKansaiCoachPalette },
     politenesscoach: { frames: [npcPolitenessCoach], palette: npcPolitenessCoachPalette },
     speedcoach: { frames: [npcSpeedCoach], palette: npcSpeedCoachPalette },
+    pronunciationguide: { frames: [npcPronunciationGuide], palette: npcPronunciationGuidePalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1477,6 +1505,179 @@ const Sprites = (() => {
     ctx.fillText(rating, bx + (bw - ratingW) / 2, by + 40);
 
     ctx.globalAlpha = 1;
+  }
+
+  // Pronunciation guide bubble (musical note icon, purple/pink)
+  function drawPronunciationBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 3) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (purple)
+    ctx.fillStyle = '#4a1a6b';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Musical note icon (pink)
+    ctx.fillStyle = '#e91e9b';
+    ctx.fillRect(x + 5, y - 12, 2, 6); // stem
+    ctx.fillRect(x + 5, y - 12, 6, 2); // flag bar
+    ctx.fillRect(x + 9, y - 12, 2, 6); // second stem
+    ctx.fillRect(x + 4, y - 7, 3, 2);  // note head 1
+    ctx.fillRect(x + 8, y - 7, 3, 2);  // note head 2
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw pitch accent diagram for a phrase
+  // mora: array of mora strings, pitch: array of 'H' or 'L'
+  function drawPitchDiagram(ctx, cx, cy, mora, pitch, phraseW) {
+    const moraCount = mora.length;
+    const spacing = Math.min(28, (phraseW - 20) / moraCount);
+    const startX = cx - (moraCount * spacing) / 2;
+    const highY = cy - 10;
+    const lowY = cy + 6;
+
+    ctx.font = '9px monospace';
+
+    for (let i = 0; i < moraCount; i++) {
+      const mx = startX + i * spacing + spacing / 2;
+      const isHigh = pitch[i] === 'H';
+      const my = isHigh ? highY : lowY;
+
+      // Draw connecting line to next mora
+      if (i < moraCount - 1) {
+        const nextHigh = pitch[i + 1] === 'H';
+        const nextY = nextHigh ? highY : lowY;
+        const nextX = startX + (i + 1) * spacing + spacing / 2;
+        ctx.strokeStyle = '#9b59b6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(mx, my);
+        ctx.lineTo(nextX, nextY);
+        ctx.stroke();
+      }
+
+      // Draw mora dot
+      ctx.fillStyle = isHigh ? '#e91e9b' : '#6c3483';
+      ctx.beginPath();
+      ctx.arc(mx, my, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw mora text below diagram
+      ctx.fillStyle = '#fff';
+      const textW = ctx.measureText(mora[i]).width;
+      ctx.fillText(mora[i], mx - textW / 2, cy + 24);
+
+      // Draw H/L label above/below dot
+      ctx.fillStyle = isHigh ? '#f39c12' : '#7f8c8d';
+      ctx.font = '6px monospace';
+      const label = isHigh ? 'H' : 'L';
+      const lw = ctx.measureText(label).width;
+      ctx.fillText(label, mx - lw / 2, isHigh ? my - 7 : my + 11);
+      ctx.font = '9px monospace';
+    }
+  }
+
+  // Draw the full pronunciation lesson overlay
+  function drawPronunciationOverlay(ctx, canvasW, canvasH, phrase, lessonNum, totalLessons) {
+    // Semi-transparent dark backdrop
+    ctx.fillStyle = 'rgba(20, 10, 40, 0.92)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    const panelW = Math.min(canvasW - 20, 320);
+    const panelH = canvasH - 40;
+    const px = (canvasW - panelW) / 2;
+    const py = 20;
+
+    // Panel background
+    ctx.fillStyle = '#1a0a2e';
+    ctx.fillRect(px, py, panelW, panelH);
+    // Purple border
+    ctx.strokeStyle = '#9b59b6';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, panelW, panelH);
+
+    // Title bar
+    ctx.fillStyle = '#4a1a6b';
+    ctx.fillRect(px, py, panelW, 22);
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#e91e9b';
+    const title = `PITCH ACCENT GUIDE  ${lessonNum}/${totalLessons}`;
+    const tw = ctx.measureText(title).width;
+    ctx.fillText(title, px + (panelW - tw) / 2, py + 15);
+
+    // Japanese phrase (large)
+    ctx.font = '16px monospace';
+    ctx.fillStyle = '#fff';
+    const jpW = ctx.measureText(phrase.japanese).width;
+    ctx.fillText(phrase.japanese, px + (panelW - jpW) / 2, py + 52);
+
+    // Romaji
+    ctx.font = '9px monospace';
+    ctx.fillStyle = '#b0b0b0';
+    const rmW = ctx.measureText(phrase.romaji).width;
+    ctx.fillText(phrase.romaji, px + (panelW - rmW) / 2, py + 67);
+
+    // English meaning
+    ctx.fillStyle = '#7f8c8d';
+    const enW = ctx.measureText(phrase.english).width;
+    ctx.fillText(phrase.english, px + (panelW - enW) / 2, py + 80);
+
+    // Divider
+    ctx.fillStyle = '#4a1a6b';
+    ctx.fillRect(px + 10, py + 88, panelW - 20, 1);
+
+    // Pitch diagram
+    drawPitchDiagram(ctx, px + panelW / 2, py + 115, phrase.mora, phrase.pitch, panelW);
+
+    // Accent type label
+    const accentNames = {
+      'heiban': '\u5e73\u677f (Heiban) - Flat',
+      'atamadaka': '\u982d\u9ad8 (Atamadaka) - Head-high',
+      'nakadaka': '\u4e2d\u9ad8 (Nakadaka) - Mid-high',
+      'odaka': '\u5c3e\u9ad8 (Odaka) - Tail-high'
+    };
+    ctx.font = '8px monospace';
+    ctx.fillStyle = '#e91e9b';
+    const accentLabel = 'Pattern: ' + (accentNames[phrase.accentType] || phrase.accentType);
+    const alW = ctx.measureText(accentLabel).width;
+    ctx.fillText(accentLabel, px + (panelW - alW) / 2, py + 155);
+
+    // Accent number explanation
+    ctx.fillStyle = '#9b59b6';
+    const accentExplain = phrase.accentNum === 0
+      ? 'No pitch drop (stays high)'
+      : `Pitch drops after mora #${phrase.accentNum}`;
+    const aeW = ctx.measureText(accentExplain).width;
+    ctx.fillText(accentExplain, px + (panelW - aeW) / 2, py + 168);
+
+    // Divider
+    ctx.fillStyle = '#4a1a6b';
+    ctx.fillRect(px + 10, py + 175, panelW - 20, 1);
+
+    // Tip text (word-wrapped)
+    ctx.font = '7px monospace';
+    ctx.fillStyle = '#ccc';
+    const tip = phrase.tip;
+    const maxLineW = panelW - 24;
+    const words = tip.split(' ');
+    let line = '';
+    let lineY = py + 190;
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (ctx.measureText(test).width > maxLineW && line) {
+        ctx.fillText(line, px + 12, lineY);
+        line = word;
+        lineY += 10;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, px + 12, lineY);
+
+    // Controls hint
+    ctx.font = '7px monospace';
+    ctx.fillStyle = '#666';
+    const hint = '[A] Next phrase  [B] Close  [P] Quiz mode';
+    const hW = ctx.measureText(hint).width;
+    ctx.fillText(hint, px + (panelW - hW) / 2, py + panelH - 8);
   }
 
   // Streak fire icon for HUD
@@ -3130,5 +3331,9 @@ const Sprites = (() => {
     drawSpeedBubble,
     drawSpeedTimer,
     drawSpeedResultBanner,
+    // Pronunciation guide
+    drawPronunciationBubble,
+    drawPitchDiagram,
+    drawPronunciationOverlay,
   };
 })();

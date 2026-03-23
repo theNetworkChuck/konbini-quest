@@ -279,6 +279,10 @@ const Engine = (() => {
         if (npc.isSpeedCoach && NPCs.isSpeedRoundReady()) {
           Sprites.drawSpeedBubble(ctx, sx, sy, time);
         }
+        // Show pronunciation bubble above pronunciation guide when ready
+        if (npc.isPronunciationGuide && NPCs.isPronunciationReady()) {
+          Sprites.drawPronunciationBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing
