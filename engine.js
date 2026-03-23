@@ -275,6 +275,10 @@ const Engine = (() => {
         if (npc.isPolitenessCoach && NPCs.isPolitenessPracticeReady()) {
           Sprites.drawPolitenessBubble(ctx, sx, sy, time);
         }
+        // Show speed round bubble above speed coach when ready
+        if (npc.isSpeedCoach && NPCs.isSpeedRoundReady()) {
+          Sprites.drawSpeedBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing

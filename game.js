@@ -184,6 +184,23 @@
       }
     }
 
+    // Update speed round countdown timer
+    if (speedGameState.inSpeedRound && speedGameState.timerActive) {
+      speedGameState.timerRemaining -= dt;
+      if (speedGameState.timerRemaining <= 0) {
+        speedGameState.timerRemaining = 0;
+        handleSpeedTimeout();
+      }
+    }
+
+    // Update speed round result banner timer
+    if (speedGameState.showingResult) {
+      speedGameState.resultTimer -= dt;
+      if (speedGameState.resultTimer <= 0) {
+        speedGameState.showingResult = false;
+      }
+    }
+
     // Handle cultural notes overlay
     if (state.culturalNotesOpen) {
       if (Engine.inputB() || Engine.wasPressed('c')) {
@@ -516,6 +533,11 @@
     // Check if this is the Politeness Coach NPC
     if (npc.isPolitenessCoach) {
       interactWithPolitenessCoach(npc);
+      return;
+    }
+    // Check if this is the Speed Round Coach NPC
+    if (npc.isSpeedCoach) {
+      interactWithSpeedCoach(npc);
       return;
     }
     const dialogue = NPCs.getStreetDialogue(npc);
@@ -1784,6 +1806,288 @@
     });
   }
 
+  // ============ SPEED ROUND (TIMED RECALL MODE) ============
+  const speedGameState = {
+    inSpeedRound: false,
+    phrases: [],
+    currentIdx: 0,
+    correct: 0,
+    total: 0,
+    timerRemaining: 0,   // seconds remaining for current question
+    timerMax: 8,         // max seconds per question
+    timerActive: false,
+    totalElapsed: 0,     // cumulative time spent answering
+    roundStartTime: 0,   // performance.now() of round start
+    questionStartTime: 0,// performance.now() of question start
+    showingResult: false,
+    resultTimer: 0,
+    resultCorrect: 0,
+    resultTotal: 0,
+    resultTime: 0,
+    resultIsNewBest: false,
+  };
+
+  function interactWithSpeedCoach(npc) {
+    if (!NPCs.canStartChallenge || Object.keys(NPCs.phraseTracker).length < 4) {
+      Dialogue.show('Hayate', [
+        'タイムアタック！ I\'m Hayate, the Speed Coach!',
+        'You need to learn more phrases before we can race!',
+        'Complete some store levels first! がんばって！'
+      ]);
+      return;
+    }
+
+    if (!NPCs.isSpeedRoundReady()) {
+      const stats = NPCs.getSpeedRoundStats();
+      Dialogue.show('Hayate', [
+        'Easy, speedy! Take a short break. 休憩!',
+        stats.roundsCompleted > 0
+          ? `Best score: ${stats.bestScore}/5 | Rounds: ${stats.roundsCompleted}`
+          : 'Come back in a moment for a speed challenge!'
+      ]);
+      return;
+    }
+
+    const phrases = NPCs.buildSpeedRoundQuiz();
+    if (phrases.length < 3) {
+      Dialogue.show('Hayate', 'Need more phrases to work with. Learn more at the stores!');
+      return;
+    }
+
+    // Set up speed round state
+    speedGameState.inSpeedRound = true;
+    speedGameState.phrases = phrases;
+    speedGameState.currentIdx = 0;
+    speedGameState.correct = 0;
+    speedGameState.total = phrases.length;
+    speedGameState.timerRemaining = 0;
+    speedGameState.timerMax = 8; // 8 seconds per question
+    speedGameState.timerActive = false;
+    speedGameState.totalElapsed = 0;
+    speedGameState.roundStartTime = performance.now();
+    speedGameState.showingResult = false;
+
+    const stats = NPCs.getSpeedRoundStats();
+    const intro = stats.roundsCompleted > 0
+      ? [
+          'タイムアタック! Speed Round!',
+          `5 questions. 8 seconds each. Beat your best!`,
+          stats.bestScore > 0 ? `Current best: ${stats.bestScore}/5` : '',
+          '準備はいい？ Ready? GO!'
+        ].filter(l => l.length > 0)
+      : [
+          'タイムアタック！ I\'m Hayate, the Speed Coach!',
+          '5 rapid-fire questions. You have 8 seconds each!',
+          'Answer fast! Time pressure builds real recall speed!',
+          '準備はいい？ Ready? GO!'
+        ];
+
+    GameAudio.playAlert();
+    Dialogue.show('Hayate', intro, () => {
+      runSpeedQuestion();
+    });
+  }
+
+  function runSpeedQuestion() {
+    if (speedGameState.currentIdx >= speedGameState.phrases.length) {
+      finishSpeedRound();
+      return;
+    }
+
+    const phraseData = speedGameState.phrases[speedGameState.currentIdx];
+    const interaction = NPCs.getInteractionForPhrase(phraseData);
+
+    if (!interaction) {
+      speedGameState.currentIdx++;
+      runSpeedQuestion();
+      return;
+    }
+
+    const qNum = speedGameState.currentIdx + 1;
+    const qTotal = speedGameState.total;
+
+    // Start the countdown timer
+    speedGameState.timerRemaining = speedGameState.timerMax;
+    speedGameState.timerActive = false; // will activate when choices show
+    speedGameState.questionStartTime = performance.now();
+
+    // Show the clerk question (brief, no long explanation)
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      Dialogue.show(`Speed Q${qNum}/${qTotal}`, interaction.clerkJp, () => {
+        showSpeedChoices(interaction, phraseData);
+      });
+    } else if (interaction.playerPrompt) {
+      Dialogue.show(`Speed Q${qNum}/${qTotal}`, interaction.playerPrompt, () => {
+        showSpeedChoices(interaction, phraseData);
+      });
+    }
+  }
+
+  function showSpeedChoices(interaction, phraseData) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    // Shuffle options
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    // Activate timer NOW when choices appear
+    speedGameState.timerActive = true;
+    speedGameState.questionStartTime = performance.now();
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      speedGameState.timerActive = false;
+      const selected = shuffled[selectedIdx];
+      handleSpeedAnswer(interaction, selected, phraseData);
+    });
+  }
+
+  function handleSpeedAnswer(interaction, selected, phraseData) {
+    Dialogue.hideChoices();
+
+    // Calculate time taken for this question
+    const questionTime = (performance.now() - speedGameState.questionStartTime) / 1000;
+    speedGameState.totalElapsed += questionTime;
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 300);
+      GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
+      Engine.spawnSparkles();
+      speedGameState.correct++;
+      NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
+
+      // Speak the correct response
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && responseText !== '[\u4f55\u3082\u8a00\u308f\u306a\u3044]') {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 400);
+      }
+
+      tryVariableReward();
+
+      // Quick encouragement then move on FAST (speed round!)
+      const fast = ['正解!', 'いいね!', '速い!', 'バッチリ!'];
+      const msg = fast[Math.floor(Math.random() * fast.length)];
+
+      Dialogue.show('Hayate', msg, () => {
+        speedGameState.currentIdx++;
+        runSpeedQuestion();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 300);
+      GameAudio.playWrong();
+      NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
+
+      // Record mistake
+      const correctOpt = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOpt ? (correctOpt.text || correctOpt.textJp || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: 'Speed Round',
+      });
+
+      // Brief wrong answer then move on quickly
+      Dialogue.show('Hayate', '残念! Next!', () => {
+        speedGameState.currentIdx++;
+        runSpeedQuestion();
+      });
+    }
+  }
+
+  function handleSpeedTimeout() {
+    // Time's up! Count as wrong
+    speedGameState.timerActive = false;
+    Dialogue.hideChoices();
+
+    const phraseData = speedGameState.phrases[speedGameState.currentIdx];
+    const interaction = NPCs.getInteractionForPhrase(phraseData);
+
+    Dialogue.flash('rgba(231,76,60,0.5)', 400);
+    GameAudio.playWrong();
+
+    if (interaction && phraseData) {
+      NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
+
+      // Record timeout as mistake
+      const correctOpt = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: '[時間切れ / Time Up]',
+        correctText: correctOpt ? (correctOpt.text || correctOpt.textJp || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: 'Speed Round',
+      });
+    }
+
+    speedGameState.totalElapsed += speedGameState.timerMax;
+
+    Dialogue.show('Hayate', '時間切れ! Time\'s up!', () => {
+      speedGameState.currentIdx++;
+      runSpeedQuestion();
+    });
+  }
+
+  function finishSpeedRound() {
+    const correct = speedGameState.correct;
+    const total = speedGameState.total;
+    const totalTime = speedGameState.totalElapsed;
+
+    const result = NPCs.recordSpeedRoundResult(correct, total, totalTime);
+    const isNewBest = correct >= result.bestScore && correct > 0;
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    // Show results
+    speedGameState.showingResult = true;
+    speedGameState.resultTimer = 5.0;
+    speedGameState.resultCorrect = correct;
+    speedGameState.resultTotal = total;
+    speedGameState.resultTime = totalTime;
+    speedGameState.resultIsNewBest = isNewBest;
+
+    const pct = correct / total;
+    let resultLines;
+    if (pct >= 1.0) {
+      resultLines = [
+        `電光石火! ${correct}/${total} correct!`,
+        `Total time: ${totalTime.toFixed(1)} seconds`,
+        'Perfect score! You have lightning reflexes!'
+      ];
+    } else if (pct >= 0.6) {
+      resultLines = [
+        `速い! ${correct}/${total} correct!`,
+        `Total time: ${totalTime.toFixed(1)} seconds`,
+        'Keep practicing to get that perfect score!'
+      ];
+    } else {
+      resultLines = [
+        `${correct}/${total} correct.`,
+        `Total time: ${totalTime.toFixed(1)} seconds`,
+        'もっと練習! Review at the stores and try again!'
+      ];
+    }
+
+    if (isNewBest && result.bestScore > 0) {
+      resultLines.push('★ NEW PERSONAL BEST! ★');
+    }
+
+    Dialogue.show('Hayate', resultLines, () => {
+      speedGameState.inSpeedRound = false;
+      speedGameState.showingResult = false;
+      speedGameState.phrases = [];
+      setTimeout(() => triggerAchievementCheck(), 300);
+    });
+  }
+
   // ============ VARIABLE REWARD TRIGGER ============
   // Called after any correct answer to roll for a bonus phrase reward
   function tryVariableReward() {
@@ -2425,6 +2729,17 @@
 
     // Dialogue
     Dialogue.render(ctx);
+
+    // Speed round timer bar (above dialogue, during speed round choices)
+    if (speedGameState.inSpeedRound && speedGameState.timerActive) {
+      Sprites.drawSpeedTimer(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        speedGameState.timerRemaining,
+        speedGameState.timerMax,
+        speedGameState.currentIdx + 1,
+        speedGameState.total
+      );
+    }
 
     // Romaji peek overlay (kana_assist mode)
     if (state.romajiPeekActive && state.romajiPeekData && Dialogue.choiceActive) {

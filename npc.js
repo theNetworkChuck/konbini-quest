@@ -98,6 +98,16 @@ const NPCs = (() => {
       ]
     },
 
+    // Speed Round Coach NPC (timed recall mode)
+    { map: 0, x: 16, y: 13, type: 'speedcoach', name: 'Hayate', dir: 'left',
+      isSpeedCoach: true,
+      dialogues: [
+        "速い！ (Hayai!) I'm Hayate, the Speed Coach!",
+        "Think fast! Can you answer before time runs out?",
+        "Time pressure builds real recall speed! タイムアタック！"
+      ]
+    },
+
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
       isClerk: true },
@@ -2226,6 +2236,62 @@ const NPCs = (() => {
 
 
 
+  // ============ SPEED ROUND SYSTEM ============
+  // Timed rapid-fire quiz that tests recall under pressure
+  // Requirements: player must have at least 4 tracked phrases
+  const speedRoundState = {
+    roundsCompleted: 0,
+    bestScore: 0,
+    bestTime: Infinity, // best total time in seconds
+    totalCorrect: 0,
+    totalAttempted: 0,
+    cooldownUntil: 0,
+  };
+
+  function isSpeedRoundReady() {
+    const tracked = Object.keys(phraseTracker);
+    if (tracked.length < 4) return false;
+    return Date.now() >= speedRoundState.cooldownUntil;
+  }
+
+  // Build 5 random questions weighted toward weaker phrases
+  function buildSpeedRoundQuiz() {
+    const count = 5;
+    const allTracked = Object.keys(phraseTracker).map(key => phraseTracker[key]);
+    if (allTracked.length < count) return allTracked;
+
+    // Weight: lower mastery + more wrong answers = more likely
+    const weighted = allTracked.map(p => ({
+      ...p,
+      weight: (5 - p.mastery) * 2 + p.wrongCount + 1 + Math.random() * 3
+    }));
+    weighted.sort((a, b) => b.weight - a.weight);
+
+    // Pick top candidates and shuffle
+    const selected = weighted.slice(0, Math.min(count + 3, weighted.length));
+    for (let i = selected.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [selected[i], selected[j]] = [selected[j], selected[i]];
+    }
+    return selected.slice(0, count);
+  }
+
+  function getSpeedRoundStats() {
+    return { ...speedRoundState };
+  }
+
+  function recordSpeedRoundResult(correct, total, totalTimeSec) {
+    speedRoundState.roundsCompleted++;
+    speedRoundState.totalCorrect += correct;
+    speedRoundState.totalAttempted += total;
+    const score = correct;
+    if (score > speedRoundState.bestScore) speedRoundState.bestScore = score;
+    if (totalTimeSec < speedRoundState.bestTime) speedRoundState.bestTime = totalTimeSec;
+    // 45-second cooldown between speed rounds
+    speedRoundState.cooldownUntil = Date.now() + 45000;
+    return { score, bestScore: speedRoundState.bestScore };
+  }
+
   // Get street NPC next dialogue
   function getStreetDialogue(npcDef) {
     const key = `${npcDef.x}_${npcDef.y}`;
@@ -2345,5 +2411,10 @@ const NPCs = (() => {
     getTotalNoteCount,
     hasNewNotes,
     markNotesViewed,
+    // Speed round
+    isSpeedRoundReady,
+    buildSpeedRoundQuiz,
+    getSpeedRoundStats,
+    recordSpeedRoundResult,
   };
 })();

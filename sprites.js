@@ -612,6 +612,34 @@ const Sprites = (() => {
     'K': '#1a2744', 'Z': '#f5f5f0'  // kimono lower, white tabi socks
   };
 
+  // Speed Round Coach NPC - Hayate (sporty, stopwatch theme)
+  const npcSpeedCoach = `
+....HHHH....
+...HhHHhH...
+..LLLLLLLL..
+..sWEsWEs..
+..sSSSSSs...
+...ssMss....
+..CCCCCCCC..
+..CwCCCwCC..
+..CCTTCCCC..
+...CCCCCC...
+..ccCCCCcc..
+..CC.CC.CC..
+..CC.CC.CC..
+...CC..CC...
+...WW..WW...
+...WW..WW...`;
+
+  const npcSpeedCoachPalette = {
+    'H': '#1a1a2e', 'h': '#2e2e44',
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff', 'w': '#ddd',
+    'M': '#c09080', 'B': '#f0a0a0',
+    'L': '#FF6B35', // orange headband (speed/energy)
+    'C': '#2196F3', 'c': '#1565C0', // bright blue sporty jacket
+    'T': '#FFD600', // yellow stopwatch/lightning accent on chest
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
@@ -622,6 +650,7 @@ const Sprites = (() => {
     seasonalguide: { frames: [npcSeasonalGuide], palette: npcSeasonalGuidePalette },
     kansaicoach: { frames: [npcKansaiCoach], palette: npcKansaiCoachPalette },
     politenesscoach: { frames: [npcPolitenessCoach], palette: npcPolitenessCoachPalette },
+    speedcoach: { frames: [npcSpeedCoach], palette: npcSpeedCoachPalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1333,6 +1362,120 @@ const Sprites = (() => {
     // Three horizontal lines (three levels)
     ctx.fillRect(x + 5, y - 8, 6, 1);
     ctx.fillRect(x + 5, y - 6, 6, 1);
+    ctx.globalAlpha = 1;
+  }
+
+  // Speed Round bubble (stopwatch icon, orange/blue)
+  function drawSpeedBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 4.5) * 0.18 + 0.82;
+    ctx.globalAlpha = pulse;
+    // Bubble background (electric blue)
+    ctx.fillStyle = '#0d47a1';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Stopwatch body (orange circle)
+    ctx.fillStyle = '#FF6B35';
+    ctx.fillRect(x + 5, y - 12, 6, 6);
+    ctx.fillRect(x + 4, y - 11, 8, 4);
+    // Stopwatch center
+    ctx.fillStyle = '#FFD600';
+    ctx.fillRect(x + 7, y - 11, 2, 1); // button on top
+    ctx.fillRect(x + 7, y - 10, 1, 2); // hand
+    ctx.fillRect(x + 7, y - 9, 2, 1);  // hand
+    ctx.globalAlpha = 1;
+  }
+
+  // Speed round timer bar (drawn above dialogue box during speed round)
+  function drawSpeedTimer(ctx, canvasW, canvasH, timeRemaining, maxTime, questionNum, totalQuestions) {
+    const barY = canvasH - 66; // above dialogue box
+    const barX = 8;
+    const barW = canvasW - 16;
+    const barH = 8;
+    const ratio = Math.max(0, timeRemaining / maxTime);
+
+    // Timer bar background
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+    // Timer bar fill — green to yellow to red
+    let color;
+    if (ratio > 0.5) {
+      color = '#2ecc71'; // green
+    } else if (ratio > 0.25) {
+      color = '#f39c12'; // yellow/orange
+    } else {
+      color = '#e74c3c'; // red
+    }
+    ctx.fillStyle = color;
+    ctx.fillRect(barX, barY, barW * ratio, barH);
+
+    // Pulsing urgency effect when low
+    if (ratio < 0.25 && ratio > 0) {
+      const urgePulse = Math.sin(Date.now() / 100) * 0.3 + 0.3;
+      ctx.fillStyle = `rgba(231,76,60,${urgePulse})`;
+      ctx.fillRect(barX, barY, barW * ratio, barH);
+    }
+
+    // Timer text
+    ctx.font = '7px monospace';
+    ctx.fillStyle = '#fff';
+    const timeText = timeRemaining.toFixed(1) + 's';
+    ctx.fillText(timeText, barX + 2, barY + 7);
+
+    // Question progress on right
+    const qText = `Q${questionNum}/${totalQuestions}`;
+    const qTextW = ctx.measureText(qText).width;
+    ctx.fillText(qText, barX + barW - qTextW - 2, barY + 7);
+
+    // "SPEED ROUND" label centered
+    ctx.fillStyle = ratio < 0.25 ? '#e74c3c' : '#FFD600';
+    const label = 'タイムアタック!';
+    const labelW = ctx.measureText(label).width;
+    ctx.fillText(label, barX + (barW - labelW) / 2, barY + 7);
+  }
+
+  // Speed round results summary
+  function drawSpeedResultBanner(ctx, canvasW, canvasH, correct, total, totalTime, isNewBest, timer) {
+    // Fade in/out
+    let alpha = 1;
+    if (timer > 4.5) alpha = (5.0 - timer) * 2;
+    else if (timer < 0.5) alpha = timer * 2;
+    ctx.globalAlpha = alpha;
+
+    const bw = 200, bh = 50;
+    const bx = (canvasW - bw) / 2;
+    const by = (canvasH - bh) / 2 - 20;
+
+    // Background
+    ctx.fillStyle = '#0d2137';
+    ctx.fillRect(bx, by, bw, bh);
+    // Border — gold if new best, blue otherwise
+    ctx.strokeStyle = isNewBest ? '#FFD600' : '#2196F3';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx, by, bw, bh);
+
+    ctx.font = '8px monospace';
+    ctx.fillStyle = '#FFD600';
+    const header = isNewBest ? '★ NEW BEST! ★' : 'SPEED ROUND COMPLETE';
+    const headerW = ctx.measureText(header).width;
+    ctx.fillText(header, bx + (bw - headerW) / 2, by + 12);
+
+    ctx.fillStyle = '#fff';
+    const scoreLine = `Score: ${correct}/${total} | Time: ${totalTime.toFixed(1)}s`;
+    const scoreW = ctx.measureText(scoreLine).width;
+    ctx.fillText(scoreLine, bx + (bw - scoreW) / 2, by + 26);
+
+    // Rating
+    const pct = correct / total;
+    let rating, ratingColor;
+    if (pct >= 1.0) { rating = '電光石火! Lightning!'; ratingColor = '#FFD600'; }
+    else if (pct >= 0.8) { rating = '速い! Fast!'; ratingColor = '#2ecc71'; }
+    else if (pct >= 0.6) { rating = 'まあまあ Not bad'; ratingColor = '#f39c12'; }
+    else { rating = 'もっと練習! Practice more!'; ratingColor = '#e74c3c'; }
+    ctx.fillStyle = ratingColor;
+    const ratingW = ctx.measureText(rating).width;
+    ctx.fillText(rating, bx + (bw - ratingW) / 2, by + 40);
+
     ctx.globalAlpha = 1;
   }
 
@@ -2983,5 +3126,9 @@ const Sprites = (() => {
     drawCulturalNoteIcon,
     drawCulturalNoteBanner,
     drawCulturalNotesOverlay,
+    // Speed round
+    drawSpeedBubble,
+    drawSpeedTimer,
+    drawSpeedResultBanner,
   };
 })();
