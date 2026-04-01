@@ -761,3 +761,20 @@
 **Why it matters for learning:** Research in educational psychology shows that visible progress tracking is one of the strongest motivators for continued learning. Players can now see exactly how far they've come across every dimension of the game -- store completions, NPC lessons, collections, accuracy rates, and challenge performance. This creates a sense of accomplishment that fights the "am I actually learning?" doubt that causes most language learners to quit. The dashboard also helps players identify which areas they haven't explored yet, naturally guiding them toward underused features like pronunciation practice or cultural notes.
 
 **Files modified:** npc.js, sprites.js, game.js (~480 lines added)
+
+### 2026-04-02 -- #31 Location Name Banners
+**Commit:** `269d6c8`
+
+**What was added:**
+- **Pokemon-style location name banners** that slide in from the right when entering or exiting stores -- just like Pokemon games display area names when entering a new town or route.
+- **Store entry banners** show the store's Japanese name in large text (e.g., "セブンイレブン") with the English name below ("7-Eleven") in the store's brand color.
+- **Brand-colored theming** -- each store's banner uses its signature color: 7-Eleven (red #d4380d), Lawson (blue #1a6fc4), FamilyMart (green #27ae60). Accent lines at top and bottom of the banner, decorative diamond marker, and gradient effects all use the brand color.
+- **Street return banner** -- when exiting a store back to Konbini Street, a gold-themed banner appears showing "コンビニ通り / Konbini Street."
+- **Smooth cubic-eased animations** -- banner slides in with ease-out timing (0.4s), holds visible for 2 seconds, then slides out with ease-in timing (0.4s). Total duration 3.2 seconds.
+- **Visual design details**: Dark semi-transparent background (rgba 10,10,30 at 92%), white Japanese text in rounded font, colored English text in pixel font, decorative diamond shape on the left edge, subtle brand-color gradient on the right edge.
+- **Proper render ordering** -- banner renders above the game scene and particles but below the sliding door animation and fade overlay, so transitions look natural.
+- **Testing hook**: `window.testLocationBanner('7-Eleven')` (also accepts 'Lawson', 'FamilyMart', 'street').
+
+**Why it matters for learning:** Location banners are a signature feature of Pokemon games that create a sense of arrival and significance when entering a new area. This reinforces the store name association in both Japanese and English every time the player enters -- passive katakana reading practice that happens naturally during gameplay. The Japanese katakana rendering of store names (セブンイレブン, ローソン, ファミリーマート) gives players authentic exposure to how these brands are written in Japan, building real-world recognition for when they visit actual Japanese konbinis. The banner also creates a brief moment of anticipation before the clerk greeting, making each store visit feel like entering a new Pokemon area.
+
+**Files modified:** engine.js, game.js (~150 lines added)
