@@ -740,3 +740,24 @@
 **Why it matters for learning:** Combo counters are one of the most psychologically powerful game mechanics for sustained engagement. The escalating visual feedback (color shifts, particle effects, Japanese exclamations) creates a "flow state" where players push to maintain their streak, naturally increasing focus and reducing careless answers. The 45-second decay timer prevents gaming the system while keeping reasonable pauses between questions. The Japanese milestone messages (いいね → すごい → 燃えろ → 伝説的) also serve as vocabulary exposure -- players learn these common exclamations through emotional association rather than explicit study, which is how native speakers actually acquire them.
 
 **Files modified:** game.js, sprites.js (~226 lines added)
+
+### 2026-04-02 -- #30 Progress Dashboard
+**Commit:** `97f89cb`
+
+**What was added:**
+- **Full-screen progress dashboard overlay** accessible via [P] key from the street map -- a comprehensive stats screen aggregating data from all 16 game subsystems into one beautiful view.
+- **Overall accuracy circle** -- large animated ring chart showing lifetime correct/total answer percentage with Japanese label (正答率) and letter grade (S/A/B/C/D) based on performance.
+- **Store progress section** -- individual progress bars for 7-Eleven, Lawson, and FamilyMart showing levels completed vs total (12 levels), with star counts and brand-colored bars.
+- **Collection stats** -- stamp cards collected, phrases learned, inventory items, cultural notes discovered, and achievement badges unlocked, each with progress fraction and visual bar.
+- **NPC lesson tracker** -- shows completion for all 9 NPC lesson systems: Payment (Reiko), Seasonal (Obaa-chan), Kansai (Takoyaki), Politeness (Keiko), Speed Round (Hayate), Pronunciation (Akiko), Conversation (Yuri), Onomatopoeia (Mimi), and Night Shift (Suzuki).
+- **Challenge & review stats** -- daily challenge best streak, review sessions completed, mistake journal entry count, and global combo best streak.
+- **Section headers** with Japanese labels: 全体の正答率 (Overall Accuracy), 店舗の進捗 (Store Progress), コレクション (Collections), NPCレッスン (NPC Lessons), チャレンジ (Challenges).
+- **Dark semi-transparent overlay** with scrollable layout, soft rounded-corner section cards, and consistent color theming matching each system's brand colors.
+- **Title bar** with Japanese + English: 「学習の進捗 PROGRESS」
+- **HUD integration** -- overlay hides minimap, combo counter, and cultural note popups while open. Closes with [P] or [B] key.
+- **getProgressDashboard()** in npc.js aggregates data from: store progress, spaced repetition tracker, stamp cards, phrase book, inventory bag, cultural notes, achievement badges, challenge stats, mistake journal, combo counter, and all 9 NPC lesson state objects.
+- **Testing hook**: `window.toggleProgressDash()` for debugging.
+
+**Why it matters for learning:** Research in educational psychology shows that visible progress tracking is one of the strongest motivators for continued learning. Players can now see exactly how far they've come across every dimension of the game -- store completions, NPC lessons, collections, accuracy rates, and challenge performance. This creates a sense of accomplishment that fights the "am I actually learning?" doubt that causes most language learners to quit. The dashboard also helps players identify which areas they haven't explored yet, naturally guiding them toward underused features like pronunciation practice or cultural notes.
+
+**Files modified:** npc.js, sprites.js, game.js (~480 lines added)
