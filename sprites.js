@@ -727,8 +727,40 @@ const Sprites = (() => {
     'L': '#2c3e50', 'l': '#1a252f', // dark navy pants
   };
 
+  // Night Shift Salaryman — tired, loosened tie, rumpled suit, holding Strong Zero
+  const npcNightSalaryman = `
+....HHHH....
+...HhHHhH...
+..HHHHHH....
+..sWEsWEs...
+..sSSSSSs...
+..ssMSSs....
+..1111111q..
+..1RR11Rq1..
+..1111111q..
+...111111...
+..q1111q1...
+..11GG11....
+..33.33.....
+...33..33...
+...OO..OO...
+...OO..OO...`;
+
+  const npcNightSalarymanPalette = {
+    'H': '#1a1a2e', 'h': '#2a2a3e', // dark messy hair
+    'S': '#e8c89a', 's': '#d0aa80', // slightly flushed skin
+    'E': '#333', 'W': '#ddd', // tired eyes
+    'M': '#b07060', // tired half-smile
+    '1': '#2c3450', 'q': '#1e2640', // rumpled dark navy suit
+    'R': '#aa3333', // loosened red tie
+    'G': '#4caf50', // Strong Zero can (green)
+    '3': '#2c3e50', // dark pants
+    'O': '#1a1a1a', // black shoes
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
+    nightsalaryman: { frames: [npcNightSalaryman], palette: npcNightSalarymanPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
     businessman: { frames: [npcBusinessMan, npcBusinessManWalk], palette: npcBusinessManPalette },
     sensei:      { frames: [npcSensei], palette: npcSenseiPalette },

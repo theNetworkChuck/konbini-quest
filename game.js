@@ -648,6 +648,11 @@
       interactWithOnomatopoeiaCoach(npc);
       return;
     }
+    // Check if this is the Night Shift Salaryman NPC
+    if (npc.isNightShift) {
+      interactWithNightShiftNPC(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
   }
@@ -2814,6 +2819,221 @@
     Dialogue.show('Mimi', resultLines, () => {
       onomatopoeiaGameState.inOnomatopoeia = false;
       onomatopoeiaGameState.lesson = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
+    });
+  }
+
+  // ============ NIGHT SHIFT SALARYMAN ============
+  const nightShiftGameState = {
+    inNightShift: false,
+    lesson: null,
+    interactionIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithNightShiftNPC(npc) {
+    if (!NPCs.isNightShiftPracticeReady()) {
+      Dialogue.show('Suzuki', [
+        '*yawn* おつかれさまです...',
+        'You look new around here... complete at least 2 store levels first.',
+        'Then come find me at night. I\'ll teach you the real konbini...',
+        '*takes a sip of Strong Zero*'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getNightShiftStats();
+    const lesson = NPCs.getNextNightShiftLesson();
+
+    if (!lesson) {
+      Dialogue.show('Suzuki', 'Something went wrong... come back later!');
+      return;
+    }
+
+    // Set up night shift practice state
+    nightShiftGameState.inNightShift = true;
+    nightShiftGameState.lesson = lesson;
+    nightShiftGameState.interactionIdx = 0;
+    nightShiftGameState.correct = 0;
+    nightShiftGameState.total = lesson.interactions.length;
+
+    // Preload Japanese phrases
+    preloadNightShiftPhrases(lesson);
+
+    const isNew = stats.completed === 0;
+    const introLines = isNew
+      ? [
+          '*stretches* 深夜のコンビニへようこそ... Welcome to the night shift...',
+          'I\'m Suzuki. Salaryman by day, konbini regular by night.',
+          'After midnight, the konbini becomes a different world.',
+          `Tonight\'s lesson: ${lesson.topicJp}`,
+          lesson.intro
+        ]
+      : [
+          `*nods* ${lesson.topicJp}`,
+          `Lesson ${stats.completed + 1} | ${stats.topicsUnlocked}/${stats.totalTopics} night topics learned`,
+          lesson.intro
+        ];
+
+    GameAudio.playAlert();
+    Dialogue.show('Suzuki', introLines, () => {
+      runNightShiftInteraction();
+    });
+  }
+
+  function preloadNightShiftPhrases(lesson) {
+    if (!lesson || !lesson.interactions) return;
+    const phrases = new Set();
+    for (const interaction of lesson.interactions) {
+      if (interaction.clerkJp) phrases.add(interaction.clerkJp);
+      if (interaction.options) {
+        for (const opt of interaction.options) {
+          const text = opt.text || opt.textJp || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase);
+    }
+  }
+
+  function runNightShiftInteraction() {
+    if (nightShiftGameState.interactionIdx >= nightShiftGameState.lesson.interactions.length) {
+      finishNightShiftLesson();
+      return;
+    }
+
+    const interaction = nightShiftGameState.lesson.interactions[nightShiftGameState.interactionIdx];
+    const qNum = nightShiftGameState.interactionIdx + 1;
+    const qTotal = nightShiftGameState.total;
+    const topic = nightShiftGameState.lesson.topic;
+    const header = `🌙 ${topic} ${qNum}/${qTotal}`;
+
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      const lines = [interaction.clerkJp];
+      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+      if (interaction.tip) lines.push(interaction.tip);
+      if (interaction.question) lines.push(interaction.question);
+
+      Dialogue.show(header, lines, () => {
+        showNightShiftQuiz(interaction);
+      });
+    } else {
+      showNightShiftQuiz(interaction);
+    }
+  }
+
+  function showNightShiftQuiz(interaction) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleNightShiftAnswer(interaction, selected);
+    });
+  }
+
+  function handleNightShiftAnswer(interaction, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
+      Engine.spawnSparkles();
+      nightShiftGameState.correct++;
+
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      tryVariableReward();
+
+      const encouragements = [
+        '正解! Not bad for a rookie!', 'おお！You know your stuff!',
+        'さすが！Impressive night owl!', 'いいね! You\'re learning fast!',
+        '完璧! Even I\'m impressed... *hic*'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = interaction.correctExplanation || '';
+
+      Dialogue.show('Suzuki', explanation ? [msg, explanation] : msg, () => {
+        nightShiftGameState.interactionIdx++;
+        runNightShiftInteraction();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+
+      // Record in mistake journal
+      const correctOpt = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOpt ? (correctOpt.text || correctOpt.textJp || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: 'Night Shift',
+      });
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Suzuki', [
+        '*shakes head* ちがうよ... Let me explain...',
+        explanation
+      ], () => {
+        nightShiftGameState.interactionIdx++;
+        runNightShiftInteraction();
+      });
+    }
+  }
+
+  function finishNightShiftLesson() {
+    const correct = nightShiftGameState.correct;
+    const total = nightShiftGameState.total;
+    const lesson = nightShiftGameState.lesson;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completeNightShiftLesson(lesson.id);
+    const stats = NPCs.getNightShiftStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '完璧! True night owl! ★★★';
+    else if (pct >= 50) rating = '悪くない! Not bad for a beginner! ★★☆';
+    else rating = 'もう少し! Come back tomorrow night! ★☆☆';
+
+    const resultLines = [
+      `Night Lesson Complete: ${correct}/${total} correct!`,
+      rating,
+      `Night topics mastered: ${stats.topicsUnlocked}/${stats.totalTopics}`,
+    ];
+
+    if (stats.topicsUnlocked >= stats.totalTopics) {
+      resultLines.push('深夜の達人! You\'ve mastered midnight konbini culture!');
+      resultLines.push('Even salarymen would be impressed. おつかれさま!');
+    } else {
+      resultLines.push('*finishes Strong Zero* Come back next night for more...');
+    }
+
+    Dialogue.show('Suzuki', resultLines, () => {
+      nightShiftGameState.inNightShift = false;
+      nightShiftGameState.lesson = null;
       setTimeout(() => triggerAchievementCheck(), 300);
       autoSave();
     });

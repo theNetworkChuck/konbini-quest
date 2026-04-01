@@ -138,6 +138,15 @@ const NPCs = (() => {
         "At konbini, sounds are everywhere: ピッピッ, ガチャ, チン... let me teach you!"
       ]
     },
+    // Night Shift Salaryman NPC (only visible at night)
+    { map: 0, x: 9, y: 14, type: 'nightsalaryman', name: 'Suzuki', dir: 'down',
+      isNightShift: true,
+      dialogues: [
+        "おつかれさまです... (otsukaresama desu) -- it means 'thanks for the hard work'...",
+        "ストロングゼロ (Strong Zero)... 9% alcohol, 0% regret... *hiccup*",
+        "The konbini is the salaryman's best friend at midnight..."
+      ]
+    },
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
       isClerk: true },
@@ -912,17 +921,29 @@ const NPCs = (() => {
   // Street NPC dialogue index
   const streetNPCState = {};
 
+  // Helper: check if a night-shift NPC should be visible right now
+  function isNPCVisible(npc) {
+    if (!npc.isNightShift) return true;
+    // Night shift NPCs only appear during 'night' time-of-day
+    if (typeof Engine !== 'undefined' && Engine.getTimeOfDay) {
+      return Engine.getTimeOfDay() === 'night';
+    }
+    return false; // hide by default if engine not ready
+  }
+
   function getNPCsOnMap(mapIdx) {
-    return npcDefs.filter(n => n.map === mapIdx);
+    return npcDefs.filter(n => n.map === mapIdx && isNPCVisible(n));
   }
 
   function getNPCAt(mapIdx, x, y) {
-    return npcDefs.find(n => n.map === mapIdx && n.x === x && n.y === y);
+    const npc = npcDefs.find(n => n.map === mapIdx && n.x === x && n.y === y);
+    if (npc && !isNPCVisible(npc)) return undefined;
+    return npc;
   }
 
   // Check if there's an NPC blocking movement
   function isNPCBlocking(mapIdx, x, y) {
-    return npcDefs.some(n => n.map === mapIdx && n.x === x && n.y === y);
+    return npcDefs.some(n => n.map === mapIdx && n.x === x && n.y === y && isNPCVisible(n));
   }
 
   // Get store progress
@@ -3245,6 +3266,253 @@ const NPCs = (() => {
     };
   }
 
+  // ============ NIGHT SHIFT LESSON SYSTEM ============
+  // Late-night konbini vocabulary: drunk salaryman teaches midnight culture
+  const NIGHT_SHIFT_LESSONS = [
+    {
+      id: 'late_night_drinks',
+      topic: 'Late-Night Drinks',
+      topicJp: '深夜の飲み物 (shinya no nomimono)',
+      icon: 'drink',
+      color: '#7c4dff',
+      intro: 'After a long day, the konbini drink section calls. Learn what salarymen reach for at midnight.',
+      interactions: [
+        {
+          clerkJp: 'ストロングゼロください',
+          clerkRomaji: 'Sutorongu Zero kudasai',
+          clerkEn: 'One Strong Zero please',
+          tip: 'ストロングゼロ (Strong Zero) is a 9% chuuhai drink by Suntory. It is the iconic late-night konbini drink for tired salarymen.',
+          question: 'What is ストロングゼロ (Strong Zero)?',
+          options: [
+            { text: '高アルコールのチューハイ (High-alcohol chuuhai drink)', en: '9% chuuhai', correct: true },
+            { text: 'エナジードリンク (Energy drink)', en: 'Energy drink', correct: false },
+            { text: 'コーラ (Cola)', en: 'Cola', correct: false },
+          ],
+          correctExplanation: 'ストロングゼロ is Suntory\'s famous 9% chuuhai. It\'s become a cultural symbol of salaryman life -- cheap, strong, and everywhere at konbini.',
+          wrongExplanation: 'ストロングゼロ is a 9% alcohol chuuhai (flavored cocktail) by Suntory. It\'s THE late-night konbini drink in Japan.'
+        },
+        {
+          clerkJp: '年齢確認ボタンを押してください',
+          clerkRomaji: 'Nenrei kakunin botan wo oshite kudasai',
+          clerkEn: 'Please press the age verification button',
+          tip: 'When buying alcohol, clerks ask you to press a touchscreen button confirming you are 20+. In Japan, the legal drinking age is 20.',
+          question: 'What is the legal drinking age in Japan?',
+          options: [
+            { text: '二十歳 (20 years old)', en: '20 years old', correct: true },
+            { text: '十八歳 (18 years old)', en: '18 years old', correct: false },
+            { text: '二十一歳 (21 years old)', en: '21 years old', correct: false },
+          ],
+          correctExplanation: 'Japan\'s drinking age is 20 (二十歳/hatachi). The register touchscreen says 私は20歳以上です (I am 20 or older). Touch it to proceed!',
+          wrongExplanation: 'Japan\'s legal age for alcohol is 20, not 18 or 21. You press the 年齢確認 (nenrei kakunin / age check) button on the register screen.'
+        },
+        {
+          clerkJp: 'おつまみもお願いします',
+          clerkRomaji: 'Otsumami mo onegai shimasu',
+          clerkEn: 'Some snacks too, please',
+          tip: 'おつまみ (otsumami) means snacks eaten while drinking. Classic choices: karaage, edamame, cheese kamaboko.',
+          question: 'What does おつまみ (otsumami) mean?',
+          options: [
+            { text: 'Snacks for drinking (酒のお供)', en: 'Drinking snacks', correct: true },
+            { text: 'Breakfast food (朝ごはん)', en: 'Breakfast', correct: false },
+            { text: 'Medicine (薬)', en: 'Medicine', correct: false },
+          ],
+          correctExplanation: 'おつまみ are snacks specifically for drinking. Konbini have entire sections of おつまみ near the beer aisle -- karaage, cheese, dried squid!',
+          wrongExplanation: 'おつまみ specifically means snacks to accompany alcohol. It\'s a big category at konbini, usually near the drinks.'
+        },
+      ]
+    },
+    {
+      id: 'midnight_food',
+      topic: 'Midnight Munchies',
+      topicJp: '深夜の食べ物 (shinya no tabemono)',
+      icon: 'food',
+      color: '#ff6f00',
+      intro: 'When the last train has gone and hunger strikes, konbini food becomes a lifeline.',
+      interactions: [
+        {
+          clerkJp: '肉まん一つください',
+          clerkRomaji: 'Nikuman hitotsu kudasai',
+          clerkEn: 'One meat bun please',
+          tip: '肉まん (nikuman) are steamed meat buns kept in a heated case by the register. In winter, they\'re the #1 late-night konbini comfort food.',
+          question: 'What are 肉まん (nikuman)?',
+          options: [
+            { text: '温かい肊まん (Hot steamed meat buns)', en: 'Steamed meat buns', correct: true },
+            { text: '冷たいおにぎり (Cold rice balls)', en: 'Cold onigiri', correct: false },
+            { text: '揚げ物 (Fried food)', en: 'Fried food', correct: false },
+          ],
+          correctExplanation: '肉まん are fluffy steamed buns filled with pork. They sit in a heated glass case at the register. Say 「肉まん一つ」(nikuman hitotsu) for one!',
+          wrongExplanation: '肉まん are steamed meat buns (肉 = meat, まん = bun) in the hot case by the register. They\'re warm and comforting at midnight!'
+        },
+        {
+          clerkJp: 'おでんはいかがですか？',
+          clerkRomaji: 'Oden wa ikaga desu ka?',
+          clerkEn: 'How about some oden?',
+          tip: 'おでん (oden) is a hot stew with various ingredients in dashi broth, sold at konbini from autumn to spring. You pick pieces individually.',
+          question: 'How do you order oden at a konbini?',
+          options: [
+            { text: '一つずつ具材を選ぶ (Pick ingredients one by one)', en: 'Choose pieces individually', correct: true },
+            { text: 'セットを買う (Buy a set)', en: 'Buy a fixed set', correct: false },
+            { text: '自分で作る (Make it yourself)', en: 'Make it yourself', correct: false },
+          ],
+          correctExplanation: 'Point and say 「これとこれ」(kore to kore = this and this). Each piece has its own price. Popular: 大根 (daikon), たまご (tamago), ちくわ (chikuwa).',
+          wrongExplanation: 'Oden at konbini is pick-and-choose! Point at what you want. Say これください (kore kudasai) for each piece you want.'
+        },
+        {
+          clerkJp: 'このおにぎり、温めますか？',
+          clerkRomaji: 'Kono onigiri, atatamemasu ka?',
+          clerkEn: 'Shall I heat up this rice ball?',
+          tip: '深夜のおにぎり (shinya no onigiri) -- midnight onigiri is a staple. Late at night, konbini restock with fresh ones. Some people heat them up!',
+          question: 'If a clerk asks 温めますか (atatamemasu ka) and you want it heated, you say:',
+          options: [
+            { text: 'お願いします (onegai shimasu -- yes please)', en: 'Yes please', correct: true },
+            { text: 'いりません (irimasen -- I don\'t need it)', en: 'No thanks', correct: false },
+            { text: 'いくらですか (ikura desu ka -- how much?)', en: 'How much?', correct: false },
+          ],
+          correctExplanation: 'お願いします (onegai shimasu) is the all-purpose polite "yes please." For no, say 大丈夫です (daijoubu desu) or そのままで (sono mama de = as is).',
+          wrongExplanation: 'Say お願いします for yes. For no: 大丈夫です (daijoubu desu = I\'m fine) or そのままで (sono mama de = leave it as is).'
+        },
+      ]
+    },
+    {
+      id: 'salaryman_phrases',
+      topic: 'Salaryman Survival',
+      topicJp: 'サラリーマンのサバイバル (sarariman no sabaibaru)',
+      icon: 'star',
+      color: '#3f51b5',
+      intro: 'Essential phrases heard at konbini after midnight. Tired workers share unspoken bonds.',
+      interactions: [
+        {
+          clerkJp: 'おつかれさまです',
+          clerkRomaji: 'Otsukaresama desu',
+          clerkEn: 'Thanks for your hard work (lit. "you must be tired")',
+          tip: 'おつかれさまです is THE most important phrase in Japanese work culture. Said when leaving work, meeting colleagues, or acknowledging effort.',
+          question: 'When do Japanese people say おつかれさまです (otsukaresama desu)?',
+          options: [
+            { text: '仕事の後、努力を認める時 (After work / acknowledging effort)', en: 'Acknowledging hard work', correct: true },
+            { text: '朝の挨拶 (Morning greeting)', en: 'Morning greeting', correct: false },
+            { text: '食事の前 (Before a meal)', en: 'Before eating', correct: false },
+          ],
+          correctExplanation: 'おつかれさまです is used after work, after meetings, or when parting with colleagues. It\'s the social glue of Japanese workplaces!',
+          wrongExplanation: 'おつかれさまです is for acknowledging hard work -- said when leaving the office, after meetings, or between colleagues. Not a morning greeting or meal phrase.'
+        },
+        {
+          clerkJp: '終電過ぎた…タクシー呼びます',
+          clerkRomaji: 'Shuuden sugita... takushii yobimasu',
+          clerkEn: 'Missed the last train... I\'ll call a taxi',
+          tip: '終電 (shuuden) means last train. Missing it is a rite of passage for salarymen. That\'s when konbini become waiting rooms!',
+          question: 'What does 終電 (shuuden) mean?',
+          options: [
+            { text: '終電車 (Last train of the night)', en: 'Last train', correct: true },
+            { text: '始発電車 (First train of the morning)', en: 'First train', correct: false },
+            { text: '急行電車 (Express train)', en: 'Express train', correct: false },
+          ],
+          correctExplanation: '終電 = 終 (last) + 電 (train). Usually around 11:30PM-12:30AM. Salarymen who miss it face a ¥10,000+ taxi ride or sleep in a manga café!',
+          wrongExplanation: '終電 means the last train (終 = last, 電 = abbreviation of 電車/densha). Missing it is a very common salaryman problem.'
+        },
+        {
+          clerkJp: 'もう一軒行きましょう！',
+          clerkRomaji: 'Mou ikken ikimashou!',
+          clerkEn: 'Let\'s go for one more round!',
+          tip: 'もう一軒 (mou ikken) means "one more bar/restaurant." After-work drinking (飲み会 nomikai) often leads to multiple stops before the konbini finale.',
+          question: 'What does 飲み会 (nomikai) mean?',
+          options: [
+            { text: '仕事の後の飲み會 (After-work drinking party)', en: 'Drinking party', correct: true },
+            { text: '会議 (Business meeting)', en: 'Meeting', correct: false },
+            { text: 'ランチ (Lunch break)', en: 'Lunch', correct: false },
+          ],
+          correctExplanation: '飲み会 (飲み = drinking, 会 = gathering) is the Japanese tradition of after-work group drinking. It strengthens team bonds -- and fills konbini with hungry salarymen later!',
+          wrongExplanation: '飲み会 is an after-work drinking gathering (飲み = drink, 会 = meeting/gathering). It\'s a major part of Japanese work culture.'
+        },
+      ]
+    },
+    {
+      id: 'midnight_culture',
+      topic: 'Midnight Konbini Culture',
+      topicJp: '深夜のコンビニ文化 (shinya no konbini bunka)',
+      icon: 'moon',
+      color: '#1a237e',
+      intro: 'The konbini transforms after midnight. Different rules, different vibes, different Japan.',
+      interactions: [
+        {
+          clerkJp: 'いってらっしゃい',
+          clerkRomaji: 'Itterasshai',
+          clerkEn: 'Have a safe trip / Take care',
+          tip: 'いってらっしゃい is what you say to someone leaving ("go and come back safely"). Konbini clerks sometimes say this late at night instead of いらっしゃいませ.',
+          question: 'What is the response to いってらっしゃい (itterasshai)?',
+          options: [
+            { text: 'いってきます (ittekimasu -- I\'m off!)', en: 'I\'ll go and come back', correct: true },
+            { text: 'いらっしゃいませ (irasshaimase -- welcome)', en: 'Welcome', correct: false },
+            { text: 'ごめんなさい (gomen nasai -- sorry)', en: 'Sorry', correct: false },
+          ],
+          correctExplanation: 'いってきます (I\'m heading out) pairs with いってらっしゃい (take care). Used at home, work, and sometimes konbini. A warm, personal exchange.',
+          wrongExplanation: 'いってきます is the reply to いってらっしゃい. It means "I\'m going (and will return)." It\'s a daily ritual in every Japanese household.'
+        },
+        {
+          clerkJp: '温かいお茶はいかがですか？',
+          clerkRomaji: 'Atatakai ocha wa ikaga desu ka?',
+          clerkEn: 'Would you like some warm tea?',
+          tip: 'Late-night konbini have both cold and hot drink sections. 温かい (atatakai = warm) drinks are in red-labeled areas of the fridge or warming cases.',
+          question: 'In a konbini drink case, the 赤いラベル (red label) section means:',
+          options: [
+            { text: '温かい飲み物 (atatakai nomimono -- warm drinks)', en: 'Hot/warm drinks', correct: true },
+            { text: '新商品 (shinshouhin -- new products)', en: 'New products', correct: false },
+            { text: 'セール品 (seeru hin -- sale items)', en: 'On sale', correct: false },
+          ],
+          correctExplanation: 'Red = あったかい (warm), Blue = つめたい (cold). Late at night, おでんのつゆ (oden broth), ホットコーヒー, and 温かいお茶 are perfect.',
+          wrongExplanation: 'Red labels in konbini drink cases mean the drinks are kept warm (温かい atatakai). Blue labels mean cold (つめたい tsumetai).'
+        },
+        {
+          clerkJp: '深夜料金ってあるの？',
+          clerkRomaji: 'Shinya ryoukin tte aru no?',
+          clerkEn: 'Is there a late-night surcharge?',
+          tip: 'Unlike restaurants, Japanese konbini have NO late-night surcharge. Same prices at 3AM as 3PM. That\'s part of their magic!',
+          question: 'Do Japanese konbini charge extra late at night?',
+          options: [
+            { text: 'いいえ、同じ値段 (No, same prices 24/7)', en: 'No surcharge', correct: true },
+            { text: 'はい、深夜料金がある (Yes, late-night surcharge)', en: 'Yes, surcharge', correct: false },
+            { text: '店による (Depends on the store)', en: 'Depends', correct: false },
+          ],
+          correctExplanation: 'Konbini never charge extra at night! Same prices, same service, 24/7/365. That\'s why 40% of konbini sales happen between 10PM-6AM.',
+          wrongExplanation: 'Japanese konbini do NOT have late-night surcharges. Prices are the same around the clock. This 24-hour consistency is core to their appeal.'
+        },
+      ]
+    },
+  ];
+
+  // Night shift practice state
+  const nightShiftState = {
+    lessonsCompleted: 0,
+    topicsCompleted: [], // IDs of completed topics
+    lastPracticeTime: 0,
+  };
+
+  function isNightShiftPracticeReady() {
+    // Available after completing at least 2 store levels
+    return completedLevelsCount >= 2;
+  }
+
+  function getNextNightShiftLesson() {
+    const unseen = NIGHT_SHIFT_LESSONS.filter(t => !nightShiftState.topicsCompleted.includes(t.id));
+    if (unseen.length > 0) return unseen[0];
+    return NIGHT_SHIFT_LESSONS[Math.floor(Math.random() * NIGHT_SHIFT_LESSONS.length)];
+  }
+
+  function completeNightShiftLesson(topicId) {
+    if (!nightShiftState.topicsCompleted.includes(topicId)) {
+      nightShiftState.topicsCompleted.push(topicId);
+    }
+    nightShiftState.lessonsCompleted++;
+    nightShiftState.lastPracticeTime = Date.now();
+  }
+
+  function getNightShiftStats() {
+    return {
+      completed: nightShiftState.lessonsCompleted,
+      topicsUnlocked: nightShiftState.topicsCompleted.length,
+      totalTopics: NIGHT_SHIFT_LESSONS.length,
+    };
+  }
+
   // ============ SAVE / LOAD SYSTEM ============
   // Persist all game progress to browser storage so nothing is lost on page reload
   const SAVE_KEY = 'konbiniquest_save_v1';
@@ -3335,6 +3603,11 @@ const NPCs = (() => {
       onomatopoeiaState: {
         lessonsCompleted: onomatopoeiaState.lessonsCompleted,
         topicsCompleted: [...onomatopoeiaState.topicsCompleted],
+      },
+      // Night shift
+      nightShiftState: {
+        lessonsCompleted: nightShiftState.lessonsCompleted,
+        topicsCompleted: [...nightShiftState.topicsCompleted],
       },
       // Pronunciation guide
       pitchGuideState: {
@@ -3466,6 +3739,11 @@ const NPCs = (() => {
       if (data.onomatopoeiaState) {
         onomatopoeiaState.lessonsCompleted = data.onomatopoeiaState.lessonsCompleted || 0;
         onomatopoeiaState.topicsCompleted = data.onomatopoeiaState.topicsCompleted || [];
+      }
+      // Night shift
+      if (data.nightShiftState) {
+        nightShiftState.lessonsCompleted = data.nightShiftState.lessonsCompleted || 0;
+        nightShiftState.topicsCompleted = data.nightShiftState.topicsCompleted || [];
       }
       // Pronunciation guide
       if (data.pitchGuideState) {
@@ -3677,6 +3955,12 @@ const NPCs = (() => {
     getNextOnomatopoeiaLesson,
     completeOnomatopoeiaLesson,
     getOnomatopoeiaStats,
+    // Night shift
+    NIGHT_SHIFT_LESSONS,
+    isNightShiftPracticeReady,
+    getNextNightShiftLesson,
+    completeNightShiftLesson,
+    getNightShiftStats,
     // Save / Load system
     saveGame,
     loadGame,
