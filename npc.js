@@ -3532,6 +3532,95 @@ const NPCs = (() => {
     storageAvailable = false;
   }
 
+  // ============ PROGRESS DASHBOARD ============
+  function getProgressDashboard() {
+    const stars = getTotalStars();
+    const maxStars = getMaxStars();
+    const review = getReviewStats();
+    const stamps = getTotalStamps();
+    const challenge = getChallengeState();
+    const conversation = getConversationStats();
+    const achievements = { unlocked: getAchievementCount(), total: getTotalAchievements() };
+    const mistakes = getMistakeJournal().length;
+    const phrases = { collected: getCollectedCount(), total: getTotalBonusPhrases() };
+    const culturalNotes = { seen: getSeenNoteCount(), total: getTotalNoteCount() };
+
+    // Per-store breakdown
+    const stores = {};
+    for (const store of ['7-Eleven', 'Lawson', 'FamilyMart']) {
+      const p = progress[store];
+      const storeLevels = LEVELS.filter(l => l.store === store);
+      let storeStars = 0;
+      let storeMaxStars = 0;
+      for (const level of storeLevels) {
+        storeMaxStars += level.interactions.length * 3;
+        const key = level.id;
+        if (p.stars[key]) storeStars += p.stars[key];
+      }
+      stores[store] = {
+        completed: p.completed.length,
+        total: storeLevels.length,
+        stars: storeStars,
+        maxStars: storeMaxStars,
+      };
+    }
+
+    // NPC lesson stats
+    const npcLessons = {
+      kansai: kansaiState.topicsCompleted.length,
+      kansaiTotal: KANSAI_LESSONS.length,
+      politeness: politenessState.topicsCompleted.length,
+      politenessTotal: POLITENESS_LESSONS.length,
+      seasonal: seasonalState.seasonsCompleted.length,
+      seasonalTotal: SEASONAL_LESSONS.length,
+      payment: paymentState.scenariosCompleted.length,
+      paymentTotal: PAYMENT_SCENARIOS.length,
+      onomatopoeia: onomatopoeiaState.topicsCompleted.length,
+      onomatopoeiaTotal: ONOMATOPOEIA_LESSONS.length,
+      nightShift: nightShiftState.topicsCompleted.length,
+      nightShiftTotal: NIGHT_SHIFT_LESSONS.length,
+    };
+
+    // Overall accuracy (from all tracked phrase attempts)
+    let totalCorrect = 0;
+    let totalAttempts = 0;
+    for (const key of Object.keys(phraseTracker)) {
+      const p = phraseTracker[key];
+      const wrong = p.wrongCount || 0;
+      const streak = p.correctStreak || 0;
+      // mastery growth implies correct answers happened
+      totalCorrect += Math.max(0, p.mastery + streak);
+      totalAttempts += Math.max(0, p.mastery + streak + wrong);
+    }
+    // Add conversation, speed round, pitch quiz stats
+    totalCorrect += conversation.totalCorrect + (speedRoundState.totalCorrect || 0) + (pitchGuideState.quizCorrect || 0);
+    totalAttempts += conversation.totalAttempted + (speedRoundState.totalAttempted || 0) + (pitchGuideState.quizTotal || 0);
+
+    const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+
+    return {
+      stars, maxStars,
+      review,
+      stamps,
+      challenge,
+      achievements,
+      mistakes,
+      phrases,
+      culturalNotes,
+      stores,
+      npcLessons,
+      levelsCompleted: completedLevelsCount,
+      accuracy,
+      totalCorrect,
+      totalAttempts,
+      inventory: getInventoryCount(),
+      inventoryTotal: getTotalItems(),
+      speedRounds: speedRoundState.roundsCompleted,
+      bestStreak: bestStreakEver || 0,
+      conversation,
+    };
+  }
+
   function getFullState() {
     return {
       version: SAVE_VERSION,
@@ -3961,6 +4050,8 @@ const NPCs = (() => {
     getNextNightShiftLesson,
     completeNightShiftLesson,
     getNightShiftStats,
+    // Progress dashboard
+    getProgressDashboard,
     // Save / Load system
     saveGame,
     loadGame,

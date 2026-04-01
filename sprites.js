@@ -3481,6 +3481,230 @@ const Sprites = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ PROGRESS DASHBOARD OVERLAY ============
+  function drawProgressDashboard(ctx, canvasW, canvasH, data, time) {
+    ctx.save();
+
+    // Full-screen overlay with dark bg
+    ctx.fillStyle = 'rgba(10,10,30,0.92)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    const panelW = Math.min(canvasW - 16, 330);
+    const panelH = canvasH - 16;
+    const px = (canvasW - panelW) / 2;
+    const py = 8;
+
+    // Panel border
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, panelW, panelH);
+
+    // Inner border accent
+    ctx.strokeStyle = 'rgba(78,205,196,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px + 2, py + 2, panelW - 4, panelH - 4);
+
+    // Title bar
+    ctx.fillStyle = '#1a1a3e';
+    ctx.fillRect(px, py, panelW, 18);
+    ctx.strokeStyle = '#4ecdc4';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px, py, panelW, 18);
+
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillStyle = '#4ecdc4';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u5b66\u7fd2\u306e\u9032\u6357 PROGRESS', canvasW / 2, py + 13);
+
+    let y = py + 24;
+    const leftX = px + 8;
+    const rightX = px + panelW / 2 + 8;
+    const colW = panelW / 2 - 16;
+
+    // --- SECTION: Overall Stats ---
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#f39c12';
+    ctx.textAlign = 'left';
+    ctx.fillText('OVERALL', leftX, y);
+    y += 9;
+
+    // Accuracy circle
+    const accCx = leftX + 16;
+    const accCy = y + 11;
+    const accR = 10;
+    // Background circle
+    ctx.beginPath();
+    ctx.arc(accCx, accCy, accR, 0, Math.PI * 2);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Progress arc
+    const accAngle = (data.accuracy / 100) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(accCx, accCy, accR, -Math.PI / 2, -Math.PI / 2 + accAngle);
+    ctx.strokeStyle = data.accuracy >= 80 ? '#2ecc71' : data.accuracy >= 60 ? '#f1c40f' : '#e74c3c';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Percentage text
+    ctx.font = 'bold 7px "Press Start 2P"';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(data.accuracy + '%', accCx, accCy + 3);
+    ctx.font = '4px monospace';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('Accuracy', accCx, accCy + 9);
+
+    // Stats next to circle
+    const statX = accCx + accR + 10;
+    ctx.font = '5px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#F1C40F';
+    ctx.fillText('\u2605 ' + data.stars + '/' + data.maxStars, statX, y + 3);
+    ctx.fillStyle = '#4ecdc4';
+    ctx.fillText('Phrases: ' + data.review.total, statX, y + 11);
+    ctx.fillStyle = '#2ecc71';
+    ctx.fillText('Mastered: ' + data.review.mastered, statX, y + 19);
+
+    // Right column stats
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillText('Mistakes: ' + data.mistakes, rightX, y + 3);
+    ctx.fillStyle = '#9b59b6';
+    ctx.fillText('Streak: ' + data.bestStreak, rightX, y + 11);
+    ctx.fillStyle = '#f39c12';
+    ctx.fillText('Levels: ' + data.levelsCompleted, rightX, y + 19);
+
+    y += 28;
+
+    // --- SECTION: Store Progress ---
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#f39c12';
+    ctx.textAlign = 'left';
+    ctx.fillText('STORES', leftX, y);
+    y += 9;
+
+    const storeColors = { '7-Eleven': '#e74c3c', 'Lawson': '#3498db', 'FamilyMart': '#2ecc71' };
+    for (const store of ['7-Eleven', 'Lawson', 'FamilyMart']) {
+      const s = data.stores[store];
+      const barW = panelW - 70;
+      const barH = 6;
+      const barX = leftX + 58;
+
+      // Store name
+      ctx.font = '5px "Press Start 2P"';
+      ctx.fillStyle = storeColors[store];
+      ctx.textAlign = 'left';
+      ctx.fillText(store, leftX, y + 4);
+
+      // Progress bar background
+      ctx.fillStyle = '#222';
+      ctx.fillRect(barX, y, barW, barH);
+
+      // Progress bar fill
+      const pct = s.maxStars > 0 ? s.stars / s.maxStars : 0;
+      ctx.fillStyle = storeColors[store];
+      ctx.fillRect(barX, y, barW * pct, barH);
+
+      // Border
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, y, barW, barH);
+
+      // Stars fraction
+      ctx.font = '5px monospace';
+      ctx.fillStyle = '#ddd';
+      ctx.textAlign = 'right';
+      ctx.fillText(s.stars + '/' + s.maxStars + '\u2605', px + panelW - 8, y + 4);
+
+      y += 10;
+    }
+
+    y += 2;
+
+    // --- SECTION: Collections ---
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#f39c12';
+    ctx.textAlign = 'left';
+    ctx.fillText('COLLECTIONS', leftX, y);
+    y += 9;
+
+    ctx.font = '5px monospace';
+    // Two columns
+    const items = [
+      { label: 'Achievements', val: data.achievements.unlocked + '/' + data.achievements.total, color: '#f39c12' },
+      { label: 'Stamps', val: data.stamps.total + '/' + data.stamps.max, color: '#D4AF37' },
+      { label: 'Bonus Phrases', val: data.phrases.collected + '/' + data.phrases.total, color: '#9b59b6' },
+      { label: 'Items', val: data.inventory + '/' + data.inventoryTotal, color: '#3498db' },
+      { label: 'Cultural Notes', val: data.culturalNotes.seen + '/' + data.culturalNotes.total, color: '#2ecc71' },
+      { label: 'Speed Rounds', val: '' + data.speedRounds, color: '#e67e22' },
+    ];
+    for (let i = 0; i < items.length; i++) {
+      const col = i % 2 === 0 ? leftX : rightX;
+      const row = Math.floor(i / 2);
+      ctx.fillStyle = items[i].color;
+      ctx.textAlign = 'left';
+      ctx.fillText(items[i].label + ': ' + items[i].val, col, y + row * 8);
+    }
+    y += Math.ceil(items.length / 2) * 8 + 3;
+
+    // --- SECTION: NPC Lessons ---
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#f39c12';
+    ctx.textAlign = 'left';
+    ctx.fillText('NPC LESSONS', leftX, y);
+    y += 9;
+
+    ctx.font = '5px monospace';
+    const npcItems = [
+      { label: 'Kansai', done: data.npcLessons.kansai, total: data.npcLessons.kansaiTotal },
+      { label: 'Politeness', done: data.npcLessons.politeness, total: data.npcLessons.politenessTotal },
+      { label: 'Seasonal', done: data.npcLessons.seasonal, total: data.npcLessons.seasonalTotal },
+      { label: 'Payment', done: data.npcLessons.payment, total: data.npcLessons.paymentTotal },
+      { label: 'Onomat.', done: data.npcLessons.onomatopoeia, total: data.npcLessons.onomatopoeiaTotal },
+      { label: 'Night', done: data.npcLessons.nightShift, total: data.npcLessons.nightShiftTotal },
+    ];
+    for (let i = 0; i < npcItems.length; i++) {
+      const col = i % 2 === 0 ? leftX : rightX;
+      const row = Math.floor(i / 2);
+      const n = npcItems[i];
+      const complete = n.done >= n.total;
+      ctx.fillStyle = complete ? '#2ecc71' : '#ccc';
+      ctx.textAlign = 'left';
+      const check = complete ? '\u2713 ' : '  ';
+      ctx.fillText(check + n.label + ': ' + n.done + '/' + n.total, col, y + row * 8);
+    }
+    y += Math.ceil(npcItems.length / 2) * 8 + 3;
+
+    // --- SECTION: Challenge Stats ---
+    if (data.challenge) {
+      ctx.font = '6px "Press Start 2P"';
+      ctx.fillStyle = '#f39c12';
+      ctx.textAlign = 'left';
+      ctx.fillText('CHALLENGES', leftX, y);
+      y += 9;
+
+      ctx.font = '5px monospace';
+      ctx.fillStyle = '#ccc';
+      ctx.fillText('Completed: ' + data.challenge.challengesCompleted, leftX, y);
+      ctx.fillText('Best Streak: ' + data.challenge.bestStreak, rightX, y);
+      y += 8;
+
+      if (data.conversation) {
+        ctx.fillText('Conversations: ' + data.conversation.completed, leftX, y);
+        const convAcc = data.conversation.totalAttempted > 0 ? Math.round(data.conversation.totalCorrect / data.conversation.totalAttempted * 100) : 0;
+        ctx.fillText('Conv. Acc: ' + convAcc + '%', rightX, y);
+        y += 8;
+      }
+    }
+
+    // Footer
+    ctx.font = '5px monospace';
+    ctx.fillStyle = '#666';
+    ctx.textAlign = 'center';
+    ctx.fillText('[B] Close  [P] Close', canvasW / 2, py + panelH - 4);
+
+    ctx.restore();
+  }
+
   // ============ COMBO COUNTER DISPLAY ============
   function drawComboCounter(ctx, canvasW, canvasH, combo, showTimer, maxCombo, multiplier) {
     if (combo < 2) return; // Only show at 2+ combo
@@ -3655,6 +3879,8 @@ const Sprites = (() => {
     drawPronunciationBubble,
     drawPitchDiagram,
     drawPronunciationOverlay,
+    // Progress dashboard
+    drawProgressDashboard,
     // Combo counter
     drawComboCounter,
     drawComboMilestoneBanner,

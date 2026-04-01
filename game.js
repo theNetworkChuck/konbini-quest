@@ -58,6 +58,8 @@
     // Conversation practice
     conversationMenuOpen: false,
     conversationMenuIdx: 0,
+    // Progress dashboard
+    progressDashOpen: false,
     // Combo counter system
     combo: 0,
     maxCombo: 0,
@@ -323,6 +325,15 @@
       return;
     }
 
+    // Handle progress dashboard overlay
+    if (state.progressDashOpen) {
+      if (Engine.inputB() || Engine.wasPressed('p')) {
+        state.progressDashOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
     // Handle cultural notes overlay
     if (state.culturalNotesOpen) {
       if (Engine.inputB() || Engine.wasPressed('c')) {
@@ -443,6 +454,13 @@
     // Open cultural notes with C key (on street map only)
     if (Engine.wasPressed('c') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
       state.culturalNotesOpen = true;
+      GameAudio.playSelect();
+      return;
+    }
+
+    // Open progress dashboard with P key (on street map only)
+    if (Engine.wasPressed('p') && !Dialogue.isActive() && !state.interacting && state.currentMap === 0) {
+      state.progressDashOpen = true;
       GameAudio.playSelect();
       return;
     }
@@ -3743,7 +3761,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !pitchGuideState.active && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !state.progressDashOpen && !pitchGuideState.active && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -3843,6 +3861,15 @@
       Sprites.drawCulturalNotesOverlay(
         ctx, Engine.CANVAS_W, Engine.CANVAS_H,
         NPCs.getAllCulturalNotes(),
+        state.time
+      );
+    }
+
+    // Progress dashboard overlay
+    if (state.progressDashOpen) {
+      Sprites.drawProgressDashboard(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        NPCs.getProgressDashboard(),
         state.time
       );
     }
@@ -3949,7 +3976,7 @@
     }
 
     // Combo counter (persistent, above overlays)
-    if (state.combo >= 2 && !state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen) {
+    if (state.combo >= 2 && !state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.progressDashOpen) {
       Sprites.drawComboCounter(
         ctx, Engine.CANVAS_W, Engine.CANVAS_H,
         state.combo, state.comboTimer, state.maxCombo, 1
@@ -3957,7 +3984,7 @@
     }
 
     // Combo milestone banner (hidden during overlays)
-    if (state.comboMilestone && !state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen) {
+    if (state.comboMilestone && !state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.progressDashOpen) {
       Sprites.drawComboMilestoneBanner(
         ctx, Engine.CANVAS_W, Engine.CANVAS_H,
         state.comboMilestone.combo, state.comboMilestone.timer
@@ -4058,6 +4085,8 @@
       achievementNotification: !!state.achievementNotification,
       achievementsUnlocked: NPCs.getAchievementCount(),
       achievementsTotal: NPCs.getTotalAchievements(),
+      // Progress dashboard
+      progressDashOpen: state.progressDashOpen,
       // Combo counter
       combo: state.combo,
       maxCombo: state.maxCombo,
@@ -4149,6 +4178,11 @@
   window.setWeather = (type) => {
     // Force a weather type: 'clear', 'cherry_blossoms', 'rain'
     console.log('Setting weather to:', type);
+  };
+
+  // Testing hook: toggle progress dashboard
+  window.toggleProgressDash = () => {
+    state.progressDashOpen = !state.progressDashOpen;
   };
 
   // Testing hook: set combo for visual testing
