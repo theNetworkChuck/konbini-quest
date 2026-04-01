@@ -643,6 +643,11 @@
       interactWithConversationCoach(npc);
       return;
     }
+    // Check if this is the Onomatopoeia Coach NPC
+    if (npc.isOnomatopoeiaCoach) {
+      interactWithOnomatopoeiaCoach(npc);
+      return;
+    }
     const dialogue = NPCs.getStreetDialogue(npc);
     Dialogue.show(npc.name, dialogue);
   }
@@ -2592,6 +2597,223 @@
     Dialogue.show('Yuri', resultLines, () => {
       conversationGameState.inConversation = false;
       conversationGameState.scenario = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
+    });
+  }
+
+
+
+  // ============ ONOMATOPOEIA COACH ============
+  const onomatopoeiaGameState = {
+    inOnomatopoeia: false,
+    lesson: null,
+    interactionIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithOnomatopoeiaCoach(npc) {
+    if (!NPCs.isOnomatopoeiaPracticeReady()) {
+      Dialogue.show('Mimi', [
+        '擬音語 (giongo) are sound words!',
+        'Complete at least one store level first.',
+        'Then come back and I\'ll teach you the sounds of the konbini!',
+        'ピッピッ、チン、ガチャ... sounds are everywhere!'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getOnomatopoeiaStats();
+    const lesson = NPCs.getNextOnomatopoeiaLesson();
+
+    if (!lesson) {
+      Dialogue.show('Mimi', 'Something went wrong... come back later!');
+      return;
+    }
+
+    // Set up onomatopoeia practice state
+    onomatopoeiaGameState.inOnomatopoeia = true;
+    onomatopoeiaGameState.lesson = lesson;
+    onomatopoeiaGameState.interactionIdx = 0;
+    onomatopoeiaGameState.correct = 0;
+    onomatopoeiaGameState.total = lesson.interactions.length;
+
+    // Preload Japanese phrases
+    preloadOnomatopoeiaPhrases(lesson);
+
+    const isNew = stats.completed === 0;
+    const introLines = isNew
+      ? [
+          '擬音語レッスンへようこそ! Welcome to Onomatopoeia Lessons!',
+          'I\'m Mimi! Japanese has hundreds of sound and texture words.',
+          'They make your speech vivid and natural -- textbooks barely cover them!',
+          `Today: ${lesson.topicJp} -- ${lesson.topic}!`,
+          lesson.intro
+        ]
+      : [
+          `${lesson.topicJp}! ${lesson.topic}`,
+          `Practice ${stats.completed + 1} | ${stats.topicsUnlocked}/${stats.totalTopics} topics learned`,
+          lesson.intro
+        ];
+
+    GameAudio.playAlert();
+    Dialogue.show('Mimi', introLines, () => {
+      runOnomatopoeiaInteraction();
+    });
+  }
+
+  function preloadOnomatopoeiaPhrases(lesson) {
+    if (!lesson || !lesson.interactions) return;
+    const phrases = new Set();
+    for (const interaction of lesson.interactions) {
+      if (interaction.clerkJp) phrases.add(interaction.clerkJp);
+      if (interaction.options) {
+        for (const opt of interaction.options) {
+          const text = opt.text || opt.textJp || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase);
+    }
+  }
+
+  function runOnomatopoeiaInteraction() {
+    if (onomatopoeiaGameState.interactionIdx >= onomatopoeiaGameState.lesson.interactions.length) {
+      finishOnomatopoeiaLesson();
+      return;
+    }
+
+    const interaction = onomatopoeiaGameState.lesson.interactions[onomatopoeiaGameState.interactionIdx];
+    const qNum = onomatopoeiaGameState.interactionIdx + 1;
+    const qTotal = onomatopoeiaGameState.total;
+    const topic = onomatopoeiaGameState.lesson.topic;
+    const header = `${topic} ${qNum}/${qTotal}`;
+
+    if (interaction.clerkJp) {
+      GameAudio.speakJapanese(interaction.clerkJp);
+      const lines = [interaction.clerkJp];
+      if (interaction.clerkRomaji) lines.push(interaction.clerkRomaji);
+      if (interaction.clerkEn) lines.push(interaction.clerkEn);
+      if (interaction.tip) lines.push(interaction.tip);
+      if (interaction.question) lines.push(interaction.question);
+
+      Dialogue.show(header, lines, () => {
+        showOnomatopoeiaQuiz(interaction);
+      });
+    } else {
+      showOnomatopoeiaQuiz(interaction);
+    }
+  }
+
+  function showOnomatopoeiaQuiz(interaction) {
+    const options = interaction.options.map(o => ({
+      text: o.text || o.textJp || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleOnomatopoeiaAnswer(interaction, selected);
+    });
+  }
+
+  function handleOnomatopoeiaAnswer(interaction, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
+      Engine.spawnSparkles();
+      onomatopoeiaGameState.correct++;
+
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      tryVariableReward();
+
+      const encouragements = [
+        '正解! Correct!', 'いいね! Nice!',
+        '音の達人! Sound master!', 'よくできました! Well done!',
+        'すごい! Amazing ear!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = interaction.correctExplanation || '';
+
+      Dialogue.show('Mimi', explanation ? [msg, explanation] : msg, () => {
+        onomatopoeiaGameState.interactionIdx++;
+        runOnomatopoeiaInteraction();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+
+      // Record in mistake journal
+      const correctOpt = interaction.options ? interaction.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: interaction.clerkJp || '',
+        clerkEn: interaction.clerkEn || '',
+        chosenText: selected.text || selected.textJp || '',
+        correctText: correctOpt ? (correctOpt.text || correctOpt.textJp || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: 'Onomatopoeia',
+      });
+
+      const explanation = interaction.wrongExplanation || 'Not quite...';
+      Dialogue.show('Mimi', [
+        'もう一回! Let me explain...',
+        explanation
+      ], () => {
+        onomatopoeiaGameState.interactionIdx++;
+        runOnomatopoeiaInteraction();
+      });
+    }
+  }
+
+  function finishOnomatopoeiaLesson() {
+    const correct = onomatopoeiaGameState.correct;
+    const total = onomatopoeiaGameState.total;
+    const lesson = onomatopoeiaGameState.lesson;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completeOnomatopoeiaLesson(lesson.id);
+    const stats = NPCs.getOnomatopoeiaStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '完璧! Sound word master! ★★★';
+    else if (pct >= 50) rating = 'いいね! Good listening! ★★☆';
+    else rating = 'もう少し! Keep your ears open! ★☆☆';
+
+    const resultLines = [
+      `Lesson Complete: ${correct}/${total} correct!`,
+      rating,
+      `Topics mastered: ${stats.topicsUnlocked}/${stats.totalTopics}`,
+    ];
+
+    if (stats.topicsUnlocked >= stats.totalTopics) {
+      resultLines.push('全トピッククリア! You know all the konbini sounds!');
+      resultLines.push('Japanese people will be impressed by your natural sound words!');
+    } else {
+      resultLines.push('Come back to learn more sound words!');
+    }
+
+    Dialogue.show('Mimi', resultLines, () => {
+      onomatopoeiaGameState.inOnomatopoeia = false;
+      onomatopoeiaGameState.lesson = null;
       setTimeout(() => triggerAchievementCheck(), 300);
       autoSave();
     });

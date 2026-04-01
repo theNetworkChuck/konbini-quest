@@ -128,6 +128,16 @@ const NPCs = (() => {
         "Real fluency comes from handling an entire exchange smoothly!"
       ]
     },
+
+    // Onomatopoeia Coach NPC (sound words / gitaigo / giongo)
+    { map: 0, x: 18, y: 10, type: 'onomatopoeiacoach', name: 'Mimi', dir: 'left',
+      isOnomatopoeiaCoach: true,
+      dialogues: [
+        "擬音語 (giongo) are sound words! I'm Mimi, your onomatopoeia coach.",
+        "Japanese has hundreds of sound words -- they make your speech vivid and natural!",
+        "At konbini, sounds are everywhere: ピッピッ, ガチャ, チン... let me teach you!"
+      ]
+    },
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
       isClerk: true },
@@ -2934,6 +2944,307 @@ const NPCs = (() => {
     return npcDef.dialogues[idx];
   }
 
+
+  // ============ ONOMATOPOEIA LESSON SYSTEM ============
+  const ONOMATOPOEIA_LESSONS = [
+    {
+      id: 'konbini_sounds',
+      topic: 'Konbini Sounds',
+      topicJp: 'コンビニの音 (konbini no oto)',
+      icon: 'speaker',
+      color: '#e74c3c',
+      intro: 'Every konbini is full of distinct sounds! Learn the words that describe them.',
+      interactions: [
+        {
+          clerkJp: 'ピッピッ',
+          clerkRomaji: 'Pippi',
+          clerkEn: '(the sound of scanning items at the register)',
+          tip: 'ピッピッ (pippi) is the beeping sound of a barcode scanner. You hear this dozens of times per konbini visit!',
+          question: 'What does ピッピッ (pippi) describe?',
+          options: [
+            { text: 'Register barcode scanner beeping', en: 'Scanner beep', correct: true },
+            { text: 'A bird chirping', en: 'Bird sound', correct: false },
+            { text: 'A phone ringing', en: 'Phone ring', correct: false },
+          ],
+          correctExplanation: 'ピッピッ mimics the short electronic beep of the scanner. In Japan, the register area is called レジ (reji)!',
+          wrongExplanation: 'ピッピッ is the register beeping sound. It imitates the short electronic beep of item scanning at the レジ (register).'
+        },
+        {
+          clerkJp: 'チン！',
+          clerkRomaji: 'Chin!',
+          clerkEn: '(the sound of a microwave finishing)',
+          tip: 'チン (chin) is the ding of a microwave. Japanese people even say お弁当をチンする (to microwave a bento)!',
+          question: 'If a clerk says お弁当をチンしますか？ (Obento wo chin shimasu ka?), what are they asking?',
+          options: [
+            { text: 'Shall I microwave your bento?', en: 'Heat it up?', correct: true },
+            { text: 'Do you want chopsticks?', en: 'Chopsticks?', correct: false },
+            { text: 'Is this your bento?', en: 'Is this yours?', correct: false },
+          ],
+          correctExplanation: 'チンする literally means "to chin (ding) it" -- using the microwave! This is everyday Japanese that textbooks skip.',
+          wrongExplanation: 'チン = microwave ding. チンする = to microwave something. The clerk is asking if you want your bento heated up!'
+        },
+        {
+          clerkJp: 'ガチャ',
+          clerkRomaji: 'Gacha',
+          clerkEn: '(the clunking sound of a door handle or capsule machine)',
+          tip: 'ガチャ (gacha) describes a mechanical clunking sound -- like turning a door handle or a capsule toy machine.',
+          question: 'What kind of sound does ガチャ (gacha) represent?',
+          options: [
+            { text: 'A mechanical clunk (door/machine)', en: 'Mechanical clunk', correct: true },
+            { text: 'A splash of water', en: 'Water splash', correct: false },
+            { text: 'A whisper', en: 'Quiet whisper', correct: false },
+          ],
+          correctExplanation: 'ガチャ is a mechanical clunking sound. ガチャポン (gachapon) capsule machines at konbini are named after this sound + ポン (pop)!',
+          wrongExplanation: 'ガチャ imitates a hard mechanical click or clunk. It is the origin of ガチャポン (gachapon) capsule toy machines!'
+        },
+      ]
+    },
+    {
+      id: 'food_textures',
+      topic: 'Food Textures',
+      topicJp: '食感 (shokkan)',
+      icon: 'food',
+      color: '#f39c12',
+      intro: 'Japanese has incredibly specific words for food textures. Essential for konbini snack reviews!',
+      interactions: [
+        {
+          clerkJp: 'このチキンはサクサクですよ！',
+          clerkRomaji: 'Kono chikin wa sakusaku desu yo!',
+          clerkEn: 'This chicken is crispy!',
+          tip: 'サクサク (sakusaku) = light, crispy texture. Used for fried food, tempura, crackers, and fresh lettuce!',
+          question: 'What texture does サクサク (sakusaku) describe?',
+          options: [
+            { text: 'Crispy and crunchy', en: 'Crispy/crunchy', correct: true },
+            { text: 'Soft and chewy', en: 'Soft/chewy', correct: false },
+            { text: 'Slimy and sticky', en: 'Slimy/sticky', correct: false },
+          ],
+          correctExplanation: 'サクサク is THE word for crispy! Famichiki (ファミチキ) is famous for being サクサク. You will see this on packaging everywhere.',
+          wrongExplanation: 'サクサク describes a light, crispy crunch. Think fried chicken coating, fresh tempura, or cookie crumble!'
+        },
+        {
+          clerkJp: 'このパンはフワフワ！',
+          clerkRomaji: 'Kono pan wa fuwafuwa!',
+          clerkEn: 'This bread is so fluffy!',
+          tip: 'フワフワ (fuwafuwa) = soft, fluffy, airy. Used for bread, pancakes, cotton candy, and even clouds!',
+          question: 'A konbini sandwich labeled フワフワ (fuwafuwa) would be:',
+          options: [
+            { text: 'Soft and fluffy', en: 'Light and airy', correct: true },
+            { text: 'Hard and dense', en: 'Dense/heavy', correct: false },
+            { text: 'Spicy and hot', en: 'Spicy', correct: false },
+          ],
+          correctExplanation: 'フワフワ means wonderfully soft and fluffy! Konbini bread (パン) often highlights this texture on the label.',
+          wrongExplanation: 'フワフワ describes something soft, fluffy, and airy -- the opposite of hard or dense. Think cloud-like bread!'
+        },
+        {
+          clerkJp: 'もちもちの大福あります',
+          clerkRomaji: 'Mochimochi no daifuku arimasu',
+          clerkEn: 'We have chewy daifuku',
+          tip: 'モチモチ (mochimochi) = pleasantly chewy and springy, like mochi, udon, or tapioca pearls.',
+          question: 'What does モチモチ (mochimochi) mean on a food label?',
+          options: [
+            { text: 'Chewy and springy', en: 'Pleasantly chewy', correct: true },
+            { text: 'Bitter and sour', en: 'Bitter/sour', correct: false },
+            { text: 'Frozen and cold', en: 'Ice cold', correct: false },
+          ],
+          correctExplanation: 'モチモチ is that satisfying chewy bounce! Mochi, tapioca drinks, fresh udon -- all モチモチ. Japanese love this texture!',
+          wrongExplanation: 'モチモチ describes a chewy, springy, bouncy texture. Named after mochi (餅) rice cakes but used for many foods!'
+        },
+      ]
+    },
+    {
+      id: 'eating_drinking',
+      topic: 'Eating & Drinking',
+      topicJp: '食べる・飲む (taberu/nomu)',
+      icon: 'drink',
+      color: '#3498db',
+      intro: 'How you eat and drink has its own vivid vocabulary in Japanese!',
+      interactions: [
+        {
+          clerkJp: 'ゴクゴク飲んでね！',
+          clerkRomaji: 'Gokugoku nonde ne!',
+          clerkEn: 'Drink it down in big gulps!',
+          tip: 'ゴクゴク (gokugoku) = gulping a drink heartily. You see this in ads for cold drinks and beer!',
+          question: 'A summer drink ad says ゴクゴク (gokugoku). What does it mean?',
+          options: [
+            { text: 'Drinking in big, satisfying gulps', en: 'Gulping down', correct: true },
+            { text: 'Sipping slowly', en: 'Sipping', correct: false },
+            { text: 'Pouring carefully', en: 'Pouring', correct: false },
+          ],
+          correctExplanation: 'ゴクゴク is the sound and sensation of gulping a cold drink. Perfect for summer konbini drink ads!',
+          wrongExplanation: 'ゴクゴク imitates the throat sound of big gulps. It is energetic and satisfying -- not slow or careful.'
+        },
+        {
+          clerkJp: 'お腹ペコペコ？',
+          clerkRomaji: 'Onaka pekopeko?',
+          clerkEn: 'Are you starving?',
+          tip: 'ペコペコ (pekopeko) = stomach growling with hunger. Very casual and cute way to say you are hungry!',
+          question: 'If your friend says お腹ペコペコ (onaka pekopeko), they mean:',
+          options: [
+            { text: 'I am really hungry!', en: 'Starving!', correct: true },
+            { text: 'I feel sick', en: 'Feeling ill', correct: false },
+            { text: 'I ate too much', en: 'Too full', correct: false },
+          ],
+          correctExplanation: 'お腹 (onaka) = stomach, ペコペコ = rumbling empty. It is a fun, informal way to say you are starving!',
+          wrongExplanation: 'ペコペコ imitates a hollow, empty stomach rumbling. お腹ペコペコ = "my stomach is growling" = I am really hungry!'
+        },
+        {
+          clerkJp: 'パクパク食べちゃった',
+          clerkRomaji: 'Pakupaku tabechatta',
+          clerkEn: 'I gobbled it all up!',
+          tip: 'パクパク (pakupaku) = eating eagerly with big bites, like chomping. The mascot Pac-Man is named from this!',
+          question: 'What is the origin of the name "Pac-Man"?',
+          options: [
+            { text: 'パクパク (pakupaku) -- eating eagerly', en: 'From pakupaku = chomping', correct: true },
+            { text: 'パッと (patto) -- quickly', en: 'From patto = quick', correct: false },
+            { text: 'パチパチ (pachipachi) -- clapping', en: 'From pachipachi = clap', correct: false },
+          ],
+          correctExplanation: 'Pac-Man comes from パクパク! The mouth-shaped character パクパク eats dots. Now you will never forget this word!',
+          wrongExplanation: 'Pac-Man is named after パクパク (pakupaku) which means eating eagerly. The game character chomps just like the word describes!'
+        },
+      ]
+    },
+    {
+      id: 'feelings_states',
+      topic: 'Feelings & States',
+      topicJp: '気持ち (kimochi)',
+      icon: 'heart',
+      color: '#e91e63',
+      intro: 'Japanese feelings come alive with onomatopoeia. Essential for natural conversation!',
+      interactions: [
+        {
+          clerkJp: 'ワクワクしますね！',
+          clerkRomaji: 'Wakuwaku shimasu ne!',
+          clerkEn: 'How exciting!',
+          tip: 'ワクワク (wakuwaku) = excited, heart racing with anticipation. Used for anything thrilling or fun!',
+          question: 'Before trying a new konbini limited edition snack, you feel:',
+          options: [
+            { text: 'ワクワク (wakuwaku) -- excited!', en: 'Excited', correct: true },
+            { text: 'イライラ (iraira) -- irritated', en: 'Irritated', correct: false },
+            { text: 'グッタリ (guttari) -- exhausted', en: 'Exhausted', correct: false },
+          ],
+          correctExplanation: 'ワクワク captures that bubbly excitement! 新作にワクワク (shinsaku ni wakuwaku) = excited about a new product!',
+          wrongExplanation: 'ワクワク is positive excitement and anticipation. イライラ is irritation, グッタリ is exhaustion -- quite different feelings!'
+        },
+        {
+          clerkJp: 'ドキドキする...',
+          clerkRomaji: 'Dokidoki suru...',
+          clerkEn: 'My heart is pounding...',
+          tip: 'ドキドキ (dokidoki) = heart pounding from nervousness, excitement, or a crush. The heartbeat sound!',
+          question: 'What physical sensation does ドキドキ (dokidoki) describe?',
+          options: [
+            { text: 'Heart pounding / beating fast', en: 'Heartbeat racing', correct: true },
+            { text: 'Stomach ache', en: 'Tummy pain', correct: false },
+            { text: 'Shivering from cold', en: 'Cold shiver', correct: false },
+          ],
+          correctExplanation: 'ドキドキ mimics a racing heartbeat! It can be from nerves, excitement, or even romance. Very common in manga!',
+          wrongExplanation: 'ドキドキ literally sounds like "doki doki" -- a heartbeat. It means your heart is pounding fast, from any strong emotion.'
+        },
+        {
+          clerkJp: 'ニコニコ笑顔で接客します',
+          clerkRomaji: 'Nikoniko egao de sekkyaku shimasu',
+          clerkEn: 'I serve customers with a big smile',
+          tip: 'ニコニコ (nikoniko) = beaming, smiling broadly. The famous video site Niconico is named after this!',
+          question: 'The streaming site ニコニコ動画 (Niconico Douga) is named after:',
+          options: [
+            { text: 'ニコニコ = smiling/beaming happily', en: 'Smiling', correct: true },
+            { text: 'ニコ = the number two', en: 'Number two', correct: false },
+            { text: 'A person named Nico', en: 'Person named Nico', correct: false },
+          ],
+          correctExplanation: 'ニコニコ means a warm, beaming smile! The site name means "Smiley Videos." Konbini clerks are always ニコニコ!',
+          wrongExplanation: 'ニコニコ describes someone smiling warmly and happily. The streaming site literally means "Smiley Videos"!'
+        },
+      ]
+    },
+    {
+      id: 'drinks_fizz',
+      topic: 'Drinks & Fizz',
+      topicJp: '飲み物の音 (nomimono no oto)',
+      icon: 'fizz',
+      color: '#1abc9c',
+      intro: 'Konbini drink aisles are full of onomatopoeia on every label! Learn to read them.',
+      interactions: [
+        {
+          clerkJp: 'シュワシュワの炭酸はいかが？',
+          clerkRomaji: 'Shuwashuwa no tansan wa ikaga?',
+          clerkEn: 'How about a fizzy carbonated drink?',
+          tip: 'シュワシュワ (shuwashuwa) = fizzy, bubbly, effervescent. Found on every soda and sparkling water label!',
+          question: 'A drink labeled シュワシュワ (shuwashuwa) will be:',
+          options: [
+            { text: 'Fizzy and carbonated', en: 'Bubbly/sparkling', correct: true },
+            { text: 'Thick and creamy', en: 'Thick/creamy', correct: false },
+            { text: 'Warm and soothing', en: 'Warm/hot', correct: false },
+          ],
+          correctExplanation: 'シュワシュワ perfectly captures the fizzy sensation of carbonation (炭酸 tansan). You will see it on every soda bottle!',
+          wrongExplanation: 'シュワシュワ imitates the sound and feel of tiny bubbles fizzing. It is always about carbonation and effervescence!'
+        },
+        {
+          clerkJp: 'ホカホカの肉まんどうぞ',
+          clerkRomaji: 'Hokahoka no nikuman douzo',
+          clerkEn: 'Here is a piping hot meat bun',
+          tip: 'ホカホカ (hokahoka) = warm and steamy, comfortingly hot. Used for fresh bento, nikuman, and oden!',
+          question: 'In winter, a konbini bento advertised as ホカホカ (hokahoka) will be:',
+          options: [
+            { text: 'Warm, steamy, and comforting', en: 'Piping hot', correct: true },
+            { text: 'Cold and refreshing', en: 'Chilled', correct: false },
+            { text: 'Extra large size', en: 'Big portion', correct: false },
+          ],
+          correctExplanation: 'ホカホカ is that wonderful warmth radiating from fresh food! ホカホカ弁当 (hokahoka bento) = a steaming warm bento box.',
+          wrongExplanation: 'ホカホカ describes warm, steamy comfort. It is about temperature and coziness, not size or coldness!'
+        },
+        {
+          clerkJp: 'トロトロのプリン、新発売です',
+          clerkRomaji: 'Torotoro no purin, shinhatsubai desu',
+          clerkEn: 'Our new melt-in-your-mouth pudding just released',
+          tip: 'トロトロ (torotoro) = melty, creamy, luxuriously smooth. Used for premium pudding, cheese, and egg dishes!',
+          question: 'A premium konbini pudding (プリン) labeled トロトロ (torotoro) promises to be:',
+          options: [
+            { text: 'Melty and creamy smooth', en: 'Melt-in-your-mouth', correct: true },
+            { text: 'Crunchy and hard', en: 'Hard/crunchy', correct: false },
+            { text: 'Sour and tangy', en: 'Sour/tart', correct: false },
+          ],
+          correctExplanation: 'トロトロ is the ultimate luxury texture -- melting, creamy, smooth. Premium konbini desserts love this label!',
+          wrongExplanation: 'トロトロ describes something that melts smoothly in your mouth. It is the opposite of crunchy or hard!'
+        },
+      ]
+    },
+  ];
+
+  // Onomatopoeia practice state
+  const onomatopoeiaState = {
+    lessonsCompleted: 0,
+    topicsCompleted: [], // IDs of completed topics
+    lastPracticeTime: 0,
+  };
+
+  function isOnomatopoeiaPracticeReady() {
+    // Available after completing at least 1 store level
+    return completedLevelsCount >= 1;
+  }
+
+  function getNextOnomatopoeiaLesson() {
+    // Show unseen topics first
+    const unseen = ONOMATOPOEIA_LESSONS.filter(t => !onomatopoeiaState.topicsCompleted.includes(t.id));
+    if (unseen.length > 0) return unseen[0];
+    // All done? Pick random for continued practice
+    return ONOMATOPOEIA_LESSONS[Math.floor(Math.random() * ONOMATOPOEIA_LESSONS.length)];
+  }
+
+  function completeOnomatopoeiaLesson(topicId) {
+    if (!onomatopoeiaState.topicsCompleted.includes(topicId)) {
+      onomatopoeiaState.topicsCompleted.push(topicId);
+    }
+    onomatopoeiaState.lessonsCompleted++;
+    onomatopoeiaState.lastPracticeTime = Date.now();
+  }
+
+  function getOnomatopoeiaStats() {
+    return {
+      completed: onomatopoeiaState.lessonsCompleted,
+      topicsUnlocked: onomatopoeiaState.topicsCompleted.length,
+      totalTopics: ONOMATOPOEIA_LESSONS.length,
+    };
+  }
+
   // ============ SAVE / LOAD SYSTEM ============
   // Persist all game progress to browser storage so nothing is lost on page reload
   const SAVE_KEY = 'konbiniquest_save_v1';
@@ -3019,6 +3330,11 @@ const NPCs = (() => {
         bestTime: speedRoundState.bestTime === Infinity ? null : speedRoundState.bestTime,
         totalCorrect: speedRoundState.totalCorrect,
         totalAttempted: speedRoundState.totalAttempted,
+      },
+      // Onomatopoeia coach
+      onomatopoeiaState: {
+        lessonsCompleted: onomatopoeiaState.lessonsCompleted,
+        topicsCompleted: [...onomatopoeiaState.topicsCompleted],
       },
       // Pronunciation guide
       pitchGuideState: {
@@ -3145,6 +3461,11 @@ const NPCs = (() => {
         speedRoundState.bestTime = data.speedRoundState.bestTime != null ? data.speedRoundState.bestTime : Infinity;
         speedRoundState.totalCorrect = data.speedRoundState.totalCorrect || 0;
         speedRoundState.totalAttempted = data.speedRoundState.totalAttempted || 0;
+      }
+      // Onomatopoeia coach
+      if (data.onomatopoeiaState) {
+        onomatopoeiaState.lessonsCompleted = data.onomatopoeiaState.lessonsCompleted || 0;
+        onomatopoeiaState.topicsCompleted = data.onomatopoeiaState.topicsCompleted || [];
       }
       // Pronunciation guide
       if (data.pitchGuideState) {
@@ -3350,6 +3671,12 @@ const NPCs = (() => {
     buildPitchQuiz,
     getPronunciationStats,
     recordPitchResult,
+    // Onomatopoeia coach
+    ONOMATOPOEIA_LESSONS,
+    isOnomatopoeiaPracticeReady,
+    getNextOnomatopoeiaLesson,
+    completeOnomatopoeiaLesson,
+    getOnomatopoeiaStats,
     // Save / Load system
     saveGame,
     loadGame,

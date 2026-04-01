@@ -668,6 +668,37 @@ const Sprites = (() => {
   };
 
 
+
+
+  // Onomatopoeia Coach (Mimi) — playful character with headphones, pink/teal sound wave theme
+  const npcOnomatopoeiaCoach = `
+....HHHH....
+...HhHhHh..
+..THhHhHhT.
+..THSSSSH..
+..TSSEESST.
+..SSSMSSMS.
+..SSSbSSS..
+..SSMMSS...
+...CCCC....
+..CcCcCc...
+.CcNNCcNc..
+.CcNNCcNc..
+..CcCcCc...
+...LLLL....
+..LlLlLl...
+..WW..WW...`;
+
+  const npcOnomatopoeiaCoachPalette = {
+    'H': '#e91e63', 'h': '#f06292', // vibrant pink hair (playful/sound theme)
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#e57373', 'b': '#ffab91', // warm smile
+    'T': '#00bcd4', // teal headphone pads
+    'C': '#00897b', 'c': '#4db6ac', // teal top (sound wave)
+    'N': '#e91e63', // pink accent on shirt
+    'L': '#37474f', 'l': '#546e7a', // dark pants
+  };
+
   // Conversation Practice Coach (Yuri) — friendly young woman with a clipboard, warm orange/brown tones
   const npcConversationCoach = `
 ....HHHH....
@@ -709,6 +740,7 @@ const Sprites = (() => {
     speedcoach: { frames: [npcSpeedCoach], palette: npcSpeedCoachPalette },
     pronunciationguide: { frames: [npcPronunciationGuide], palette: npcPronunciationGuidePalette },
     conversationcoach: { frames: [npcConversationCoach], palette: npcConversationCoachPalette },
+    onomatopoeiacoach: { frames: [npcOnomatopoeiaCoach], palette: npcOnomatopoeiaCoachPalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1621,6 +1653,23 @@ const Sprites = (() => {
     const hint = '[↑↓] Select  [A] Start  [B] Close';
     const hintW = ctx.measureText(hint).width;
     ctx.fillText(hint, (canvasW - hintW) / 2, canvasH - 8);
+  }
+
+
+  // Onomatopoeia practice indicator (pulsing sound wave icon, pink/teal)
+  function drawOnomatopoeiaBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 4.2) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (teal)
+    ctx.fillStyle = '#00897b';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Sound wave icon (pink)
+    ctx.fillStyle = '#e91e63';
+    ctx.fillRect(x + 4, y - 10, 2, 4);  // center bar
+    ctx.fillRect(x + 7, y - 12, 2, 8);  // tall bar
+    ctx.fillRect(x + 10, y - 10, 2, 4); // right bar
+    ctx.globalAlpha = 1;
   }
 
   // Pronunciation guide bubble (musical note icon, purple/pink)
@@ -3449,6 +3498,8 @@ const Sprites = (() => {
     drawConversationMenu,
     drawSpeedTimer,
     drawSpeedResultBanner,
+    // Onomatopoeia coach
+    drawOnomatopoeiaBubble,
     // Pronunciation guide
     drawPronunciationBubble,
     drawPitchDiagram,

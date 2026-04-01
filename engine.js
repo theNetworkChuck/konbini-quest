@@ -287,6 +287,10 @@ const Engine = (() => {
         if (npc.isConversationCoach && NPCs.isConversationPracticeReady()) {
           Sprites.drawConversationBubble(ctx, sx, sy, time);
         }
+        // Show onomatopoeia bubble above coach when ready
+        if (npc.isOnomatopoeiaCoach && NPCs.isOnomatopoeiaPracticeReady()) {
+          Sprites.drawOnomatopoeiaBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing
