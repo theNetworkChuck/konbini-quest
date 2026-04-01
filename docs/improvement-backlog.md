@@ -46,7 +46,7 @@
 25. ~~**Save/Load System**~~ ✅ - Persist all game progress to localStorage. Auto-save after level completion, NPC interactions, and store exits. Title screen shows CONTINUE/NEW GAME menu when save data exists. Green "SAVED" indicator flashes on screen. Serializes all 16 state systems (progress, spaced repetition, stamps, inventory, achievements, etc.).
 26. ~~**Conversation Practice Mode**~~ -- Free-form conversation NPC where player picks from a scenario (buying coffee, asking for directions to bathroom, etc.) and plays through a full multi-turn conversation. More immersive than single-question quizzes.
 27. ~~**Onomatopoeia Lesson**~~ ✅ - Teach common konbini sound words: pipi (register beep), gacha (capsule machine), paka (opening a bento). Japanese onomatopoeia is essential for natural speech.
-28. **Night Shift Mode** - Different NPCs and dialogue appear at night (time-of-day already exists). Drunk salaryman, late-night snack vocabulary, midnight konbini culture.
+28. ~~**Night Shift Mode**~~ ✅ - Different NPCs and dialogue appear at night (time-of-day already exists). Drunk salaryman, late-night snack vocabulary, midnight konbini culture.
 
 ## Research Notes
 - Flow Theory: 7 key elements for educational game engagement - learning goals, immediate feedback, adaptive challenge, control/autonomy, concentration, rewards, sensory immersion
@@ -697,3 +697,24 @@
 **Why it matters for learning:** Japanese has one of the world's richest onomatopoeia systems (~4,500 words), yet textbooks barely cover them. They're everywhere in daily speech -- food packaging (サクサク、モチモチ), manga (ドキドキ、ワクワク), and konbini interactions (チンしますか？). Knowing these words is the difference between textbook Japanese and natural-sounding Japanese. Japanese people are genuinely impressed when foreigners use onomatopoeia correctly, because it signals deep cultural understanding beyond vocabulary drills.
 
 **Files modified:** npc.js, sprites.js, engine.js, game.js (~604 lines added)
+
+### 2026-04-01 -- #28 Night Shift Mode (Salaryman Suzuki)
+**Commit:** `106ae79`
+
+**What was added:**
+- **Suzuki NPC** -- a tired salaryman who only appears during the night phase of the day/night cycle. Custom pixel art sprite: dark messy hair, rumpled navy suit, loosened red tie, holding a green Strong Zero can, black shoes. Positioned at (9, 14) on Konbini Street.
+- **Time-of-day NPC filtering** -- `getNPCsOnMap()`, `getNPCAt()`, and `isNPCBlocking()` now check an `isNPCVisible()` helper that hides night-shift NPCs during non-night phases. Uses the existing `Engine.getTimeOfDay()` system (120s full cycle, night = 35%-65% of cycle).
+- **4 night lesson topics** with 3 quizzes each (12 total questions):
+  1. **Late-Night Drinks** (深夜の飲み物) -- ストロングゼロ (Strong Zero), 年齢確認 (age verification), おつまみ (drinking snacks)
+  2. **Midnight Munchies** (深夜の食べ物) -- 肉まん (nikuman), おでん (oden ordering), 温めますか (heating food)
+  3. **Salaryman Survival** (サラリーマンのサバイバル) -- おつかれさまです, 終電 (last train), 飲み会 (nomikai)
+  4. **Midnight Konbini Culture** (深夜のコンビニ文化) -- いってらっしゃい/いってきます, warm vs cold drink labels, no late-night surcharge fact
+- **Salaryman personality** in dialogue: tired humor, Strong Zero references, *yawn* and *hic* actions, night owl encouragements
+- **Full quiz flow**: Night-themed intro -> Japanese phrase with romaji/English + cultural tip -> quiz question -> 3 shuffled options -> correct/wrong feedback with detailed explanations -> lesson completion with ★ rating
+- **System integration**: ElevenLabs voice preloading, sparkle particles + register beep on correct, variable reward rolls, mistake journal for wrong answers, auto-save after lesson completion
+- **Save/load support**: Night shift state (completed topics, lesson count) serialized via getFullState/loadFullState
+- **Activation requirement**: Requires completing 2+ store levels (higher than other NPCs since this is intermediate content)
+
+**Why it matters for learning:** 40% of konbini sales happen between 10PM-6AM, yet no Japanese learning resource covers late-night konbini culture. This teaches vocabulary and phrases that salarymen and night owls use daily -- ordering nikuman, understanding age verification for alcohol, knowing おつかれさまです (the most important phrase in Japanese work culture), and navigating the unique midnight konbini atmosphere. The time-gated NPC adds discovery and mystery -- players have to wait for night to find Suzuki, creating a memorable learning moment.
+
+**Files modified:** npc.js, sprites.js, game.js (~539 lines added)
