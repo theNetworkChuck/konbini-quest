@@ -718,3 +718,25 @@
 **Why it matters for learning:** 40% of konbini sales happen between 10PM-6AM, yet no Japanese learning resource covers late-night konbini culture. This teaches vocabulary and phrases that salarymen and night owls use daily -- ordering nikuman, understanding age verification for alcohol, knowing おつかれさまです (the most important phrase in Japanese work culture), and navigating the unique midnight konbini atmosphere. The time-gated NPC adds discovery and mystery -- players have to wait for night to find Suzuki, creating a memorable learning moment.
 
 **Files modified:** npc.js, sprites.js, game.js (~539 lines added)
+
+### 2026-04-01 -- #29 Global Combo Counter
+**Commit:** `26594ba`
+
+**What was added:**
+- **Cross-quiz combo streak system** -- tracks consecutive correct answers across ALL quiz types (store levels, challenges, reviews, speed rounds, pitch quizzes, conversation practice, onomatopoeia, night shift). Any correct answer increments the combo; any wrong answer resets it to zero.
+- **5 escalating visual tiers** with distinct color schemes:
+  1. **Teal** (2-4x) -- cool, understated pulsing counter
+  2. **Gold** (5-9x) -- warm golden glow, milestone banner: "いいね!" (Nice!)
+  3. **Orange** (10-14x) -- hot orange with stronger glow, milestone: "すごい!" (Amazing!)
+  4. **Red** (15-19x) -- fire red with star decorations, milestone: "燃えろ!" (Burn it up!)
+  5. **Purple** (20+x) -- legendary tier with intense glow + stars, milestone: "伝説的!" (Legendary!)
+- **Animated combo pill** in top-right HUD area -- scales with tier (stronger pulse at higher combos), glow effects at tier 2+
+- **Milestone banners** at 5/10/15/20/25/30/40/50 with slide-in animation, Japanese encouragement text, and star burst particle effects
+- **45-second inactivity decay** -- combo resets if no answers within 45 seconds, preventing stale combos across sessions
+- **Centralized hook system** -- `onCorrectAnswer()` and `onWrongAnswer()` functions called at all 13 correct-answer and 14 wrong-answer code sites (including pitch quiz wrong path that didn't previously have a sound)
+- **Overlay awareness** -- combo counter and milestone banners hidden during stamp card, phrase book, inventory, achievement, mistake journal, and cultural notes overlays
+- **Testing hook**: `window.setCombo(n)` for visual debugging
+
+**Why it matters for learning:** Combo counters are one of the most psychologically powerful game mechanics for sustained engagement. The escalating visual feedback (color shifts, particle effects, Japanese exclamations) creates a "flow state" where players push to maintain their streak, naturally increasing focus and reducing careless answers. The 45-second decay timer prevents gaming the system while keeping reasonable pauses between questions. The Japanese milestone messages (いいね → すごい → 燃えろ → 伝説的) also serve as vocabulary exposure -- players learn these common exclamations through emotional association rather than explicit study, which is how native speakers actually acquire them.
+
+**Files modified:** game.js, sprites.js (~226 lines added)
