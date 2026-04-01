@@ -45,7 +45,7 @@
 ### Batch 7: Persistence & Quality of Life
 25. ~~**Save/Load System**~~ ✅ - Persist all game progress to localStorage. Auto-save after level completion, NPC interactions, and store exits. Title screen shows CONTINUE/NEW GAME menu when save data exists. Green "SAVED" indicator flashes on screen. Serializes all 16 state systems (progress, spaced repetition, stamps, inventory, achievements, etc.).
 26. ~~**Conversation Practice Mode**~~ -- Free-form conversation NPC where player picks from a scenario (buying coffee, asking for directions to bathroom, etc.) and plays through a full multi-turn conversation. More immersive than single-question quizzes.
-27. **Onomatopoeia Lesson** - Teach common konbini sound words: pipi (register beep), gacha (capsule machine), paka (opening a bento). Japanese onomatopoeia is essential for natural speech.
+27. ~~**Onomatopoeia Lesson**~~ ✅ - Teach common konbini sound words: pipi (register beep), gacha (capsule machine), paka (opening a bento). Japanese onomatopoeia is essential for natural speech.
 28. **Night Shift Mode** - Different NPCs and dialogue appear at night (time-of-day already exists). Drunk salaryman, late-night snack vocabulary, midnight konbini culture.
 
 ## Research Notes
@@ -675,3 +675,25 @@
 **Why it matters for learning:** Single-question quizzes test isolated vocabulary, but real konbini conversations require stringing together multiple responses in sequence -- understanding the clerk's greeting, confirming your order, handling payment, and saying goodbye. This mode bridges the gap between knowing individual phrases and handling a complete interaction. Players practice the full flow they'll actually experience in a Japanese konbini, building the confidence and automaticity needed for real-world encounters.
 
 **Files modified:** npc.js, sprites.js, engine.js, game.js (~794 lines added)
+
+### 2026-04-01 -- #27 Onomatopoeia Coach NPC (Mimi)
+**Commit:** `c200d54`
+
+**What was added:**
+- **Mimi NPC** -- new Onomatopoeia Coach character on Konbini Street at position (18, 10). Custom pixel art sprite: vibrant pink hair, teal headphones, pink/teal sound wave theme.
+- **5 onomatopoeia lesson topics** with 3 quizzes each (15 total questions):
+  1. **Konbini Sounds** (コンビニの音) -- ピッピッ (scanner beep), チン (microwave ding), ガチャ (mechanical clunk)
+  2. **Food Textures** (食感) -- サクサク (crispy), フワフワ (fluffy), モチモチ (chewy)
+  3. **Eating & Drinking** (食べる・飲む) -- ゴクゴク (gulping), ペコペコ (hungry), パクパク (chomping)
+  4. **Feelings & States** (気持ち) -- ワクワク (excited), ドキドキ (heartbeat), ニコニコ (smiling)
+  5. **Drinks & Fizz** (飲み物の音) -- シュワシュワ (fizzy), ホカホカ (warm/steamy), トロトロ (melty/creamy)
+- **Cultural connections** woven into quiz explanations: Pac-Man named from パクパク, Niconico from ニコニコ, チンする as everyday verb for microwaving, ガチャポン capsule machines from ガチャ+ポン
+- **Teal bubble indicator** with sound wave icon (3 vertical bars) pulsing above Mimi when practice is ready
+- **Full quiz flow**: Intro dialogue -> Japanese phrase with romaji/English -> quiz question -> 3 shuffled options -> correct/wrong feedback with detailed explanations -> lesson completion rating (★★★/★★☆/★☆☆)
+- **System integration**: ElevenLabs voice preloading for all Japanese phrases, sparkle particles + register beep on correct, variable reward rolls, mistake journal for wrong answers, auto-save after lesson completion
+- **Save/load support**: Onomatopoeia state (completed topics, lesson count) serialized via getFullState/loadFullState
+- **Activation requirement**: Requires completing 1+ store levels
+
+**Why it matters for learning:** Japanese has one of the world's richest onomatopoeia systems (~4,500 words), yet textbooks barely cover them. They're everywhere in daily speech -- food packaging (サクサク、モチモチ), manga (ドキドキ、ワクワク), and konbini interactions (チンしますか？). Knowing these words is the difference between textbook Japanese and natural-sounding Japanese. Japanese people are genuinely impressed when foreigners use onomatopoeia correctly, because it signals deep cultural understanding beyond vocabulary drills.
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js (~604 lines added)
