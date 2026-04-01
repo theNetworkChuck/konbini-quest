@@ -58,6 +58,12 @@
     // Conversation practice
     conversationMenuOpen: false,
     conversationMenuIdx: 0,
+    // Combo counter system
+    combo: 0,
+    maxCombo: 0,
+    comboTimer: 0, // visual display timer (animation time accumulator)
+    comboMilestone: null, // {combo, timer} for milestone banner
+    comboDecayTimer: 0, // resets combo after inactivity (seconds)
   };
 
   let audioInitialized = false;
@@ -72,6 +78,28 @@
       Engine.showSaveIndicator();
       state.hasSaveData = true;
     }
+  }
+
+  // ============ COMBO COUNTER SYSTEM ============
+  const COMBO_MILESTONES = [5, 10, 15, 20, 25, 30, 40, 50];
+  const COMBO_DECAY_TIME = 45; // seconds before combo resets from inactivity
+
+  function onCorrectAnswer() {
+    state.combo++;
+    state.comboDecayTimer = COMBO_DECAY_TIME;
+    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+    // Check for milestone
+    if (COMBO_MILESTONES.includes(state.combo)) {
+      state.comboMilestone = { combo: state.combo, timer: 2.5 };
+      // Extra sparkles for milestones
+      Engine.spawnStarBurst();
+    }
+  }
+
+  function onWrongAnswer() {
+    state.combo = 0;
+    state.comboDecayTimer = 0;
   }
 
   // ============ GAME LOOP ============
@@ -234,6 +262,24 @@
       state.culturalNoteNotification.timer -= dt;
       if (state.culturalNoteNotification.timer <= 0) {
         state.culturalNoteNotification = null;
+      }
+    }
+
+    // Update combo counter timers
+    if (state.combo >= 2) {
+      state.comboTimer += dt;
+    }
+    if (state.comboDecayTimer > 0) {
+      state.comboDecayTimer -= dt;
+      if (state.comboDecayTimer <= 0) {
+        state.combo = 0;
+        state.comboTimer = 0;
+      }
+    }
+    if (state.comboMilestone) {
+      state.comboMilestone.timer -= dt;
+      if (state.comboMilestone.timer <= 0) {
+        state.comboMilestone = null;
       }
     }
 
@@ -757,6 +803,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       Engine.spawnSparkles();
       state.reviewCorrect++;
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, true);
@@ -774,6 +821,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
 
       // Record in mistake journal
@@ -962,6 +1010,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       challengeGameState.challengeCorrect++;
@@ -989,6 +1038,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
 
       // Record in mistake journal
@@ -1193,6 +1243,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       setTimeout(() => GameAudio.playCoinDrop(), 200); // coin sound for payment
       Engine.spawnSparkles();
@@ -1221,6 +1272,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
 
       // Record in mistake journal
       const correctOptPayment = interaction.options ? interaction.options.find(o => o.correct) : null;
@@ -1408,6 +1460,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       seasonalGameState.correct++;
@@ -1433,6 +1486,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
 
       // Record in mistake journal
       const correctOptSeasonal = interaction.options ? interaction.options.find(o => o.correct) : null;
@@ -1623,6 +1677,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       kansaiGameState.correct++;
@@ -1649,6 +1704,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
 
       // Record in mistake journal
       const correctOptKansai = interaction.options ? interaction.options.find(o => o.correct) : null;
@@ -1839,6 +1895,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       politenessGameState.correct++;
@@ -1865,6 +1922,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
 
       // Record in mistake journal
       const correctOptPoliteness = interaction.options ? interaction.options.find(o => o.correct) : null;
@@ -2075,6 +2133,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 300);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       speedGameState.correct++;
@@ -2099,6 +2158,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 300);
       GameAudio.playWrong();
+      onWrongAnswer();
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
 
       // Record mistake
@@ -2130,6 +2190,7 @@
 
     Dialogue.flash('rgba(231,76,60,0.5)', 400);
     GameAudio.playWrong();
+    onWrongAnswer();
 
     if (interaction && phraseData) {
       NPCs.trackPhrase(phraseData.levelId, phraseData.interactionIdx, false);
@@ -2359,7 +2420,9 @@
         if (isCorrect) {
           pitchGuideState.quizCorrect++;
           GameAudio.playCorrect();
+          onCorrectAnswer();
         } else {
+          onWrongAnswer();
           NPCs.recordMistake(
             q.phrase.japanese,
             q.phrase.english,
@@ -2520,6 +2583,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       conversationGameState.correct++;
@@ -2547,6 +2611,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
 
       // Record in mistake journal
       const correctOpt = turn.options ? turn.options.find(o => o.correct) : null;
@@ -2737,6 +2802,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       onomatopoeiaGameState.correct++;
@@ -2763,6 +2829,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
 
       // Record in mistake journal
       const correctOpt = interaction.options ? interaction.options.find(o => o.correct) : null;
@@ -2952,6 +3019,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
       nightShiftGameState.correct++;
@@ -2978,6 +3046,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
 
       // Record in mistake journal
       const correctOpt = interaction.options ? interaction.options.find(o => o.correct) : null;
@@ -3268,6 +3337,7 @@
     if (selected.correct) {
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
 
@@ -3304,6 +3374,7 @@
     } else {
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
       state.interactionMistakes++;
 
       // Record in mistake journal
@@ -3393,6 +3464,7 @@
       // Correct!
       Dialogue.flash('rgba(46,204,113,0.5)', 400);
       GameAudio.playCorrect();
+      onCorrectAnswer();
       GameAudio.playRegisterBeep();
       Engine.spawnSparkles();
 
@@ -3427,6 +3499,7 @@
       // Wrong
       Dialogue.flash('rgba(231,76,60,0.5)', 400);
       GameAudio.playWrong();
+      onWrongAnswer();
       state.interactionMistakes++;
 
       // Track mistake for spaced repetition
@@ -3875,6 +3948,22 @@
       );
     }
 
+    // Combo counter (persistent, above overlays)
+    if (state.combo >= 2 && !state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen) {
+      Sprites.drawComboCounter(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        state.combo, state.comboTimer, state.maxCombo, 1
+      );
+    }
+
+    // Combo milestone banner (hidden during overlays)
+    if (state.comboMilestone && !state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen) {
+      Sprites.drawComboMilestoneBanner(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        state.comboMilestone.combo, state.comboMilestone.timer
+      );
+    }
+
     // Particle effects (sparkles + star bursts — above dialogue/overlays)
     Engine.renderParticles(state.time);
 
@@ -3969,6 +4058,10 @@
       achievementNotification: !!state.achievementNotification,
       achievementsUnlocked: NPCs.getAchievementCount(),
       achievementsTotal: NPCs.getTotalAchievements(),
+      // Combo counter
+      combo: state.combo,
+      maxCombo: state.maxCombo,
+      comboMilestone: state.comboMilestone ? state.comboMilestone.combo : null,
     });
   };
 
@@ -4056,6 +4149,17 @@
   window.setWeather = (type) => {
     // Force a weather type: 'clear', 'cherry_blossoms', 'rain'
     console.log('Setting weather to:', type);
+  };
+
+  // Testing hook: set combo for visual testing
+  window.setCombo = (n) => {
+    state.combo = n;
+    state.maxCombo = Math.max(state.maxCombo, n);
+    state.comboDecayTimer = COMBO_DECAY_TIME;
+    state.comboTimer = 0;
+    if (COMBO_MILESTONES.includes(n)) {
+      state.comboMilestone = { combo: n, timer: 2.5 };
+    }
   };
 
   window.getWeatherInfo = () => {

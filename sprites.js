@@ -3481,6 +3481,125 @@ const Sprites = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ COMBO COUNTER DISPLAY ============
+  function drawComboCounter(ctx, canvasW, canvasH, combo, showTimer, maxCombo, multiplier) {
+    if (combo < 2) return; // Only show at 2+ combo
+
+    ctx.save();
+
+    // Position: top-right area, below HUD stars
+    const cx = canvasW - 50;
+    const cy = 18;
+
+    // Determine tier for visual escalation
+    let tier = 0; // 0=normal, 1=warm, 2=hot, 3=fire, 4=legendary
+    if (combo >= 20) tier = 4;
+    else if (combo >= 15) tier = 3;
+    else if (combo >= 10) tier = 2;
+    else if (combo >= 5) tier = 1;
+
+    const tierColors = [
+      { bg: 'rgba(26,26,46,0.85)', border: '#4ecdc4', text: '#4ecdc4', glow: null },       // normal teal
+      { bg: 'rgba(46,26,10,0.9)', border: '#f39c12', text: '#f1c40f', glow: '#f39c12' },   // warm gold
+      { bg: 'rgba(60,20,10,0.9)', border: '#e67e22', text: '#ff6b35', glow: '#e67e22' },   // hot orange
+      { bg: 'rgba(70,10,10,0.92)', border: '#e74c3c', text: '#ff4757', glow: '#e74c3c' },  // fire red
+      { bg: 'rgba(60,10,60,0.95)', border: '#9b59b6', text: '#f39cff', glow: '#9b59b6' },  // legendary purple
+    ];
+    const tc = tierColors[tier];
+
+    // Pulse animation based on showTimer (0..1 fraction remaining)
+    const pulse = 1 + Math.sin(showTimer * 12) * (0.03 * (tier + 1));
+
+    ctx.translate(cx, cy);
+    ctx.scale(pulse, pulse);
+
+    // Glow effect for higher tiers
+    if (tc.glow && tier >= 2) {
+      ctx.shadowColor = tc.glow;
+      ctx.shadowBlur = 4 + tier * 2;
+    }
+
+    // Background pill
+    const pillW = 44;
+    const pillH = 20;
+    ctx.fillStyle = tc.bg;
+    ctx.fillRect(-pillW / 2, -pillH / 2, pillW, pillH);
+    ctx.strokeStyle = tc.border;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-pillW / 2, -pillH / 2, pillW, pillH);
+
+    ctx.shadowBlur = 0;
+
+    // Combo number
+    ctx.font = 'bold 10px "Press Start 2P"';
+    ctx.fillStyle = tc.text;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(combo + 'x', 0, -2);
+
+    // Multiplier label below
+    ctx.font = '5px monospace';
+    ctx.fillStyle = '#aaa';
+    ctx.fillText('COMBO', 0, 7);
+
+    // Fire emoji for tier 3+
+    if (tier >= 3) {
+      ctx.font = '7px monospace';
+      ctx.fillStyle = tier >= 4 ? '#f39cff' : '#ff4757';
+      ctx.fillText('\u2605', -pillW / 2 - 5, -1);
+      ctx.fillText('\u2605', pillW / 2 + 2, -1);
+    }
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
+  }
+
+  // Draw combo milestone banner ("5x COMBO! +10% Bonus!")
+  function drawComboMilestoneBanner(ctx, canvasW, canvasH, combo, timer) {
+    if (timer <= 0) return;
+
+    const maxTimer = 2.5;
+    let alpha = 1;
+    if (timer > maxTimer - 0.3) alpha = (maxTimer - timer + 0.3) / 0.3; // fade in
+    else if (timer < 0.5) alpha = timer / 0.5; // fade out
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+    // Slide down from top
+    const slideY = timer > maxTimer - 0.3 ? 8 + ((maxTimer - timer) / 0.3) * 20 : 28;
+
+    const bannerW = 140;
+    const bannerH = 18;
+    const bx = (canvasW - bannerW) / 2;
+    const by = slideY;
+
+    // Milestone text
+    let milestoneText = '';
+    let bgColor = '';
+    let borderColor = '';
+    if (combo >= 20) { milestoneText = combo + 'x COMBO! \u4f1d\u8aac\u7684!'; bgColor = 'rgba(60,10,60,0.95)'; borderColor = '#9b59b6'; }
+    else if (combo >= 15) { milestoneText = combo + 'x COMBO! \u71c3\u3048\u308d!'; bgColor = 'rgba(70,10,10,0.92)'; borderColor = '#e74c3c'; }
+    else if (combo >= 10) { milestoneText = combo + 'x COMBO! \u3059\u3054\u3044!'; bgColor = 'rgba(60,20,10,0.9)'; borderColor = '#e67e22'; }
+    else if (combo >= 5) { milestoneText = combo + 'x COMBO! \u3044\u3044\u306d!'; bgColor = 'rgba(46,26,10,0.9)'; borderColor = '#f39c12'; }
+    else { ctx.restore(); return; }
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(bx, by, bannerW, bannerH);
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, bannerW, bannerH);
+
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(milestoneText, canvasW / 2, by + 12);
+    ctx.textAlign = 'left';
+
+    ctx.restore();
+  }
+
   return {
     T,
     drawPlayer,
@@ -3536,5 +3655,8 @@ const Sprites = (() => {
     drawPronunciationBubble,
     drawPitchDiagram,
     drawPronunciationOverlay,
+    // Combo counter
+    drawComboCounter,
+    drawComboMilestoneBanner,
   };
 })();
