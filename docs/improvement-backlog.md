@@ -44,7 +44,7 @@
 
 ### Batch 7: Persistence & Quality of Life
 25. ~~**Save/Load System**~~ ✅ - Persist all game progress to localStorage. Auto-save after level completion, NPC interactions, and store exits. Title screen shows CONTINUE/NEW GAME menu when save data exists. Green "SAVED" indicator flashes on screen. Serializes all 16 state systems (progress, spaced repetition, stamps, inventory, achievements, etc.).
-26. **Conversation Practice Mode** - Free-form conversation NPC where player picks from a scenario (buying coffee, asking for directions to bathroom, etc.) and plays through a full multi-turn conversation. More immersive than single-question quizzes.
+26. ~~**Conversation Practice Mode**~~ -- Free-form conversation NPC where player picks from a scenario (buying coffee, asking for directions to bathroom, etc.) and plays through a full multi-turn conversation. More immersive than single-question quizzes.
 27. **Onomatopoeia Lesson** - Teach common konbini sound words: pipi (register beep), gacha (capsule machine), paka (opening a bento). Japanese onomatopoeia is essential for natural speech.
 28. **Night Shift Mode** - Different NPCs and dialogue appear at night (time-of-day already exists). Drunk salaryman, late-night snack vocabulary, midnight konbini culture.
 
@@ -652,3 +652,26 @@
 **Why it matters:** This was the single most impactful quality-of-life improvement possible. Before this change, ALL progress was lost every time the page reloaded. Players who completed levels, earned stamps, collected phrases, or made progress through any NPC interaction would lose everything. Now the game auto-saves silently at every checkpoint, and the Pokemon-style CONTINUE/NEW GAME menu makes it feel like a real game cartridge. This removes the #1 barrier to long-term engagement with the learning content.
 
 **Files modified:** npc.js, engine.js, game.js (~400 lines added)
+
+### 2026-04-01 -- #26 Conversation Practice Mode
+**Commit:** `b5d08fd`
+
+**What was added:**
+- **Yuri NPC** -- new Conversation Coach character on Konbini Street at position (11, 9). Custom pixel art sprite: orange cardigan, brown hair, clipboard in hand.
+- **5 multi-turn conversation scenarios** covering common konbini interactions from start to finish:
+  1. **Buying Coffee** (コーヒーを買う) -- 4 turns: greeting, order confirmation, payment method, receipt/farewell
+  2. **Buying a Bento** (お弁当を買う) -- 4 turns: greeting, warming offer, chopsticks, payment
+  3. **Asking for Bathroom** (トイレを聞く) -- 3 turns: approaching clerk, asking politely, thanking
+  4. **Buying Hot Food** (ホットスナック) -- 4 turns: ordering from hot case, quantity, sauce/condiments, payment
+  5. **Buying Alcohol** (お酒を買う) -- 4 turns: selection, age verification screen tap, payment, farewell
+- **Multi-turn conversation flow**: Clerk speaks Japanese (with ElevenLabs voice) -> English translation shown -> context hint -> player picks from 3 multiple-choice responses -> feedback (correct/wrong) -> next turn
+- **Scenario selection overlay**: When interacting with Yuri, a full menu shows all 5 scenarios with emoji icons, Japanese titles, difficulty stars, and completion status
+- **Conversation bubble indicator**: Orange speech bubble with conversation icon above Yuri when conversation practice is available
+- **Correct answer tracking**: Per-scenario completion, total correct/attempted stats
+- **Full system integration**: Sparkle particles on correct answers, ElevenLabs voice preloading for all scenario phrases, variable reward rolls, mistake journal recording on wrong answers, auto-save after scenario completion
+- **Save/load support**: Conversation state (completed scenarios, stats) serialized via getFullState/loadFullState
+- **Activation requirement**: Requires completing 1+ store levels
+
+**Why it matters for learning:** Single-question quizzes test isolated vocabulary, but real konbini conversations require stringing together multiple responses in sequence -- understanding the clerk's greeting, confirming your order, handling payment, and saying goodbye. This mode bridges the gap between knowing individual phrases and handling a complete interaction. Players practice the full flow they'll actually experience in a Japanese konbini, building the confidence and automaticity needed for real-world encounters.
+
+**Files modified:** npc.js, sprites.js, engine.js, game.js (~794 lines added)
