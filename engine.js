@@ -1199,6 +1199,128 @@ const Engine = (() => {
     ctx.textAlign = 'left';
   }
 
+  // ============ LOCATION NAME BANNER ============
+  // Pokemon-style location name banner that slides in when entering a store/area
+  let locBanner = {
+    active: false,
+    nameJp: '',      // Japanese name (top line)
+    nameEn: '',      // English name (bottom line)
+    color: '#888',   // Brand accent color
+    timer: 0,        // total elapsed time
+    duration: 3.2,   // total banner lifetime
+    // Timing phases: slide-in 0.4s, hold 2.0s, slide-out 0.4s, linger 0.4s
+  };
+
+  function showLocationBanner(nameJp, nameEn, color) {
+    locBanner.active = true;
+    locBanner.nameJp = nameJp || '';
+    locBanner.nameEn = nameEn || '';
+    locBanner.color = color || '#888';
+    locBanner.timer = 0;
+  }
+
+  function updateLocationBanner(dt) {
+    if (!locBanner.active) return;
+    locBanner.timer += dt;
+    if (locBanner.timer >= locBanner.duration) {
+      locBanner.active = false;
+    }
+  }
+
+  function renderLocationBanner() {
+    if (!locBanner.active) return;
+    const t = locBanner.timer;
+    const cw = CANVAS_W;
+
+    // Calculate slide progress
+    // Phase 1: slide in (0 -> 0.4s)
+    // Phase 2: hold (0.4 -> 2.4s)
+    // Phase 3: slide out (2.4 -> 2.8s)
+    // Phase 4: done (2.8 -> 3.2s)
+    let slideX = 0;
+    const slideInEnd = 0.4;
+    const holdEnd = 2.4;
+    const slideOutEnd = 2.8;
+
+    if (t < slideInEnd) {
+      // Slide in from right -- ease out cubic
+      const p = t / slideInEnd;
+      const ease = 1 - Math.pow(1 - p, 3);
+      slideX = cw * (1 - ease);
+    } else if (t < holdEnd) {
+      slideX = 0; // fully visible
+    } else if (t < slideOutEnd) {
+      // Slide out to right -- ease in cubic
+      const p = (t - holdEnd) / (slideOutEnd - holdEnd);
+      const ease = p * p * p;
+      slideX = cw * ease;
+    } else {
+      return; // fading out, skip render
+    }
+
+    ctx.save();
+
+    // Banner dimensions
+    const bannerH = 36;
+    const bannerY = 20;
+    const accentH = 3;
+
+    // Main banner background -- dark with slight transparency
+    ctx.fillStyle = 'rgba(10, 10, 30, 0.92)';
+    ctx.fillRect(slideX, bannerY, cw, bannerH);
+
+    // Top accent line (brand color)
+    ctx.fillStyle = locBanner.color;
+    ctx.fillRect(slideX, bannerY, cw, accentH);
+
+    // Bottom accent line (brand color, thinner)
+    ctx.fillStyle = locBanner.color;
+    ctx.fillRect(slideX, bannerY + bannerH - 2, cw, 2);
+
+    // Small decorative diamond on left side
+    const diaX = slideX + 8;
+    const diaY = bannerY + bannerH / 2;
+    ctx.fillStyle = locBanner.color;
+    ctx.beginPath();
+    ctx.moveTo(diaX, diaY - 4);
+    ctx.lineTo(diaX + 4, diaY);
+    ctx.lineTo(diaX, diaY + 4);
+    ctx.lineTo(diaX - 4, diaY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Japanese name (larger, main text)
+    const textStartX = slideX + 18;
+    if (locBanner.nameJp) {
+      ctx.font = '12px "M PLUS Rounded 1c"';
+      ctx.fillStyle = '#fff';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(locBanner.nameJp, textStartX, bannerY + 13);
+    }
+
+    // English name (smaller, below Japanese)
+    if (locBanner.nameEn) {
+      ctx.font = '7px "Press Start 2P"';
+      ctx.fillStyle = locBanner.color;
+      ctx.textBaseline = 'middle';
+      ctx.fillText(locBanner.nameEn, textStartX, bannerY + 27);
+    }
+
+    // Subtle right-side fade gradient for polish
+    const gradX = slideX + cw - 40;
+    const grad = ctx.createLinearGradient(gradX, 0, slideX + cw, 0);
+    grad.addColorStop(0, 'rgba(10, 10, 30, 0)');
+    grad.addColorStop(1, locBanner.color + '40'); // 25% opacity brand color
+    ctx.fillStyle = grad;
+    ctx.fillRect(gradX, bannerY + accentH, 40, bannerH - accentH - 2);
+
+    ctx.restore();
+  }
+
+  function isLocationBannerActive() {
+    return locBanner.active;
+  }
+
   // Save indicator -- brief flash when game auto-saves
   let saveIndicatorTimer = 0;
   function showSaveIndicator() {
@@ -1247,5 +1369,7 @@ const Engine = (() => {
     renderTitle,
     // Save indicator
     showSaveIndicator, updateSaveIndicator, renderSaveIndicator,
+    // Location banner
+    showLocationBanner, updateLocationBanner, renderLocationBanner, isLocationBannerActive,
   };
 })();

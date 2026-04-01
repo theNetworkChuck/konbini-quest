@@ -124,6 +124,7 @@
     Engine.updateDoorAnimation(dt);
     Engine.updateParticles(dt);
     Engine.updateSaveIndicator(dt);
+    Engine.updateLocationBanner(dt);
     Dialogue.update(dt);
 
     // Update weather only on street (map 0) — indoors has no weather
@@ -603,6 +604,10 @@
           // Play store chime as we enter
           GameAudio.playStoreChime(targetMap.store);
 
+          // Show location name banner (Pokemon-style)
+          const bannerColor = STORE_COLORS[targetMap.store] || '#888';
+          Engine.showLocationBanner(targetMap.nameJp, targetMap.name, bannerColor);
+
           // Show greeting after fade-in
           setTimeout(() => {
             if (!state.greetingShown) {
@@ -632,6 +637,12 @@
 
         // Auto-save when leaving a store
         autoSave();
+
+        // Show street location banner when exiting
+        const streetMap = Maps.allMaps[0];
+        if (warp.targetMap === 0 && streetMap) {
+          Engine.showLocationBanner(streetMap.nameJp, streetMap.name, '#f1c40f');
+        }
 
         Engine.startFadeIn();
       });
@@ -3994,6 +4005,9 @@
     // Particle effects (sparkles + star bursts — above dialogue/overlays)
     Engine.renderParticles(state.time);
 
+    // Location name banner (above scene, below door/fade)
+    Engine.renderLocationBanner();
+
     // Sliding door animation overlay (above scene, below fade)
     Engine.renderDoorAnimation();
 
@@ -4213,6 +4227,18 @@
   window.testVoice = (text) => {
     text = text || 'いらっしゃいませ';
     GameAudio.speakJapanese(text);
+  };
+
+  // Test location banners from console
+  window.testLocationBanner = (store) => {
+    const stores = {
+      '7-Eleven': { jp: 'セブンイレブン', en: '7-Eleven', color: '#d4380d' },
+      'Lawson': { jp: 'ローソン', en: 'Lawson', color: '#1a6fc4' },
+      'FamilyMart': { jp: 'ファミリーマート', en: 'FamilyMart', color: '#27ae60' },
+      'street': { jp: 'コンビニ通り', en: 'Konbini Street', color: '#f1c40f' },
+    };
+    const s = stores[store] || stores['7-Eleven'];
+    Engine.showLocationBanner(s.jp, s.en, s.color);
   };
 
   // ============ INIT ============
