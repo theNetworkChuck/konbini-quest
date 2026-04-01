@@ -283,6 +283,10 @@ const Engine = (() => {
         if (npc.isPronunciationGuide && NPCs.isPronunciationReady()) {
           Sprites.drawPronunciationBubble(ctx, sx, sy, time);
         }
+        // Show conversation bubble above conversation coach when ready
+        if (npc.isConversationCoach && NPCs.isConversationPracticeReady()) {
+          Sprites.drawConversationBubble(ctx, sx, sy, time);
+        }
       }
 
       // Show "!" when player is adjacent and facing

@@ -667,6 +667,35 @@ const Sprites = (() => {
     'N': '#e91e9b', // hot pink musical note accent
   };
 
+
+  // Conversation Practice Coach (Yuri) — friendly young woman with a clipboard, warm orange/brown tones
+  const npcConversationCoach = `
+....HHHH....
+...HhHhHh..
+..HhHhHhH..
+..HSSSSSH..
+..SSEESSE..
+..SSMSSMS..
+..SSSbSSS..
+..SSMMSS...
+...CCCC....
+..CcCcCc...
+.CcNNCcNc..
+.CcNNCcNc..
+..CcCcCc...
+...LLLL....
+..LlLlLl...
+..WW..WW...`;
+
+  const npcConversationCoachPalette = {
+    'H': '#5c3a1e', 'h': '#7a4f2e', // warm brown hair
+    'S': '#f5d0a9', 's': '#e0b88a', 'E': '#1a1a2e', 'W': '#fff',
+    'M': '#d06070', 'b': '#f0a0a0', // pink smile and blush
+    'C': '#e67e22', 'c': '#d35400', // orange cardigan
+    'N': '#f5e6d3', // clipboard/notepad
+    'L': '#2c3e50', 'l': '#1a252f', // dark navy pants
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     schoolgirl:  { frames: [npcSchoolGirl, npcSchoolGirlWalk], palette: npcSchoolGirlPalette },
@@ -679,6 +708,7 @@ const Sprites = (() => {
     politenesscoach: { frames: [npcPolitenessCoach], palette: npcPolitenessCoachPalette },
     speedcoach: { frames: [npcSpeedCoach], palette: npcSpeedCoachPalette },
     pronunciationguide: { frames: [npcPronunciationGuide], palette: npcPronunciationGuidePalette },
+    conversationcoach: { frames: [npcConversationCoach], palette: npcConversationCoachPalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
@@ -1505,6 +1535,92 @@ const Sprites = (() => {
     ctx.fillText(rating, bx + (bw - ratingW) / 2, by + 40);
 
     ctx.globalAlpha = 1;
+  }
+
+
+  // Conversation practice bubble (speech lines icon, orange/warm)
+  function drawConversationBubble(ctx, x, y, time) {
+    const pulse = Math.sin(time * 3.5) * 0.15 + 0.85;
+    ctx.globalAlpha = pulse;
+    // Bubble background (warm orange)
+    ctx.fillStyle = '#d35400';
+    ctx.fillRect(x + 2, y - 14, 12, 10);
+    ctx.fillRect(x + 5, y - 4, 6, 2);
+    // Speech bubble icon (two overlapping speech bubbles)
+    ctx.fillStyle = '#f5e6d3';
+    ctx.fillRect(x + 4, y - 13, 6, 4); // bubble 1
+    ctx.fillRect(x + 4, y - 9, 2, 1);  // tail 1
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x + 7, y - 11, 5, 4); // bubble 2
+    ctx.fillRect(x + 10, y - 7, 2, 1); // tail 2
+    ctx.globalAlpha = 1;
+  }
+
+  // Conversation scenario selection overlay
+  function drawConversationMenu(ctx, canvasW, canvasH, scenarios, selectedIdx, stats) {
+    // Dark overlay background
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Title header
+    ctx.fillStyle = '#e67e22';
+    ctx.font = 'bold 10px monospace';
+    const title = '会話練習 Conversation Practice';
+    const titleW = ctx.measureText(title).width;
+    ctx.fillText(title, (canvasW - titleW) / 2, 18);
+
+    // Stats line
+    ctx.fillStyle = '#aaa';
+    ctx.font = '7px monospace';
+    const statsText = `Completed: ${stats.scenariosUnlocked}/${stats.totalScenarios} | Score: ${stats.totalCorrect}/${stats.totalAttempted}`;
+    const statsW = ctx.measureText(statsText).width;
+    ctx.fillText(statsText, (canvasW - statsW) / 2, 30);
+
+    // Scenario list
+    const startY = 42;
+    const itemH = 22;
+    ctx.font = '8px monospace';
+
+    for (let i = 0; i < scenarios.length; i++) {
+      const s = scenarios[i];
+      const y = startY + i * itemH;
+      const isSelected = i === selectedIdx;
+
+      // Highlight selected
+      if (isSelected) {
+        ctx.fillStyle = 'rgba(230, 126, 34, 0.3)';
+        ctx.fillRect(8, y - 9, canvasW - 16, itemH - 2);
+        // Blinking cursor
+        if (Math.floor(Date.now() / 400) % 2 === 0) {
+          ctx.fillStyle = '#e67e22';
+          ctx.fillText('▶', 12, y + 2);
+        }
+      }
+
+      // Emoji + title
+      ctx.fillStyle = s.completed ? '#2ecc71' : '#fff';
+      const label = `${s.emoji} ${s.titleJp} - ${s.title}`;
+      ctx.fillText(label, 24, y + 2);
+
+      // Difficulty dots
+      ctx.fillStyle = '#f39c12';
+      for (let d = 0; d < s.difficulty; d++) {
+        ctx.fillRect(canvasW - 22 + d * 5, y - 1, 3, 3);
+      }
+
+      // Checkmark if completed
+      if (s.completed) {
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillText('✓', canvasW - 36, y + 2);
+      }
+    }
+
+    // Instructions
+    ctx.fillStyle = '#888';
+    ctx.font = '7px monospace';
+    const hint = '[↑↓] Select  [A] Start  [B] Close';
+    const hintW = ctx.measureText(hint).width;
+    ctx.fillText(hint, (canvasW - hintW) / 2, canvasH - 8);
   }
 
   // Pronunciation guide bubble (musical note icon, purple/pink)
@@ -3329,6 +3445,8 @@ const Sprites = (() => {
     drawCulturalNotesOverlay,
     // Speed round
     drawSpeedBubble,
+    drawConversationBubble,
+    drawConversationMenu,
     drawSpeedTimer,
     drawSpeedResultBanner,
     // Pronunciation guide

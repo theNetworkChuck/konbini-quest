@@ -55,6 +55,9 @@
     // Title menu (save/load)
     titleMenuIdx: 0,
     hasSaveData: false,
+    // Conversation practice
+    conversationMenuOpen: false,
+    conversationMenuIdx: 0,
   };
 
   let audioInitialized = false;
@@ -249,6 +252,29 @@
       if (speedGameState.resultTimer <= 0) {
         speedGameState.showingResult = false;
       }
+    }
+
+    // Handle conversation scenario menu overlay
+    if (state.conversationMenuOpen) {
+      const dir = Engine.inputDir();
+      const scenarioList = NPCs.getConversationScenarioList();
+      if (dir === 'up' && state.conversationMenuIdx > 0) {
+        state.conversationMenuIdx--;
+        GameAudio.playMove && GameAudio.playMove();
+      } else if (dir === 'down' && state.conversationMenuIdx < scenarioList.length - 1) {
+        state.conversationMenuIdx++;
+        GameAudio.playMove && GameAudio.playMove();
+      }
+      if (Engine.inputA()) {
+        state.conversationMenuOpen = false;
+        GameAudio.playSelect();
+        startConversationScenario(scenarioList[state.conversationMenuIdx].id);
+      }
+      if (Engine.inputB()) {
+        state.conversationMenuOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
     }
 
     // Handle cultural notes overlay
@@ -610,6 +636,11 @@
     // Check if this is the Pronunciation Guide NPC
     if (npc.isPronunciationGuide) {
       interactWithPronunciationGuide(npc);
+      return;
+    }
+    // Check if this is the Conversation Practice NPC
+    if (npc.isConversationCoach) {
+      interactWithConversationCoach(npc);
       return;
     }
     const dialogue = NPCs.getStreetDialogue(npc);
@@ -2348,6 +2379,225 @@
 
   // ============ VARIABLE REWARD TRIGGER ============
   // Called after any correct answer to roll for a bonus phrase reward
+  
+
+  // ============ CONVERSATION PRACTICE ============
+  const conversationGameState = {
+    inConversation: false,
+    scenario: null,
+    turnIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithConversationCoach(npc) {
+    if (!NPCs.isConversationPracticeReady()) {
+      Dialogue.show('Yuri', [
+        '会話 (kaiwa) means conversation!',
+        'Complete at least one store level first.',
+        'Then come back and we\'ll practice full konbini conversations!',
+        '会話練習は一番大事！ Conversation practice is the most important!'
+      ]);
+      return;
+    }
+
+    const stats = NPCs.getConversationStats();
+
+    // Show scenario selection menu
+    state.conversationMenuOpen = true;
+    state.conversationMenuIdx = 0;
+    GameAudio.playAlert();
+  }
+
+  function startConversationScenario(scenarioId) {
+    const scenario = NPCs.CONVERSATION_SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+
+    conversationGameState.inConversation = true;
+    conversationGameState.scenario = scenario;
+    conversationGameState.turnIdx = 0;
+    conversationGameState.correct = 0;
+    conversationGameState.total = scenario.turns.length;
+
+    // Preload all Japanese phrases for this scenario
+    preloadConversationPhrases(scenario);
+
+    // Intro dialogue
+    Dialogue.show('Yuri', [
+      `${scenario.emoji} ${scenario.titleJp}! ${scenario.title}`,
+      scenario.intro,
+      '準備はいい？ Ready? Let\'s go!'
+    ], () => {
+      runConversationTurn();
+    });
+  }
+
+  function preloadConversationPhrases(scenario) {
+    if (!scenario || !scenario.turns) return;
+    const phrases = new Set();
+    for (const turn of scenario.turns) {
+      if (turn.lineJp) phrases.add(turn.lineJp);
+      if (turn.options) {
+        for (const opt of turn.options) {
+          const text = opt.text || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase);
+    }
+  }
+
+  function runConversationTurn() {
+    if (conversationGameState.turnIdx >= conversationGameState.scenario.turns.length) {
+      finishConversation();
+      return;
+    }
+
+    const turn = conversationGameState.scenario.turns[conversationGameState.turnIdx];
+    const tNum = conversationGameState.turnIdx + 1;
+    const tTotal = conversationGameState.total;
+    const header = `Turn ${tNum}/${tTotal}`;
+
+    if (turn.speaker === 'clerk' || turn.speaker === 'narrator') {
+      // Clerk or narrator speaks first, then quiz
+      const lines = [];
+      if (turn.lineJp) {
+        if (turn.speaker === 'clerk') GameAudio.speakJapanese(turn.lineJp);
+        lines.push(turn.lineJp);
+      }
+      if (turn.lineEn) lines.push(turn.lineEn);
+      if (turn.question) lines.push(turn.question);
+
+      const speakerName = turn.speaker === 'clerk' ? 'Clerk' : header;
+      Dialogue.show(speakerName, lines, () => {
+        showConversationQuiz(turn);
+      });
+    } else {
+      // Player starts (player_start) - just show the question
+      const lines = [];
+      if (turn.lineEn) lines.push(turn.lineEn);
+      if (turn.question) lines.push(turn.question);
+
+      Dialogue.show(header, lines, () => {
+        showConversationQuiz(turn);
+      });
+    }
+  }
+
+  function showConversationQuiz(turn) {
+    const options = turn.options.map(o => ({
+      text: o.text || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleConversationAnswer(turn, selected);
+    });
+  }
+
+  function handleConversationAnswer(turn, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      GameAudio.playRegisterBeep();
+      Engine.spawnSparkles();
+      conversationGameState.correct++;
+
+      // Speak the player's correct Japanese response
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      // Roll for variable reward
+      tryVariableReward();
+
+      const encouragements = [
+        '正解! Correct!', 'いいね! Nice!',
+        'スムーズ! Smooth!', '会話上手! Great conversation skills!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = turn.correctExplanation || '';
+
+      Dialogue.show('Yuri', explanation ? [msg, explanation] : msg, () => {
+        conversationGameState.turnIdx++;
+        runConversationTurn();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+
+      // Record in mistake journal
+      const correctOpt = turn.options ? turn.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: turn.lineJp || turn.question || '',
+        clerkEn: turn.lineEn || '',
+        chosenText: selected.text || '',
+        correctText: correctOpt ? (correctOpt.text || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: 'Conversation',
+      });
+
+      const explanation = turn.wrongExplanation || 'Not quite...';
+      Dialogue.show('Yuri', [
+        'もう一回！ Let\'s try that...',
+        explanation
+      ], () => {
+        conversationGameState.turnIdx++;
+        runConversationTurn();
+      });
+    }
+  }
+
+  function finishConversation() {
+    const correct = conversationGameState.correct;
+    const total = conversationGameState.total;
+    const scenario = conversationGameState.scenario;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completeConversationScenario(scenario.id, correct, total);
+    const stats = NPCs.getConversationStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '完璧! Perfect conversation! ★★★';
+    else if (pct >= 60) rating = 'いいね! Good job! ★★☆';
+    else rating = 'もう少し! Keep practicing! ★☆☆';
+
+    const resultLines = [
+      `Conversation Complete: ${correct}/${total} correct!`,
+      rating,
+      `Scenarios mastered: ${stats.scenariosUnlocked}/${stats.totalScenarios}`,
+    ];
+
+    if (stats.scenariosUnlocked >= stats.totalScenarios) {
+      resultLines.push('\u{1F389} 全シナリオクリア！ You\'ve mastered all conversations!');
+    } else {
+      resultLines.push('Come back to practice more conversations!');
+    }
+
+    Dialogue.show('Yuri', resultLines, () => {
+      conversationGameState.inConversation = false;
+      conversationGameState.scenario = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
+    });
+  }
+
+
   function tryVariableReward() {
     const chalState = NPCs.getChallengeState();
     const reward = NPCs.rollVariableReward(chalState.streak);
@@ -2978,7 +3228,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !pitchGuideState.active && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !pitchGuideState.active && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -3064,6 +3314,13 @@
         NPCs.getMistakeJournal(),
         state.time
       );
+    }
+
+    // Conversation scenario selection menu
+    if (state.conversationMenuOpen) {
+      const scenarioList = NPCs.getConversationScenarioList();
+      const stats = NPCs.getConversationStats();
+      Sprites.drawConversationMenu(ctx, Engine.CANVAS_W, Engine.CANVAS_H, scenarioList, state.conversationMenuIdx, stats);
     }
 
     // Cultural notes collection overlay

@@ -118,6 +118,16 @@ const NPCs = (() => {
       ]
     },
 
+
+    // Conversation Practice NPC (multi-turn conversation scenarios)
+    { map: 0, x: 11, y: 9, type: 'conversationcoach', name: 'Yuri', dir: 'down',
+      isConversationCoach: true,
+      dialogues: [
+        "会話 (kaiwa) means conversation! I'm Yuri, your conversation partner.",
+        "Let's practice full konbini conversations from start to finish!",
+        "Real fluency comes from handling an entire exchange smoothly!"
+      ]
+    },
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
       isClerk: true },
@@ -2246,6 +2256,389 @@ const NPCs = (() => {
 
 
 
+
+  // ============ CONVERSATION PRACTICE SYSTEM ============
+  // Full multi-turn konbini conversations: player picks a scenario,
+  // then goes through a realistic clerk-customer exchange step by step
+  const CONVERSATION_SCENARIOS = [
+    {
+      id: 'buy_coffee',
+      title: 'Buying Coffee',
+      titleJp: 'コーヒーを買う',
+      emoji: '☕',
+      difficulty: 1,
+      intro: 'You walk up to the register with a hot coffee. Let\'s handle the whole checkout!',
+      turns: [
+        {
+          speaker: 'clerk',
+          lineJp: 'いらっしゃいませ！こちらの商品でよろしいですか？',
+          lineEn: 'Welcome! Is it just this item?',
+          question: 'The clerk is asking if this is everything. How do you respond?',
+          options: [
+            { text: 'はい、お願いします', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: 'いいえ、まだです', romaji: 'Iie, mada desu', en: 'No, not yet', correct: false },
+            { text: '[黙って頷く]', en: 'Nod silently (not ideal)', correct: false },
+          ],
+          correctExplanation: 'はい、お願いします is the standard confirmation. Clear and polite!',
+          wrongExplanation: 'When confirming your purchase, say はい、お願いします (Yes, please).',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'ポイントカードはお持ちですか？',
+          lineEn: 'Do you have a point card?',
+          question: 'The clerk is asking about your point card.',
+          options: [
+            { text: '持ってないです', romaji: 'Motte nai desu', en: 'I don\'t have one', correct: true },
+            { text: 'はい、あります', romaji: 'Hai, arimasu', en: 'Yes, I have one', correct: true },
+            { text: 'ポイントカード？', en: 'Point card? (confused)', correct: false },
+          ],
+          correctExplanation: 'Both are natural responses. 持ってないです or ないです are the most common tourist answers!',
+          wrongExplanation: 'Say 持ってないです (I don\'t have one) or ないです. It\'s completely fine!',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '百五十円でございます。お支払い方法は？',
+          lineEn: 'That will be 150 yen. Payment method?',
+          question: 'Time to pay! Choose your method.',
+          options: [
+            { text: '現金でお願いします', romaji: 'Genkin de onegaishimasu', en: 'Cash, please', correct: true },
+            { text: 'Suicaでお願いします', romaji: 'Suica de onegaishimasu', en: 'Suica, please', correct: true },
+            { text: 'Money...', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'Pattern: [method] + で + お願いします works for ANY payment method!',
+          wrongExplanation: 'Say the method in Japanese + で + お願いします. 現金 = cash, カード = card, Suica, etc.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'レシートはよろしいですか？',
+          lineEn: 'Do you need the receipt?',
+          question: 'The clerk is asking about the receipt.',
+          options: [
+            { text: '大丈夫です', romaji: 'Daijoubu desu', en: 'No, I\'m fine', correct: true },
+            { text: 'はい、お願いします', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: 'No', en: '(in English)', correct: false },
+          ],
+          correctExplanation: '大丈夫です is the go-to phrase to politely decline anything at konbini!',
+          wrongExplanation: 'Say 大丈夫です (I\'m fine) to decline, or はい、お願いします to accept.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'ありがとうございました。またお越しくださいませ！',
+          lineEn: 'Thank you! Please come again!',
+          question: 'The clerk thanks you. What do you say as you leave?',
+          options: [
+            { text: 'ありがとうございます', romaji: 'Arigatou gozaimasu', en: 'Thank you', correct: true },
+            { text: 'どうも', romaji: 'Doumo', en: 'Thanks (casual)', correct: true },
+            { text: '[何も言わない]', en: 'Say nothing (acceptable but cold)', correct: false },
+          ],
+          correctExplanation: 'A quick ありがとうございます or casual どうも is perfect. Japanese appreciate the acknowledgment!',
+          wrongExplanation: 'A simple ありがとうございます or どうも as you leave makes a good impression.',
+        },
+      ]
+    },
+    {
+      id: 'buy_bento',
+      title: 'Buying Bento for Lunch',
+      titleJp: 'お弁当を買う',
+      emoji: '🍱',
+      difficulty: 2,
+      intro: 'Lunchtime! You grab a bento and head to the register. This one has extra clerk questions!',
+      turns: [
+        {
+          speaker: 'clerk',
+          lineJp: 'お弁当温めますか？',
+          lineEn: 'Would you like the bento heated?',
+          question: 'The clerk asks if you want your bento microwaved.',
+          options: [
+            { text: 'お願いします', romaji: 'Onegaishimasu', en: 'Yes, please', correct: true },
+            { text: 'そのままで大丈夫です', romaji: 'Sono mama de daijoubu desu', en: 'As is, I\'m fine', correct: true },
+            { text: 'Hot?', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'お願いします to heat, or そのままで大丈夫です to skip. Both are natural!',
+          wrongExplanation: 'Say お願いします (yes please) or そのままで大丈夫です (no thanks, as is).',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'お箸はおつけしますか？',
+          lineEn: 'Would you like chopsticks?',
+          question: 'Do you need chopsticks?',
+          options: [
+            { text: 'お願いします', romaji: 'Onegaishimasu', en: 'Yes, please', correct: true },
+            { text: 'いらないです', romaji: 'Iranai desu', en: 'No, I don\'t need them', correct: true },
+            { text: 'Chopsticks?', en: '(confused English)', correct: false },
+          ],
+          correctExplanation: 'お箸 = chopsticks. You can also ask for スプーン (spoon) or フォーク (fork)!',
+          wrongExplanation: 'Say お願いします (yes) or いらないです (no). Simple pattern for any offer!',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '袋はご利用ですか？',
+          lineEn: 'Would you like a bag?',
+          question: 'Plastic bags cost 3-5 yen since 2020.',
+          options: [
+            { text: 'お願いします', romaji: 'Onegaishimasu', en: 'Yes, please', correct: true },
+            { text: '大丈夫です', romaji: 'Daijoubu desu', en: 'No thanks', correct: true },
+            { text: 'Bag please', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'Bags cost 3-5 yen. Many Japanese bring a マイバッグ (reusable bag)!',
+          wrongExplanation: 'Say お願いします (yes) or 大丈夫です (no, I\'m fine).',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '五百円でございます。お支払いは？',
+          lineEn: 'That\'s 500 yen. Payment?',
+          question: 'Choose how to pay.',
+          options: [
+            { text: '現金でお願いします', romaji: 'Genkin de onegaishimasu', en: 'Cash, please', correct: true },
+            { text: 'カードでお願いします', romaji: 'Kaado de onegaishimasu', en: 'Card, please', correct: true },
+            { text: '[お金を出す]', en: 'Just put money on counter', correct: false },
+          ],
+          correctExplanation: 'Always SAY your payment method. The clerk needs to select it on the register!',
+          wrongExplanation: 'Tell the clerk! 現金 (cash), カード (card), or Suica + でお願いします.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'お釣り二百円でございます。レシートは？',
+          lineEn: 'Here\'s 200 yen change. Receipt?',
+          question: 'Clerk gives change and asks about receipt.',
+          options: [
+            { text: '大丈夫です。ありがとうございます', romaji: 'Daijoubu desu. Arigatou gozaimasu', en: 'No thanks. Thank you!', correct: true },
+            { text: 'はい、お願いします', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: '[黙って立ち去る]', en: 'Leave silently', correct: false },
+          ],
+          correctExplanation: 'Declining the receipt + thank you is the most common combo. Smooth checkout!',
+          wrongExplanation: 'Say 大丈夫です (no thanks) or はい、お願いします (yes please) for the receipt.',
+        },
+      ]
+    },
+    {
+      id: 'ask_bathroom',
+      title: 'Asking for the Bathroom',
+      titleJp: 'トイレを借りる',
+      emoji: '🚻',
+      difficulty: 2,
+      intro: 'You need the restroom at the konbini. This is a common real-world situation!',
+      turns: [
+        {
+          speaker: 'player_start',
+          lineJp: null,
+          lineEn: 'You approach the clerk to ask about the restroom.',
+          question: 'How do you ask to use the bathroom?',
+          options: [
+            { text: 'すみません、トイレお借りしてもいいですか？', romaji: 'Sumimasen, toire okari shite mo ii desu ka?', en: 'Excuse me, may I use the restroom?', correct: true },
+            { text: 'トイレはどこですか？', romaji: 'Toire wa doko desu ka?', en: 'Where is the restroom?', correct: true },
+            { text: 'Bathroom?', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'Both work! The polite お借りして form is best, but どこですか is fine too.',
+          wrongExplanation: 'Say すみません、トイレお借りしてもいいですか？ to politely ask.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'はい、奥にございます。どうぞお使いください。',
+          lineEn: 'Yes, it\'s in the back. Please go ahead.',
+          question: 'The clerk says the bathroom is in the back (奥). How do you respond?',
+          options: [
+            { text: 'ありがとうございます', romaji: 'Arigatou gozaimasu', en: 'Thank you', correct: true },
+            { text: 'すみません', romaji: 'Sumimasen', en: 'Thank you (lit. sorry for the trouble)', correct: true },
+            { text: 'OK', en: '(too casual)', correct: false },
+          ],
+          correctExplanation: 'すみません here means "thanks for the trouble" -- very natural in this situation!',
+          wrongExplanation: 'Say ありがとうございます or すみません (thanks for the trouble).',
+        },
+        {
+          speaker: 'narrator',
+          lineJp: '（トイレを使った後）',
+          lineEn: '(After using the restroom)',
+          question: 'You\'re done. Do you say anything to the clerk on the way out?',
+          options: [
+            { text: 'ありがとうございました', romaji: 'Arigatou gozaimashita', en: 'Thank you (past tense)', correct: true },
+            { text: 'すみませんでした', romaji: 'Sumimasen deshita', en: 'Sorry for the trouble', correct: true },
+            { text: '[何も言わずに出る]', en: 'Leave without saying anything', correct: false },
+          ],
+          correctExplanation: 'Past tense ございました shows appreciation for something already done. Polite and natural!',
+          wrongExplanation: 'A quick thank you shows good manners. ありがとうございました (past tense) is perfect here.',
+        },
+      ]
+    },
+    {
+      id: 'buy_hot_food',
+      title: 'Ordering Hot Food',
+      titleJp: 'ホットスナックを注文する',
+      emoji: '🍗',
+      difficulty: 2,
+      intro: 'Fried chicken (ファミチキ) and nikuman are behind the counter. You need to ask for them!',
+      turns: [
+        {
+          speaker: 'player_start',
+          lineJp: null,
+          lineEn: 'You want to order fried chicken from the hot food case behind the clerk.',
+          question: 'How do you ask for hot food behind the counter?',
+          options: [
+            { text: 'すみません、ファミチキ一つお願いします', romaji: 'Sumimasen, famichiki hitotsu onegaishimasu', en: 'Excuse me, one fried chicken please', correct: true },
+            { text: 'あのチキンをください', romaji: 'Ano chikin wo kudasai', en: 'That chicken, please', correct: true },
+            { text: '[指を差す]', en: 'Just point (no words)', correct: false },
+          ],
+          correctExplanation: 'すみません + item + 一つ + お願いします is the perfect pattern for ordering counter items!',
+          wrongExplanation: 'Use: すみません + item name + 一つ(hitotsu = one) + お願いします.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'ファミチキ一つですね。他に何かございますか？',
+          lineEn: 'One fried chicken. Anything else?',
+          question: 'The clerk confirms and asks if you want anything else.',
+          options: [
+            { text: '以上でお願いします', romaji: 'Ijou de onegaishimasu', en: 'That\'s all, please', correct: true },
+            { text: '肉まんも一つお願いします', romaji: 'Nikuman mo hitotsu onegaishimasu', en: 'One nikuman too, please', correct: true },
+            { text: 'No', en: '(in English)', correct: false },
+          ],
+          correctExplanation: '以上で (ijou de) means "that\'s all" -- very useful at any register!',
+          wrongExplanation: 'Say 以上でお願いします (that\'s all) or add more items with も一つお願いします.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '袋はご利用ですか？お支払い方法は？',
+          lineEn: 'Would you like a bag? And payment method?',
+          question: 'The clerk asks about bag and payment together.',
+          options: [
+            { text: '袋はいらないです。PayPayでお願いします', romaji: 'Fukuro wa iranai desu. PayPay de onegaishimasu', en: 'No bag. PayPay, please', correct: true },
+            { text: 'お願いします。現金で', romaji: 'Onegaishimasu. Genkin de', en: 'Yes (bag). Cash', correct: true },
+            { text: '[迷う]', en: 'Look confused', correct: false },
+          ],
+          correctExplanation: 'Combining bag + payment in one response is natural and efficient!',
+          wrongExplanation: 'Handle both questions: いらないです/お願いします for bag + payment method + でお願いします.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'ありがとうございます。お気をつけて！',
+          lineEn: 'Thank you! Take care!',
+          question: 'The clerk says take care as you leave.',
+          options: [
+            { text: 'ありがとう！', romaji: 'Arigatou!', en: 'Thanks!', correct: true },
+            { text: 'どうも', romaji: 'Doumo', en: 'Thanks (casual)', correct: true },
+            { text: '[無視する]', en: 'Ignore them', correct: false },
+          ],
+          correctExplanation: 'A quick casual thanks is perfect for leaving. お気をつけて = take care!',
+          wrongExplanation: 'A simple ありがとう or どうも is friendly and natural.',
+        },
+      ]
+    },
+    {
+      id: 'buy_alcohol',
+      title: 'Buying Alcohol (Age Check)',
+      titleJp: 'お酒を買う（年齢確認）',
+      emoji: '🍺',
+      difficulty: 3,
+      intro: 'Buying beer requires age verification in Japan. The legal age is 20, not 18!',
+      turns: [
+        {
+          speaker: 'clerk',
+          lineJp: 'お酒のお買い物ですね。年齢確認をお願いいたします。画面のボタンを押してください。',
+          lineEn: 'You\'re buying alcohol. Please confirm your age by pressing the screen button.',
+          question: 'The clerk points to the age verification screen on the register. What do you do?',
+          options: [
+            { text: '[画面の「20歳以上です」を押す]', en: 'Press the "I am 20 or over" button', correct: true },
+            { text: '二十歳以上です', romaji: 'Hatachi ijou desu', en: 'I\'m 20 or older (verbal)', correct: false },
+            { text: 'パスポートを見せる', romaji: 'Pasupooto wo miseru', en: 'Show passport', correct: false },
+          ],
+          correctExplanation: 'You MUST press the screen button yourself. The clerk cannot press it for you -- it\'s the law!',
+          wrongExplanation: 'You must physically press the 「20歳以上です」 button on the register screen.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'ありがとうございます。他にお買い物はございますか？',
+          lineEn: 'Thank you. Anything else?',
+          question: 'After age verification, the clerk asks if there\'s more.',
+          options: [
+            { text: 'それだけです', romaji: 'Sore dake desu', en: 'Just that', correct: true },
+            { text: 'おつまみも一つ', romaji: 'Otsumami mo hitotsu', en: 'And one snack too', correct: true },
+            { text: 'That\'s all', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'それだけです is another natural way to say "that\'s all" -- more casual than 以上で.',
+          wrongExplanation: 'Say それだけです (just that) or 以上でお願いします (that\'s all, please).',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '三百五十円です。お支払い方法は？',
+          lineEn: '350 yen. Payment method?',
+          question: 'Time to pay for your beer.',
+          options: [
+            { text: '現金でお願いします', romaji: 'Genkin de onegaishimasu', en: 'Cash, please', correct: true },
+            { text: 'Suicaでお願いします', romaji: 'Suica de onegaishimasu', en: 'Suica, please', correct: true },
+            { text: 'いくらですか？', romaji: 'Ikura desu ka?', en: 'How much? (already told)', correct: false },
+          ],
+          correctExplanation: 'Same pattern every time! [method] + で + お願いします works at every konbini.',
+          wrongExplanation: 'Use [payment method] + でお願いします. The price was already stated!',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'お釣りでございます。レシートはよろしいですか？',
+          lineEn: 'Here\'s your change. Receipt?',
+          question: 'Final exchange -- change and receipt.',
+          options: [
+            { text: '大丈夫です。ありがとうございます', romaji: 'Daijoubu desu. Arigatou gozaimasu', en: 'No receipt. Thank you!', correct: true },
+            { text: 'お願いします', romaji: 'Onegaishimasu', en: 'Yes, please (receipt)', correct: true },
+            { text: 'Thanks', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'Great job! You handled a full alcohol purchase with age verification. 乾杯！',
+          wrongExplanation: 'Say 大丈夫です (no thanks) or お願いします (yes) for the receipt.',
+        },
+      ]
+    },
+  ];
+
+  // Conversation practice state
+  const conversationState = {
+    practicesCompleted: 0,
+    scenariosCompleted: [], // IDs of completed scenarios
+    lastPracticeTime: 0,
+    totalCorrect: 0,
+    totalAttempted: 0,
+  };
+
+  function isConversationPracticeReady() {
+    return completedLevelsCount >= 1;
+  }
+
+  function getNextConversationScenario() {
+    const unseen = CONVERSATION_SCENARIOS.filter(s => !conversationState.scenariosCompleted.includes(s.id));
+    if (unseen.length > 0) {
+      unseen.sort((a, b) => a.difficulty - b.difficulty);
+      return unseen[0];
+    }
+    return CONVERSATION_SCENARIOS[Math.floor(Math.random() * CONVERSATION_SCENARIOS.length)];
+  }
+
+  function getConversationScenarioList() {
+    return CONVERSATION_SCENARIOS.map(s => ({
+      id: s.id,
+      title: s.title,
+      titleJp: s.titleJp,
+      emoji: s.emoji,
+      difficulty: s.difficulty,
+      completed: conversationState.scenariosCompleted.includes(s.id),
+    }));
+  }
+
+  function completeConversationScenario(scenarioId, correct, total) {
+    if (!conversationState.scenariosCompleted.includes(scenarioId)) {
+      conversationState.scenariosCompleted.push(scenarioId);
+    }
+    conversationState.practicesCompleted++;
+    conversationState.totalCorrect += correct;
+    conversationState.totalAttempted += total;
+    conversationState.lastPracticeTime = Date.now();
+  }
+
+  function getConversationStats() {
+    return {
+      completed: conversationState.practicesCompleted,
+      scenariosUnlocked: conversationState.scenariosCompleted.length,
+      totalScenarios: CONVERSATION_SCENARIOS.length,
+      totalCorrect: conversationState.totalCorrect,
+      totalAttempted: conversationState.totalAttempted,
+    };
+  }
+
   // ============ SPEED ROUND SYSTEM ============
   // Timed rapid-fire quiz that tests recall under pressure
   // Requirements: player must have at least 4 tracked phrases
@@ -2612,6 +3005,13 @@ const NPCs = (() => {
       // Achievements
       unlockedAchievements: [...unlockedAchievements],
       bestStreakEver,
+      // Conversation practice
+      conversationState: {
+        practicesCompleted: conversationState.practicesCompleted,
+        scenariosCompleted: [...conversationState.scenariosCompleted],
+        totalCorrect: conversationState.totalCorrect,
+        totalAttempted: conversationState.totalAttempted,
+      },
       // Speed round stats
       speedRoundState: {
         roundsCompleted: speedRoundState.roundsCompleted,
@@ -2730,6 +3130,13 @@ const NPCs = (() => {
       }
       if (typeof data.bestStreakEver === 'number') {
         bestStreakEver = data.bestStreakEver;
+      }
+      // Conversation practice
+      if (data.conversationState) {
+        conversationState.practicesCompleted = data.conversationState.practicesCompleted || 0;
+        conversationState.scenariosCompleted = data.conversationState.scenariosCompleted || [];
+        conversationState.totalCorrect = data.conversationState.totalCorrect || 0;
+        conversationState.totalAttempted = data.conversationState.totalAttempted || 0;
       }
       // Speed round
       if (data.speedRoundState) {
@@ -2924,6 +3331,13 @@ const NPCs = (() => {
     getTotalNoteCount,
     hasNewNotes,
     markNotesViewed,
+    // Conversation practice
+    CONVERSATION_SCENARIOS,
+    isConversationPracticeReady,
+    getNextConversationScenario,
+    getConversationScenarioList,
+    completeConversationScenario,
+    getConversationStats,
     // Speed round
     isSpeedRoundReady,
     buildSpeedRoundQuiz,
