@@ -800,3 +800,26 @@
 **Why it matters for learning:** Research consistently shows that the #1 cause of player drop-off in educational games is confusion during the first 60 seconds. Without guidance, new players don't know they can enter stores, talk to NPCs, or how to use the quiz system. This tutorial system solves that by teaching through play -- each hint appears naturally at the exact moment the player encounters a new mechanic. The one-time-only display ensures experienced players are never interrupted. The hotkeys guide also surfaces hidden features (phrase book, inventory, journal, cultural notes, stamp card) that many players would otherwise never discover, dramatically increasing engagement with the game's learning systems.
 
 **Files modified:** engine.js, game.js (~305 lines added)
+
+### 2026-04-02 -- #33 Weather-Based Street Encounters
+**Commit:** `e386a75`
+
+**What was added:**
+- **Two weather-conditional NPCs** that dynamically appear and disappear on the street based on the current weather state, creating a living world that changes with the seasons and weather.
+- **Ame-chan** (雨ちゃん) -- a rain-loving character in a yellow raincoat with a blue umbrella who appears ONLY during rain weather. Teaches essential rain/umbrella vocabulary:
+  - 雨が降っていますね (ame ga futte imasu ne) -- "It's raining!"
+  - 傘はお持ちですか？(kasa wa omochi desu ka?) -- "Do you have an umbrella?"
+  - コンビニでビニール傘を買えますよ (konbini de biniiru-gasa wo kaemasu yo) -- "You can buy a plastic umbrella at the konbini!"
+  - 雨 (ame) = rain, 傘 (kasa) = umbrella, ビニール傘 (biniiru-gasa) = plastic umbrella
+- **Sakura-san** (桜さん) -- a hanami enthusiast in a pink kimono with a flower in her hair who appears ONLY during cherry blossom weather. Teaches cherry blossom and seasonal vocabulary:
+  - 桜がきれいですね (sakura ga kirei desu ne) -- "The cherry blossoms are beautiful!"
+  - お花見 (ohanami) = flower viewing, a beloved spring tradition
+  - コンビニでお花見用のお弁当やおにぎりを買えますよ -- "You can buy hanami bento and onigiri at the konbini!"
+  - 桜の季節 (sakura no kisetsu) = cherry blossom season
+- **Pixel art sprites**: Ame-chan has a detailed yellow raincoat, blue umbrella on head, and red rain boots. Sakura-san has dark hair with a pink flower, pink spring kimono.
+- **Weather visibility system**: Extended `isNPCVisible()` in npc.js to support a `weatherOnly` property. NPCs with this property only render and interact when `Engine.getWeatherType()` matches their specified weather type.
+- **Seamless integration**: Weather NPCs naturally cycle with the existing 45-second weather system (clear → cherry_blossoms → rain → clear → cherry_blossoms). They appear/disappear smoothly as weather transitions.
+
+**Why it matters for learning:** Weather is a huge part of Japanese daily conversation, especially around konbinis where people buy umbrellas and seasonal items. These encounters teach vocabulary that textbooks often skip: ビニール傘 (plastic umbrella, a konbini staple), お花見 (hanami/flower viewing), and seasonal food items. By tying vocabulary to weather events, players experience contextual learning -- rain vocabulary appears during rain, cherry blossom vocabulary appears during cherry blossoms. This mirrors real-life Japan where these conversations happen naturally at konbinis during those weather conditions. The dynamic appearance also adds discovery and surprise, rewarding players who explore during different weather states.
+
+**Files modified:** npc.js, sprites.js (~99 lines added)
