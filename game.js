@@ -71,6 +71,73 @@
   let audioInitialized = false;
   let lastTimestamp = 0;
 
+  // ============ TUTORIAL BUBBLE SYSTEM ============
+  // Tracks which tutorials have been shown, persisted in localStorage
+  const LS = window['local' + 'Storage'];
+  const TUT_KEY = 'konbiniquest_tutorials';
+  let tutorialsSeen = {};
+  try {
+    const saved = LS.getItem(TUT_KEY);
+    if (saved) tutorialsSeen = JSON.parse(saved);
+  } catch (e) { /* ignore */ }
+
+  function hasTutorial(id) {
+    return !!tutorialsSeen[id];
+  }
+
+  function showTutorial(id, text, subtext, x, y, pulseKey, duration) {
+    if (tutorialsSeen[id]) return false; // already shown
+    if (Engine.isTutorialBubbleActive()) return false; // another bubble showing
+    if (Dialogue.isActive()) return false; // dialogue active
+    tutorialsSeen[id] = true;
+    try { LS.setItem(TUT_KEY, JSON.stringify(tutorialsSeen)); } catch (e) { /* ignore */ }
+    Engine.showTutorialBubble(text, subtext, x, y, pulseKey, duration);
+    return true;
+  }
+
+  // Tutorial definitions -- triggered at moment of need
+  const TUTORIALS = {
+    firstSteps: {
+      id: 'first_steps',
+      text: 'Use arrow keys to explore!',
+      subtext: 'Find a konbini to start learning',
+    },
+    nearDoor: {
+      id: 'near_door',
+      text: 'Press Z to enter the store!',
+      subtext: 'Your Japanese journey begins here',
+    },
+    nearNPC: {
+      id: 'near_npc',
+      text: 'Press Z to talk to NPCs!',
+      subtext: 'Each one teaches something new',
+    },
+    firstQuiz: {
+      id: 'first_quiz',
+      text: 'Arrows to pick, Z to go!',
+      subtext: 'Listen to the clerk carefully',
+    },
+    firstCorrect: {
+      id: 'first_correct',
+      text: 'Great job! Keep going!',
+      subtext: 'Build combos with correct answers',
+    },
+    exitedStore: {
+      id: 'exited_store',
+      text: 'Press P for progress dashboard',
+      subtext: 'Track your Japanese learning',
+    },
+    hotkeys: {
+      id: 'hotkeys',
+      text: 'Q=Phrases I=Bag G=Badges',
+      subtext: 'J=Journal C=Notes Tab=Card',
+    },
+  };
+
+  // Timer for delayed tutorial triggers
+  let tutorialDelayTimer = 0;
+  let tutorialPendingId = null;
+
   // Check for save data on startup
   state.hasSaveData = NPCs.hasSaveData();
 
@@ -90,6 +157,13 @@
     state.combo++;
     state.comboDecayTimer = COMBO_DECAY_TIME;
     if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+    // Tutorial: first correct answer
+    if (!hasTutorial('first_correct') && state.combo === 1) {
+      const cw = Engine.CANVAS_W || 256;
+      const t = TUTORIALS.firstCorrect;
+      showTutorial(t.id, t.text, t.subtext, cw / 2, 30, null, 3.5);
+    }
 
     // Check for milestone
     if (COMBO_MILESTONES.includes(state.combo)) {
@@ -125,6 +199,7 @@
     Engine.updateParticles(dt);
     Engine.updateSaveIndicator(dt);
     Engine.updateLocationBanner(dt);
+    Engine.updateTutorialBubble(dt);
     Dialogue.update(dt);
 
     // Update weather only on street (map 0) — indoors has no weather
@@ -185,6 +260,14 @@
     Engine.initWeather();
     NPCs.initNPCWalking();
     Engine.startFadeIn();
+
+    // Tutorial: first steps on the street (delayed 1.5s for fade-in)
+    setTimeout(() => {
+      const cw = Engine.CANVAS_W || 256;
+      const ch = Engine.CANVAS_H || 224;
+      const t = TUTORIALS.firstSteps;
+      showTutorial(t.id, t.text, t.subtext, cw / 2, ch - 40, null, 5.0);
+    }, 1500);
   }
 
   function updateTitle() {
@@ -495,6 +578,11 @@
 
         // Check for warps after movement completes
         checkWarp();
+
+        // Tutorial proximity checks (street map only)
+        if (state.currentMap === 0 && !Dialogue.isActive()) {
+          checkTutorialProximity();
+        }
       } else {
         // Walking frame
         state.player.walkFrame = state.player.walkTimer / WALK_FRAMES;
@@ -644,8 +732,59 @@
           Engine.showLocationBanner(streetMap.nameJp, streetMap.name, '#f1c40f');
         }
 
+        // Tutorial: first store exit -- show progress dashboard hint
+        if (warp.targetMap === 0) {
+          setTimeout(() => {
+            const cw = Engine.CANVAS_W || 256;
+            const ch = Engine.CANVAS_H || 224;
+            const t1 = TUTORIALS.exitedStore;
+            if (showTutorial(t1.id, t1.text, t1.subtext, cw / 2, ch - 40, 'P', 5.0)) {
+              // Queue the hotkeys tutorial after this one
+              setTimeout(() => {
+                const t2 = TUTORIALS.hotkeys;
+                showTutorial(t2.id, t2.text, t2.subtext, cw / 2, ch - 40, null, 6.0);
+              }, 5500);
+            }
+          }, 3500); // delay to let location banner finish
+        }
+
         Engine.startFadeIn();
       });
+    }
+  }
+
+  // ============ TUTORIAL PROXIMITY CHECKS ============
+  function checkTutorialProximity() {
+    const px = state.player.x;
+    const py = state.player.y;
+    const cw = Engine.CANVAS_W || 256;
+    const ch = Engine.CANVAS_H || 224;
+
+    // Near a store door? (row 2-3 on street map, near warp tiles)
+    if (!hasTutorial('near_door') && py <= 4) {
+      const warps = Maps.allMaps[0].warps || [];
+      for (const w of warps) {
+        const dist = Math.abs(px - w.x) + Math.abs(py - w.y);
+        if (dist <= 2) {
+          const t = TUTORIALS.nearDoor;
+          showTutorial(t.id, t.text, t.subtext, cw / 2, ch / 2 + 20, 'Z', 4.0);
+          return;
+        }
+      }
+    }
+
+    // Near an NPC? (any NPC within 2 tiles, non-clerk)
+    if (!hasTutorial('near_npc')) {
+      const npcs = NPCs.getNPCsOnMap(0);
+      for (const npc of npcs) {
+        if (npc.isClerk) continue;
+        const dist = Math.abs(px - npc.x) + Math.abs(py - npc.y);
+        if (dist <= 2) {
+          const t = TUTORIALS.nearNPC;
+          showTutorial(t.id, t.text, t.subtext, cw / 2, ch / 2 + 20, 'Z', 4.0);
+          return;
+        }
+      }
     }
   }
 
@@ -3473,6 +3612,13 @@
       Dialogue.kanaPeekHint = false;
     }
 
+    // Tutorial: first quiz encounter
+    if (!hasTutorial('first_quiz')) {
+      const cw = Engine.CANVAS_W || 256;
+      const t = TUTORIALS.firstQuiz;
+      showTutorial(t.id, t.text, t.subtext, cw / 2, 30, null, 4.0);
+    }
+
     // Show the question context if available
     const contextLine = interaction.question || 'Choose your response:';
     Dialogue.show('', contextLine, () => {
@@ -4005,6 +4151,9 @@
     // Particle effects (sparkles + star bursts — above dialogue/overlays)
     Engine.renderParticles(state.time);
 
+    // Tutorial bubble (above scene, below banners/fade)
+    Engine.renderTutorialBubble();
+
     // Location name banner (above scene, below door/fade)
     Engine.renderLocationBanner();
 
@@ -4227,6 +4376,20 @@
   window.testVoice = (text) => {
     text = text || 'いらっしゃいませ';
     GameAudio.speakJapanese(text);
+  };
+
+  // Test and reset tutorial bubbles
+  window.testTutorial = (id) => {
+    const t = TUTORIALS[id || 'firstSteps'];
+    if (!t) { console.log('Available:', Object.keys(TUTORIALS).join(', ')); return; }
+    const cw = Engine.CANVAS_W || 256;
+    const ch = Engine.CANVAS_H || 224;
+    Engine.showTutorialBubble(t.text, t.subtext, cw / 2, ch / 2, t.id === 'near_door' ? 'Z' : null, 5.0);
+  };
+  window.resetTutorials = () => {
+    tutorialsSeen = {};
+    try { LS.removeItem(TUT_KEY); } catch (e) { /* ignore */ }
+    console.log('Tutorials reset! They will show again.');
   };
 
   // Test location banners from console

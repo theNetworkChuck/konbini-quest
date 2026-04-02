@@ -1321,6 +1321,146 @@ const Engine = (() => {
     return locBanner.active;
   }
 
+  // ============ TUTORIAL BUBBLE SYSTEM ============
+  // Contextual help bubbles that appear at the moment of need
+  let tutBubble = {
+    active: false,
+    text: '',        // Main text
+    subtext: '',     // Smaller hint text below
+    x: 0,           // Screen position
+    y: 0,
+    timer: 0,
+    duration: 5.0,   // How long to show (seconds)
+    fadeIn: 0,       // 0-1 fade-in progress
+    pulseKey: '',    // Key name to pulse-animate (e.g. 'Z', 'arrows')
+  };
+
+  function showTutorialBubble(text, subtext, x, y, pulseKey, duration) {
+    tutBubble.active = true;
+    tutBubble.text = text || '';
+    tutBubble.subtext = subtext || '';
+    tutBubble.x = x != null ? x : CANVAS_W / 2;
+    tutBubble.y = y != null ? y : CANVAS_H - 60;
+    tutBubble.timer = 0;
+    tutBubble.duration = duration || 5.0;
+    tutBubble.fadeIn = 0;
+    tutBubble.pulseKey = pulseKey || '';
+  }
+
+  function dismissTutorialBubble() {
+    tutBubble.active = false;
+  }
+
+  function updateTutorialBubble(dt) {
+    if (!tutBubble.active) return;
+    tutBubble.timer += dt;
+    tutBubble.fadeIn = Math.min(1, tutBubble.timer / 0.3);
+    if (tutBubble.timer >= tutBubble.duration) {
+      tutBubble.active = false;
+    }
+  }
+
+  function renderTutorialBubble() {
+    if (!tutBubble.active) return;
+    const alpha = tutBubble.fadeIn * (tutBubble.timer > tutBubble.duration - 0.5
+      ? Math.max(0, (tutBubble.duration - tutBubble.timer) / 0.5) : 1);
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Measure text to size the bubble
+    ctx.font = '8px "Press Start 2P"';
+    const mainW = ctx.measureText(tutBubble.text).width;
+    ctx.font = '6px "Press Start 2P"';
+    const subW = tutBubble.subtext ? ctx.measureText(tutBubble.subtext).width : 0;
+    const textW = Math.max(mainW, subW);
+
+    const padX = 12;
+    const padY = 8;
+    const bubbleW = Math.min(textW + padX * 2, CANVAS_W - 12);
+    const bubbleH = tutBubble.subtext ? 34 : 22;
+    let bx = tutBubble.x - bubbleW / 2;
+    let by = tutBubble.y - bubbleH / 2;
+
+    // Clamp to screen
+    bx = Math.max(4, Math.min(CANVAS_W - bubbleW - 4, bx));
+    by = Math.max(4, Math.min(CANVAS_H - bubbleH - 4, by));
+
+    // Bobbing animation
+    const bob = Math.sin(tutBubble.timer * 2.5) * 2;
+    by += bob;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    roundRect(ctx, bx + 2, by + 2, bubbleW, bubbleH, 6);
+    ctx.fill();
+
+    // Background
+    const grad = ctx.createLinearGradient(bx, by, bx, by + bubbleH);
+    grad.addColorStop(0, '#2a1f5e');
+    grad.addColorStop(1, '#1a1240');
+    ctx.fillStyle = grad;
+    roundRect(ctx, bx, by, bubbleW, bubbleH, 6);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = '#f1c40f';
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, bx, by, bubbleW, bubbleH, 6);
+    ctx.stroke();
+
+    // Key icon pulse (left side)
+    if (tutBubble.pulseKey) {
+      const pulse = 0.8 + Math.sin(tutBubble.timer * 4) * 0.2;
+      const kx = bx - 14;
+      const ky = by + bubbleH / 2;
+      ctx.save();
+      ctx.globalAlpha = alpha * pulse;
+      ctx.fillStyle = '#f1c40f';
+      ctx.font = '7px "Press Start 2P"';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tutBubble.pulseKey, kx, ky);
+      ctx.restore();
+    }
+
+    // Main text
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(tutBubble.text, bx + padX, by + padY);
+
+    // Sub text
+    if (tutBubble.subtext) {
+      ctx.font = '6px "Press Start 2P"';
+      ctx.fillStyle = '#f1c40f';
+      ctx.fillText(tutBubble.subtext, bx + padX, by + padY + 14);
+    }
+
+    ctx.restore();
+  }
+
+  function isTutorialBubbleActive() {
+    return tutBubble.active;
+  }
+
+  // Rounded rectangle helper
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.lineTo(x + w - r, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r);
+    c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r);
+    c.quadraticCurveTo(x, y, x + r, y);
+    c.closePath();
+  }
+
   // Save indicator -- brief flash when game auto-saves
   let saveIndicatorTimer = 0;
   function showSaveIndicator() {
@@ -1371,5 +1511,7 @@ const Engine = (() => {
     showSaveIndicator, updateSaveIndicator, renderSaveIndicator,
     // Location banner
     showLocationBanner, updateLocationBanner, renderLocationBanner, isLocationBannerActive,
+    // Tutorial bubbles
+    showTutorialBubble, dismissTutorialBubble, updateTutorialBubble, renderTutorialBubble, isTutorialBubbleActive,
   };
 })();
