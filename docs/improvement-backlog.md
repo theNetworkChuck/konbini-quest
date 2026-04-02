@@ -778,3 +778,25 @@
 **Why it matters for learning:** Location banners are a signature feature of Pokemon games that create a sense of arrival and significance when entering a new area. This reinforces the store name association in both Japanese and English every time the player enters -- passive katakana reading practice that happens naturally during gameplay. The Japanese katakana rendering of store names (セブンイレブン, ローソン, ファミリーマート) gives players authentic exposure to how these brands are written in Japan, building real-world recognition for when they visit actual Japanese konbinis. The banner also creates a brief moment of anticipation before the clerk greeting, making each store visit feel like entering a new Pokemon area.
 
 **Files modified:** engine.js, game.js (~150 lines added)
+
+### 2026-04-02 -- #32 Interactive Tutorial Bubbles
+**Commit:** `67a068c`
+
+**What was added:**
+- **Contextual tutorial bubble system** that teaches players through play at the exact moment they need each hint -- following BBC GEL and GameRefinery onboarding best practices.
+- **7 tutorial trigger points** covering the full new-player journey:
+  1. **First steps** ("Use arrow keys to explore! / Find a konbini to start learning") -- appears 1.5 seconds after first game start
+  2. **Near store door** ("Press Z to enter the store! / Your Japanese journey begins here") -- triggers when player walks within 2 tiles of a store entrance
+  3. **Near NPC** ("Press Z to talk to NPCs! / Each one teaches something new") -- triggers when player walks within 2 tiles of a street NPC
+  4. **First quiz** ("Arrows to pick, Z to go! / Listen to the clerk carefully") -- appears when the first quiz choice is presented
+  5. **First correct answer** ("Great job! Keep going! / Build combos with correct answers") -- appears after the player's first correct answer
+  6. **Store exit** ("Press P for progress dashboard / Track your Japanese learning") -- appears after first store exit
+  7. **Hotkeys guide** ("Q=Phrases I=Bag G=Badges / J=Journal C=Notes Tab=Card") -- queued after the store exit tutorial
+- **One-time display** -- each tutorial shows exactly once per player, tracked in localStorage. Returning players never see them again.
+- **Visual design**: Dark purple gradient bubbles (#2a1f5e to #1a1240) with gold (#f1c40f) border. Pulsing key icon animation for actionable hints. Smooth 0.3s fade-in and 0.5s fade-out. Gentle bobbing motion.
+- **Auto-clamping** -- bubbles automatically stay within canvas bounds to prevent text overflow on the 256px-wide game canvas.
+- **Testing hooks**: `window.testTutorial('nearDoor')` to preview any tutorial, `window.resetTutorials()` to clear all seen flags.
+
+**Why it matters for learning:** Research consistently shows that the #1 cause of player drop-off in educational games is confusion during the first 60 seconds. Without guidance, new players don't know they can enter stores, talk to NPCs, or how to use the quiz system. This tutorial system solves that by teaching through play -- each hint appears naturally at the exact moment the player encounters a new mechanic. The one-time-only display ensures experienced players are never interrupted. The hotkeys guide also surfaces hidden features (phrase book, inventory, journal, cultural notes, stamp card) that many players would otherwise never discover, dramatically increasing engagement with the game's learning systems.
+
+**Files modified:** engine.js, game.js (~305 lines added)
