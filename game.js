@@ -308,9 +308,10 @@
   function updatePlaying(dt) {
     if (Engine.isFading() || Engine.isDoorAnimating()) return;
 
-    // Update NPC walk cycles (street map only)
+    // Update NPC walk cycles and ambient speech bubbles (street map only)
     if (state.currentMap === 0) {
       NPCs.updateNPCWalking(state.player.x, state.player.y, Dialogue.isActive());
+      NPCs.updateAmbientBubbles(dt);
     }
 
     // Update stamp notification timer

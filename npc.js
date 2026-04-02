@@ -3881,6 +3881,138 @@ const NPCs = (() => {
     }
   }
 
+  // ============ AMBIENT SPEECH BUBBLES ============
+  // NPC-type-appropriate ambient phrases that display periodically above street NPCs
+  const AMBIENT_PHRASES = {
+    sensei: [
+      { jp: '復習は大事ですよ', en: 'Review is important', romaji: 'fukushuu wa daiji desu yo' },
+      { jp: '毎日練習しましょう', en: 'Let\'s practice every day', romaji: 'mainichi renshuu shimashou' },
+      { jp: 'がんばって！', en: 'Do your best!', romaji: 'ganbatte!' },
+      { jp: '日本語は楽しいね', en: 'Japanese is fun, right?', romaji: 'nihongo wa tanoshii ne' },
+    ],
+    oldman: [
+      { jp: '今日もいい天気じゃ', en: 'Nice weather today', romaji: 'kyou mo ii tenki ja' },
+      { jp: 'わしの若い頃は...', en: 'Back in my day...', romaji: 'washi no wakai koro wa...' },
+      { jp: 'お腹すいたのう', en: 'I\'m hungry...', romaji: 'onaka suita nou' },
+      { jp: 'ふぉっふぉっふぉ', en: '*chuckling*', romaji: 'foffofo' },
+    ],
+    schoolgirl: [
+      { jp: 'やばい！遅刻する！', en: 'Oh no! I\'ll be late!', romaji: 'yabai! chikoku suru!' },
+      { jp: 'マジで？ウケる！', en: 'Seriously? LOL!', romaji: 'maji de? ukeru!' },
+      { jp: 'プリクラ撮りたい～', en: 'Wanna take purikura~', romaji: 'purikura toritai~' },
+      { jp: 'お菓子買いに行こ', en: 'Let\'s go buy snacks', romaji: 'okashi kai ni iko' },
+    ],
+    businessman: [
+      { jp: 'お疲れ様です', en: 'Good work today', romaji: 'otsukaresama desu' },
+      { jp: '会議に遅れる！', en: 'Late for the meeting!', romaji: 'kaigi ni okureru!' },
+      { jp: 'コーヒー飲みたい', en: 'I want coffee', romaji: 'koohii nomitai' },
+      { jp: '今日も残業か...', en: 'Overtime again...', romaji: 'kyou mo zangyou ka...' },
+    ],
+    challenger: [
+      { jp: '次は負けないよ！', en: 'I won\'t lose next time!', romaji: 'tsugi wa makenai yo!' },
+      { jp: 'もっと強くなる', en: 'I\'ll get stronger', romaji: 'motto tsuyoku naru' },
+      { jp: '練習あるのみ！', en: 'Practice is everything!', romaji: 'renshuu aru nomi!' },
+    ],
+    paymentcoach: [
+      { jp: 'お会計はこちらです', en: 'Payment is over here', romaji: 'okaikei wa kochira desu' },
+      { jp: '現金？カード？', en: 'Cash? Card?', romaji: 'genkin? kaado?' },
+    ],
+    seasonalguide: [
+      { jp: '季節の味を楽しんで', en: 'Enjoy seasonal flavors', romaji: 'kisetsu no aji wo tanoshinde' },
+      { jp: '旬のものは美味しい', en: 'Seasonal food is delicious', romaji: 'shun no mono wa oishii' },
+    ],
+    politenesscoach: [
+      { jp: '敬語は大切です', en: 'Keigo is important', romaji: 'keigo wa taisetsu desu' },
+      { jp: '丁寧に話しましょう', en: 'Let\'s speak politely', romaji: 'teinei ni hanashimashou' },
+    ],
+    kansaicoach: [
+      { jp: 'なんでやねん！', en: 'Why the heck?!', romaji: 'nandeyanen!' },
+      { jp: 'めっちゃええやん', en: 'That\'s really great', romaji: 'meccha ee yan' },
+      { jp: 'おおきに～', en: 'Thanks~ (Kansai)', romaji: 'ookini~' },
+    ],
+    speedcoach: [
+      { jp: '速い！速い！', en: 'Fast! Fast!', romaji: 'hayai! hayai!' },
+      { jp: 'タイムアタック！', en: 'Time attack!', romaji: 'taimu atakku!' },
+    ],
+    pronunciationguide: [
+      { jp: '発音に気をつけて', en: 'Watch your pronunciation', romaji: 'hatsuon ni ki wo tsukete' },
+      { jp: 'アクセントが大事', en: 'Accent matters', romaji: 'akusento ga daiji' },
+    ],
+    conversationcoach: [
+      { jp: '会話を楽しもう', en: 'Let\'s enjoy conversation', romaji: 'kaiwa wo tanoshimou' },
+      { jp: '自然に話そう', en: 'Speak naturally', romaji: 'shizen ni hanasou' },
+    ],
+    onomatopoeiacoach: [
+      { jp: 'ワクワクする！', en: '*excited*', romaji: 'wakuwaku suru!' },
+      { jp: 'ピカピカ！', en: '*sparkling*', romaji: 'pikapika!' },
+      { jp: 'ドキドキ...', en: '*heart pounding*', romaji: 'dokidoki...' },
+    ],
+    nightsalaryman: [
+      { jp: 'はぁ...疲れた', en: 'Haah... I\'m tired', romaji: 'haa... tsukareta' },
+      { jp: '一杯飲みたい...', en: 'I want a drink...', romaji: 'ippai nomitai...' },
+      { jp: '終電大丈夫かな', en: 'Will I make the last train?', romaji: 'shuuden daijoubu kana' },
+    ],
+    rainperson: [
+      { jp: 'すごい雨ですね', en: 'Such heavy rain', romaji: 'sugoi ame desu ne' },
+      { jp: '傘忘れちゃった', en: 'I forgot my umbrella', romaji: 'kasa wasurechatta' },
+    ],
+    hanami: [
+      { jp: '桜がきれい～', en: 'The sakura are pretty~', romaji: 'sakura ga kirei~' },
+      { jp: 'お花見日和ですね', en: 'Perfect day for hanami', romaji: 'ohanami biyori desu ne' },
+    ],
+  };
+
+  // State for ambient bubbles: { npcIdx: { phrase, timer, active, cooldown } }
+  const ambientBubbleState = {};
+
+  function updateAmbientBubbles(dt) {
+    const streetNPCs = getNPCsOnMap(0);
+    for (let i = 0; i < streetNPCs.length; i++) {
+      const npc = streetNPCs[i];
+      if (npc.isClerk) continue; // clerks don't get ambient bubbles
+      const npcIdx = getNPCIndex(npc);
+      const key = npcIdx;
+
+      if (!ambientBubbleState[key]) {
+        // Initialize with a random cooldown so bubbles don't all pop at once
+        ambientBubbleState[key] = {
+          phrase: null,
+          timer: 0,
+          active: false,
+          cooldown: 8 + Math.random() * 20, // 8-28s stagger
+        };
+      }
+
+      const bs = ambientBubbleState[key];
+
+      if (bs.active) {
+        bs.timer -= dt;
+        if (bs.timer <= 0) {
+          bs.active = false;
+          bs.cooldown = 12 + Math.random() * 18; // 12-30s between bubbles
+        }
+      } else {
+        bs.cooldown -= dt;
+        if (bs.cooldown <= 0) {
+          const phrases = AMBIENT_PHRASES[npc.type];
+          if (phrases && phrases.length > 0) {
+            bs.phrase = phrases[Math.floor(Math.random() * phrases.length)];
+            bs.timer = 3.5; // show for 3.5 seconds
+            bs.active = true;
+          } else {
+            bs.cooldown = 20; // no phrases for this type, try again later
+          }
+        }
+      }
+    }
+  }
+
+  function getAmbientBubble(npcIdx) {
+    const bs = ambientBubbleState[npcIdx];
+    if (!bs || !bs.active) return null;
+    return { phrase: bs.phrase, timer: bs.timer, maxTimer: 3.5 };
+  }
+
   function saveGame() {
     if (!storageAvailable) return false;
     try {
@@ -4086,6 +4218,9 @@ const NPCs = (() => {
     getNightShiftStats,
     // Progress dashboard
     getProgressDashboard,
+    // Ambient speech bubbles
+    updateAmbientBubbles,
+    getAmbientBubble,
     // Save / Load system
     saveGame,
     loadGame,

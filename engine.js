@@ -293,6 +293,15 @@ const Engine = (() => {
         }
       }
 
+      // Show ambient speech bubble above street NPCs
+      if (!npc.isClerk) {
+        const npcIdx = NPCs.getNPCIndex(npc);
+        const bubble = NPCs.getAmbientBubble(npcIdx);
+        if (bubble) {
+          renderAmbientBubble(ctx, sx, sy, bubble);
+        }
+      }
+
       // Show "!" when player is adjacent and facing
       const facingX = playerX + (playerDir === 'right' ? 1 : playerDir === 'left' ? -1 : 0);
       const facingY = playerY + (playerDir === 'down' ? 1 : playerDir === 'up' ? -1 : 0);
@@ -300,6 +309,87 @@ const Engine = (() => {
         Sprites.drawExclamation(ctx, sx, sy, time);
       }
     }
+  }
+
+  function renderAmbientBubble(ctx, sx, sy, bubble) {
+    const phrase = bubble.phrase;
+    if (!phrase) return;
+
+    // Fade in/out based on timer
+    const fadeInTime = 0.4;
+    const fadeOutTime = 0.6;
+    const elapsed = bubble.maxTimer - bubble.timer;
+    let alpha = 1;
+    if (elapsed < fadeInTime) {
+      alpha = elapsed / fadeInTime;
+    } else if (bubble.timer < fadeOutTime) {
+      alpha = bubble.timer / fadeOutTime;
+    }
+    if (alpha <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Measure text
+    ctx.font = '7px "Press Start 2P"';
+    const jpWidth = ctx.measureText(phrase.jp).width;
+    ctx.font = '5px "Press Start 2P"';
+    const enWidth = ctx.measureText(phrase.en).width;
+    const textW = Math.max(jpWidth, enWidth);
+
+    const padX = 6;
+    const padY = 4;
+    const bubbleW = textW + padX * 2;
+    const bubbleH = 24;
+    // Position above the NPC sprite, with gentle float
+    const floatY = Math.sin(elapsed * 2) * 1.5;
+    let bx = sx + T / 2 - bubbleW / 2;
+    let by = sy - bubbleH - 6 + floatY;
+
+    // Clamp to screen
+    bx = Math.max(2, Math.min(CANVAS_W - bubbleW - 2, bx));
+    by = Math.max(2, by);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    roundRect(ctx, bx + 1, by + 1, bubbleW, bubbleH, 4);
+    ctx.fill();
+
+    // Background
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    roundRect(ctx, bx, by, bubbleW, bubbleH, 4);
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = 'rgba(80,80,80,0.5)';
+    ctx.lineWidth = 0.5;
+    roundRect(ctx, bx, by, bubbleW, bubbleH, 4);
+    ctx.stroke();
+
+    // Small triangle pointer pointing down to NPC
+    const triX = sx + T / 2;
+    const triY = by + bubbleH;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath();
+    ctx.moveTo(triX - 3, triY);
+    ctx.lineTo(triX + 3, triY);
+    ctx.lineTo(triX, triY + 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Japanese text (main)
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillStyle = '#1a1a2e';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(phrase.jp, bx + bubbleW / 2, by + padY);
+
+    // English text (smaller, below)
+    ctx.font = '5px "Press Start 2P"';
+    ctx.fillStyle = '#666';
+    ctx.fillText(phrase.en, bx + bubbleW / 2, by + padY + 11);
+
+    ctx.restore();
   }
 
   // ============ HUD ============
