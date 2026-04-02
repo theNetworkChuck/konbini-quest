@@ -147,6 +147,31 @@ const NPCs = (() => {
         "The konbini is the salaryman's best friend at midnight..."
       ]
     },
+    // === WEATHER-CONDITIONAL NPCs ===
+    // Rain NPC: appears only during rain weather
+    { map: 0, x: 7, y: 7, type: 'rainperson', name: 'Ame-chan', dir: 'down',
+      weatherOnly: 'rain',
+      dialogues: [
+        "雨が降っていますね！(ame ga futte imasu ne!) -- It's raining!",
+        "傘はお持ちですか？(kasa wa omochi desu ka?) -- Do you have an umbrella?",
+        "コンビニでビニール傘を買えますよ！(konbini de biniiru-gasa wo kaemasu yo!) -- You can buy a plastic umbrella at the konbini!",
+        "雨の日 (ame no hi) means 'rainy day.' Rain is 雨 (ame), umbrella is 傘 (kasa).",
+        "In Japan, the rainy season is called 梅雨 (tsuyu). It's in June-July!",
+        "Japanese tip: 傘をお忘れなく！(kasa wo owasure naku!) -- Don't forget your umbrella!"
+      ]
+    },
+    // Cherry blossom NPC: appears only during cherry_blossoms weather
+    { map: 0, x: 13, y: 7, type: 'hanami', name: 'Sakura-san', dir: 'down',
+      weatherOnly: 'cherry_blossoms',
+      dialogues: [
+        "桜がきれいですね！(sakura ga kirei desu ne!) -- The cherry blossoms are beautiful!",
+        "お花見 (ohanami) means 'flower viewing.' It's a spring tradition!",
+        "コンビニでお花見用のお弁当やおにぎりを買えますよ！You can buy hanami bento and onigiri at the konbini!",
+        "桜の季節 (sakura no kisetsu) means 'cherry blossom season.' It's in March-April.",
+        "花見酒 (hanamizake) -- sake enjoyed while viewing blossoms. A classic experience!",
+        "Japanese saying: 花より団子 (hana yori dango) -- dumplings over flowers! Meaning food is better than beauty."
+      ]
+    },
     // === MAP 1: 7-ELEVEN CLERK ===
     { map: 1, x: 8, y: 10, type: 'clerk', store: '7-Eleven', name: 'Clerk', dir: 'down',
       isClerk: true },
@@ -923,12 +948,21 @@ const NPCs = (() => {
 
   // Helper: check if a night-shift NPC should be visible right now
   function isNPCVisible(npc) {
-    if (!npc.isNightShift) return true;
-    // Night shift NPCs only appear during 'night' time-of-day
-    if (typeof Engine !== 'undefined' && Engine.getTimeOfDay) {
-      return Engine.getTimeOfDay() === 'night';
+    // Weather-conditional NPCs: only appear during specific weather
+    if (npc.weatherOnly) {
+      if (typeof Engine !== 'undefined' && Engine.getWeatherType) {
+        return Engine.getWeatherType() === npc.weatherOnly;
+      }
+      return false;
     }
-    return false; // hide by default if engine not ready
+    // Night shift NPCs only appear during 'night' time-of-day
+    if (npc.isNightShift) {
+      if (typeof Engine !== 'undefined' && Engine.getTimeOfDay) {
+        return Engine.getTimeOfDay() === 'night';
+      }
+      return false;
+    }
+    return true;
   }
 
   function getNPCsOnMap(mapIdx) {

@@ -758,6 +758,65 @@ const Sprites = (() => {
     'O': '#1a1a1a', // black shoes
   };
 
+  // Rain NPC: Ame-chan (yellow raincoat, umbrella overhead)
+  const npcRainPerson = `
+..UUUUUUUU..
+.UuuuuuuuuU.
+..UUUUUUUU..
+....HHHH....
+...HSSHSH...
+..sSWEWEs...
+...sSMSs....
+..YYYYYYYYY.
+..YYYYYYYYY.
+..YY.YY.YYY.
+..YYYYYYYYY.
+...YY..YY...
+...BB..BB...
+...BB..BB...
+...OO..OO...
+...OO..OO...`;
+
+  const npcRainPersonPalette = {
+    'U': '#5090d0', 'u': '#70b0e8', // blue umbrella
+    'H': '#2a1a0a', // dark hair (wet)
+    'S': '#f0d0b0', 's': '#d8b898', // skin
+    'E': '#222', 'W': '#eee', // eyes
+    'M': '#d08080', // smile
+    'Y': '#f5d020', // yellow raincoat
+    'B': '#1a4a7a', // blue rain pants
+    'O': '#d04040', // red rain boots
+  };
+
+  // Cherry blossom NPC: Sakura-san (pink spring outfit, flower in hair)
+  const npcHanami = `
+....HHHH....
+...HHHHHH...
+..FHHHHHH...
+..sSWEWEs...
+...sSMSs....
+..ppppppp...
+..ppWppWpp..
+..ppWppWpp..
+..ppppppp...
+...pppppp...
+..pp..pp....
+..RR..RR....
+..RR..RR....
+...SS..SS...
+...SS..SS...
+...SS..SS...`;
+
+  const npcHanamiPalette = {
+    'H': '#2a1a0a', // dark hair
+    'F': '#ff88aa', // pink flower in hair
+    'S': '#f0d0b0', 's': '#d8b898', // skin
+    'E': '#222', 'W': '#eee', // eyes
+    'M': '#d06070', // smile
+    'p': '#ffb0c8', // pink spring kimono top
+    'R': '#cc4466', // darker pink bottom
+  };
+
   const npcSprites = {
     oldman:      { frames: [npcOldMan, npcOldManWalk], palette: npcOldManPalette },
     nightsalaryman: { frames: [npcNightSalaryman], palette: npcNightSalarymanPalette },
@@ -773,6 +832,8 @@ const Sprites = (() => {
     pronunciationguide: { frames: [npcPronunciationGuide], palette: npcPronunciationGuidePalette },
     conversationcoach: { frames: [npcConversationCoach], palette: npcConversationCoachPalette },
     onomatopoeiacoach: { frames: [npcOnomatopoeiaCoach], palette: npcOnomatopoeiaCoachPalette },
+    rainperson: { frames: [npcRainPerson], palette: npcRainPersonPalette },
+    hanami: { frames: [npcHanami], palette: npcHanamiPalette },
   };
 
   function drawNPC(ctx, x, y, type, dir, animFrame) {
