@@ -823,3 +823,26 @@
 **Why it matters for learning:** Weather is a huge part of Japanese daily conversation, especially around konbinis where people buy umbrellas and seasonal items. These encounters teach vocabulary that textbooks often skip: ビニール傘 (plastic umbrella, a konbini staple), お花見 (hanami/flower viewing), and seasonal food items. By tying vocabulary to weather events, players experience contextual learning -- rain vocabulary appears during rain, cherry blossom vocabulary appears during cherry blossoms. This mirrors real-life Japan where these conversations happen naturally at konbinis during those weather conditions. The dynamic appearance also adds discovery and surprise, rewarding players who explore during different weather states.
 
 **Files modified:** npc.js, sprites.js (~99 lines added)
+
+### 2026-04-02 -- #34 Ambient NPC Speech Bubbles
+**Commit:** `1e9d87c`
+
+**What was added:**
+- **Ambient speech bubbles** that periodically appear above street NPCs, showing context-appropriate Japanese phrases. Each bubble displays Japanese text on top with English translation below, fades in/out smoothly, and gently floats for an organic feel.
+- **40+ phrases across 15 NPC types**, each tailored to the character's role and personality:
+  - Sensei: fukushuu wa daiji desu yo, mainichi renshuu shimashou, ganbatte!
+  - Old Man: kyou mo ii tenki ja, washi no wakai koro wa, foffofo
+  - Schoolgirl: yabai! chikoku suru!, maji de? ukeru!, purikura toritai
+  - Businessman: otsukaresama desu, kaigi ni okureru!, koohii nomitai, zangyou ka...
+  - Kansai coach: nandeyanen!, meccha ee yan, ookini
+  - Onomatopoeia coach: wakuwaku, pikapika, dokidoki
+  - Night salaryman: tsukareta, ippai nomitai, shuuden daijoubu kana
+  - Weather NPCs (Ame-chan, Sakura-san): contextual rain/cherry blossom phrases
+  - Plus politeness, pronunciation, conversation, speed, payment, seasonal, and challenger coaches
+- **Smart scheduling**: each NPC has a random 8-28 second initial cooldown, then 12-30 second cooldowns between bubbles. This creates natural staggered conversation across the street rather than synchronized popups.
+- **Rendering**: white rounded bubbles with a triangle pointer, soft shadow, fade animation, gentle floating motion. Japanese text in 7px Press Start 2P, English in 5px gray.
+- **Smart positioning**: bubbles clamp to screen edges so they never get cut off, even when NPCs are at the edges of the visible area.
+
+**Why it matters for learning:** Passive exposure is one of the most powerful techniques in language acquisition. By overhearing realistic phrases that real people in Japan would say in everyday situations, players absorb natural Japanese without explicit study. The phrases capture authentic registers: salaryman fatigue ("kyou mo zangyou ka"), schoolgirl slang ("yabai", "ukeru"), elderly speech patterns ("ja", "nou"), Kansai dialect ("nandeyanen", "ookini"), and konbini-relevant utterances ("koohii nomitai", "kasa wasurechatta"). This creates a living Japanese street where players feel immersed in the language. It also reinforces phrases learned elsewhere in the game by hearing them used naturally in context, which is the gold standard for retention.
+
+**Files modified:** npc.js (phrase pools + state), engine.js (rendering), game.js (update loop hook). 227 lines added.
