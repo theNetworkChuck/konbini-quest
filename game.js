@@ -165,17 +165,32 @@
       showTutorial(t.id, t.text, t.subtext, cw / 2, 30, null, 3.5);
     }
 
-    // Check for milestone
+    // Reaction emote: pop a kawaii face / heart / fire above the dialogue area
+    // Combo milestone -> star, hot streak (5+) -> fire, every 3rd -> heart, otherwise happy
+    const cw = Engine.CANVAS_W || 256;
+    const ch = Engine.CANVAS_H || 240;
+    const emoteY = ch / 2 - 36; // above dialogue, below HUD
     if (COMBO_MILESTONES.includes(state.combo)) {
-      state.comboMilestone = { combo: state.combo, timer: 2.5 };
-      // Extra sparkles for milestones
+      Engine.spawnEmote('star', cw / 2, emoteY);
       Engine.spawnStarBurst();
+      state.comboMilestone = { combo: state.combo, timer: 2.5 };
+    } else if (state.combo >= 5 && state.combo % 5 === 0) {
+      Engine.spawnEmote('fire', cw / 2, emoteY);
+    } else if (state.combo > 0 && state.combo % 3 === 0) {
+      Engine.spawnEmote('heart', cw / 2, emoteY);
+    } else {
+      Engine.spawnEmote('happy', cw / 2, emoteY);
     }
   }
 
   function onWrongAnswer() {
     state.combo = 0;
     state.comboDecayTimer = 0;
+    // Reaction emote: classic anime sweatdrop
+    const cw = Engine.CANVAS_W || 256;
+    const ch = Engine.CANVAS_H || 240;
+    const emoteY = ch / 2 - 36;
+    Engine.spawnEmote('sweatdrop', cw / 2, emoteY);
   }
 
   // ============ GAME LOOP ============

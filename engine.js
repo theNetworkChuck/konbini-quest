@@ -1015,6 +1015,34 @@ const Engine = (() => {
     }
   }
 
+  /**
+   * Spawn a reaction emote (Pokemon-style) for quiz feedback.
+   * Floats up and fades. Types: 'happy' (correct), 'sweatdrop' (wrong),
+   * 'heart' (combo bonus), 'fire' (combo streak).
+   * @param {string} type - emote type
+   * @param {number} cx - center X (default: center of screen)
+   * @param {number} cy - center Y (default: above dialogue area)
+   */
+  function spawnEmote(type, cx, cy) {
+    if (cx === undefined) cx = CANVAS_W / 2;
+    if (cy === undefined) cy = CANVAS_H / 2 - 30;
+    particles.push({
+      type: 'emote',
+      emoteKind: type || 'happy',
+      x: cx,
+      y: cy,
+      vx: 0,
+      vy: type === 'sweatdrop' ? 12 : -22, // sweatdrop falls, others rise
+      size: 16,
+      life: 1.6,
+      maxLife: 1.6,
+      color: '#fff',
+      gravity: type === 'sweatdrop' ? 30 : -12, // gentle gravity
+      twinkleSpeed: 4,
+      bobble: Math.random() * Math.PI * 2,
+    });
+  }
+
   function updateParticles(dt) {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -1034,6 +1062,220 @@ const Engine = (() => {
     }
   }
 
+  /**
+   * Render an 8-bit kawaii reaction emote (Pokemon-style).
+   * Draws a 16x16 pixel emote with a slight horizontal bobble.
+   */
+  function renderEmote(ctx, p, time) {
+    const lifeRatio = p.life / p.maxLife;
+    // Pop-in scale: starts small, pops to full size, then fades
+    const popPhase = Math.min(1, (1 - lifeRatio) * 5); // first 20% of life
+    const popScale = popPhase < 1
+      ? 0.4 + popPhase * 0.6 + Math.sin(popPhase * Math.PI) * 0.25 // overshoot bounce
+      : 1.0;
+    // Fade out only in last 20%
+    const alpha = lifeRatio < 0.2 ? lifeRatio / 0.2 : 1.0;
+    // Subtle horizontal bobble
+    const bx = Math.sin(time * 4 + p.bobble) * 1.5;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(p.x + bx, p.y);
+    ctx.scale(popScale, popScale);
+    ctx.translate(-8, -8); // 16x16 sprite, draw centered
+
+    if (p.emoteKind === 'happy') {
+      drawHappyEmote(ctx);
+    } else if (p.emoteKind === 'sweatdrop') {
+      drawSweatdropEmote(ctx);
+    } else if (p.emoteKind === 'heart') {
+      drawHeartEmote(ctx);
+    } else if (p.emoteKind === 'fire') {
+      drawFireEmote(ctx);
+    } else if (p.emoteKind === 'star') {
+      drawStarEmote(ctx);
+    }
+
+    ctx.restore();
+  }
+
+  // 16x16 pixel-art emote sprites (drawn via fillRect for crisp 8-bit look)
+  function drawHappyEmote(ctx) {
+    // Yellow round face with closed-eye smile (kawaii happy face)
+    // Outline (black)
+    ctx.fillStyle = '#000';
+    ctx.fillRect(4, 1, 8, 1);  // top
+    ctx.fillRect(2, 2, 2, 1); ctx.fillRect(12, 2, 2, 1);
+    ctx.fillRect(1, 3, 1, 2); ctx.fillRect(14, 3, 1, 2);
+    ctx.fillRect(0, 5, 1, 6); ctx.fillRect(15, 5, 1, 6);
+    ctx.fillRect(1, 11, 1, 2); ctx.fillRect(14, 11, 1, 2);
+    ctx.fillRect(2, 13, 2, 1); ctx.fillRect(12, 13, 2, 1);
+    ctx.fillRect(4, 14, 8, 1); // bottom
+    // Yellow fill
+    ctx.fillStyle = '#ffe066';
+    ctx.fillRect(4, 2, 8, 1);
+    ctx.fillRect(2, 3, 12, 2);
+    ctx.fillRect(1, 5, 14, 6);
+    ctx.fillRect(2, 11, 12, 2);
+    ctx.fillRect(4, 13, 8, 1);
+    // Highlight (brighter)
+    ctx.fillStyle = '#fff5b8';
+    ctx.fillRect(3, 4, 2, 1);
+    ctx.fillRect(3, 5, 1, 1);
+    // Closed-eye arcs (^^)
+    ctx.fillStyle = '#000';
+    ctx.fillRect(4, 6, 1, 1); ctx.fillRect(5, 7, 1, 1); ctx.fillRect(6, 6, 1, 1);
+    ctx.fillRect(9, 6, 1, 1); ctx.fillRect(10, 7, 1, 1); ctx.fillRect(11, 6, 1, 1);
+    // Smile
+    ctx.fillRect(5, 10, 1, 1); ctx.fillRect(10, 10, 1, 1);
+    ctx.fillRect(6, 11, 4, 1);
+    // Pink cheeks (kawaii blush)
+    ctx.fillStyle = '#ff9eb1';
+    ctx.fillRect(2, 9, 1, 1); ctx.fillRect(3, 9, 1, 1);
+    ctx.fillRect(12, 9, 1, 1); ctx.fillRect(13, 9, 1, 1);
+  }
+
+  function drawSweatdropEmote(ctx) {
+    // Big anime-style sweatdrop (light blue teardrop with shine)
+    // Outline
+    ctx.fillStyle = '#1a4a7a';
+    ctx.fillRect(7, 1, 2, 1);
+    ctx.fillRect(6, 2, 1, 1); ctx.fillRect(9, 2, 1, 1);
+    ctx.fillRect(6, 3, 1, 1); ctx.fillRect(9, 3, 1, 1);
+    ctx.fillRect(5, 4, 1, 1); ctx.fillRect(10, 4, 1, 1);
+    ctx.fillRect(5, 5, 1, 1); ctx.fillRect(10, 5, 1, 1);
+    ctx.fillRect(4, 6, 1, 2); ctx.fillRect(11, 6, 1, 2);
+    ctx.fillRect(3, 8, 1, 2); ctx.fillRect(12, 8, 1, 2);
+    ctx.fillRect(3, 10, 1, 2); ctx.fillRect(12, 10, 1, 2);
+    ctx.fillRect(4, 12, 1, 1); ctx.fillRect(11, 12, 1, 1);
+    ctx.fillRect(5, 13, 2, 1); ctx.fillRect(9, 13, 2, 1);
+    ctx.fillRect(7, 14, 2, 1);
+    // Light blue fill
+    ctx.fillStyle = '#7cc4f0';
+    ctx.fillRect(7, 2, 2, 1);
+    ctx.fillRect(7, 3, 2, 1);
+    ctx.fillRect(6, 4, 4, 1);
+    ctx.fillRect(6, 5, 4, 1);
+    ctx.fillRect(5, 6, 6, 2);
+    ctx.fillRect(4, 8, 8, 2);
+    ctx.fillRect(4, 10, 8, 2);
+    ctx.fillRect(5, 12, 6, 1);
+    ctx.fillRect(7, 13, 2, 1);
+    // Lighter blue mid-tone
+    ctx.fillStyle = '#b0e0ff';
+    ctx.fillRect(8, 6, 1, 1);
+    ctx.fillRect(9, 7, 1, 1);
+    ctx.fillRect(10, 8, 1, 2);
+    // White shine highlight
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(5, 8, 1, 2);
+    ctx.fillRect(4, 9, 1, 1);
+    ctx.fillRect(6, 9, 1, 1);
+  }
+
+  function drawHeartEmote(ctx) {
+    // Pink kawaii heart with shine
+    // Outline
+    ctx.fillStyle = '#a01030';
+    ctx.fillRect(3, 3, 3, 1); ctx.fillRect(10, 3, 3, 1);
+    ctx.fillRect(2, 4, 1, 2); ctx.fillRect(13, 4, 1, 2);
+    ctx.fillRect(6, 4, 4, 1);
+    ctx.fillRect(2, 6, 1, 2); ctx.fillRect(13, 6, 1, 2);
+    ctx.fillRect(3, 8, 1, 1); ctx.fillRect(12, 8, 1, 1);
+    ctx.fillRect(4, 9, 1, 1); ctx.fillRect(11, 9, 1, 1);
+    ctx.fillRect(5, 10, 1, 1); ctx.fillRect(10, 10, 1, 1);
+    ctx.fillRect(6, 11, 1, 1); ctx.fillRect(9, 11, 1, 1);
+    ctx.fillRect(7, 12, 2, 1);
+    // Pink fill
+    ctx.fillStyle = '#ff5a85';
+    ctx.fillRect(3, 4, 3, 2);
+    ctx.fillRect(10, 4, 3, 2);
+    ctx.fillRect(6, 5, 4, 3);
+    ctx.fillRect(3, 6, 10, 2);
+    ctx.fillRect(4, 8, 8, 1);
+    ctx.fillRect(5, 9, 6, 1);
+    ctx.fillRect(6, 10, 4, 1);
+    ctx.fillRect(7, 11, 2, 1);
+    // White shine highlight
+    ctx.fillStyle = '#ffe0eb';
+    ctx.fillRect(4, 5, 1, 1);
+    ctx.fillRect(3, 5, 1, 1);
+    ctx.fillRect(4, 6, 1, 1);
+  }
+
+  function drawFireEmote(ctx) {
+    // Flame: red outer, orange middle, yellow core (combo streak)
+    // Red outer
+    ctx.fillStyle = '#c0260a';
+    ctx.fillRect(7, 1, 2, 1);
+    ctx.fillRect(6, 2, 4, 1);
+    ctx.fillRect(5, 3, 6, 1);
+    ctx.fillRect(4, 5, 1, 4);
+    ctx.fillRect(11, 5, 1, 4);
+    ctx.fillRect(3, 7, 1, 4);
+    ctx.fillRect(12, 7, 1, 4);
+    ctx.fillRect(2, 9, 1, 4);
+    ctx.fillRect(13, 9, 1, 4);
+    ctx.fillRect(3, 13, 2, 1);
+    ctx.fillRect(11, 13, 2, 1);
+    ctx.fillRect(5, 14, 6, 1);
+    // Orange middle
+    ctx.fillStyle = '#ff8a1f';
+    ctx.fillRect(7, 2, 2, 1);
+    ctx.fillRect(6, 3, 4, 1);
+    ctx.fillRect(5, 4, 6, 1);
+    ctx.fillRect(5, 5, 6, 1);
+    ctx.fillRect(4, 6, 8, 3);
+    ctx.fillRect(3, 9, 10, 4);
+    ctx.fillRect(4, 13, 8, 1);
+    ctx.fillRect(5, 13, 6, 1);
+    // Yellow core
+    ctx.fillStyle = '#ffe066';
+    ctx.fillRect(7, 4, 2, 1);
+    ctx.fillRect(6, 5, 4, 1);
+    ctx.fillRect(6, 6, 4, 4);
+    ctx.fillRect(5, 10, 6, 2);
+    ctx.fillRect(6, 12, 4, 1);
+    // White hot center
+    ctx.fillStyle = '#fff5b8';
+    ctx.fillRect(7, 7, 2, 2);
+    ctx.fillRect(7, 9, 2, 1);
+  }
+
+  function drawStarEmote(ctx) {
+    // Big golden 5-pointed star (level up / milestone)
+    // Outline
+    ctx.fillStyle = '#a06000';
+    ctx.fillRect(7, 1, 2, 1);
+    ctx.fillRect(6, 2, 4, 2);
+    ctx.fillRect(5, 4, 6, 1);
+    ctx.fillRect(0, 5, 16, 1);
+    ctx.fillRect(1, 6, 14, 1);
+    ctx.fillRect(2, 7, 12, 2);
+    ctx.fillRect(3, 9, 10, 1);
+    ctx.fillRect(4, 10, 4, 1); ctx.fillRect(8, 10, 4, 1);
+    ctx.fillRect(3, 11, 4, 1); ctx.fillRect(9, 11, 4, 1);
+    ctx.fillRect(2, 12, 3, 1); ctx.fillRect(11, 12, 3, 1);
+    ctx.fillRect(2, 13, 2, 1); ctx.fillRect(12, 13, 2, 1);
+    // Golden fill
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(7, 2, 2, 1);
+    ctx.fillRect(6, 3, 4, 1);
+    ctx.fillRect(1, 5, 14, 1);
+    ctx.fillRect(2, 6, 12, 1);
+    ctx.fillRect(3, 7, 10, 2);
+    ctx.fillRect(4, 9, 8, 1);
+    ctx.fillRect(4, 10, 4, 1); ctx.fillRect(8, 10, 4, 1);
+    ctx.fillRect(3, 11, 3, 1); ctx.fillRect(10, 11, 3, 1);
+    ctx.fillRect(2, 12, 2, 1); ctx.fillRect(12, 12, 2, 1);
+    // Yellow highlight (brighter)
+    ctx.fillStyle = '#fff5b8';
+    ctx.fillRect(7, 3, 2, 1);
+    ctx.fillRect(6, 4, 4, 1);
+    ctx.fillRect(5, 5, 6, 1);
+    ctx.fillRect(7, 6, 2, 2);
+  }
+
   function renderParticles(time) {
     if (particles.length === 0) return;
     ctx.save();
@@ -1045,6 +1287,11 @@ const Engine = (() => {
       const fadeOut = lifeRatio < 0.3 ? lifeRatio / 0.3 : 1;
       ctx.globalAlpha = twinkle * fadeOut;
       ctx.fillStyle = p.color;
+
+      if (p.type === 'emote') {
+        renderEmote(ctx, p, time);
+        continue;
+      }
 
       if (p.type === 'star') {
         // Draw a 4-pointed star shape (pixel-style)
@@ -1592,7 +1839,7 @@ const Engine = (() => {
     initWeather, updateWeather, renderWeather, renderTimeOfDayTint,
     getWeatherType, getTimeOfDay,
     // Particle effects
-    spawnSparkles, spawnStarBurst, updateParticles, renderParticles,
+    spawnSparkles, spawnStarBurst, spawnEmote, updateParticles, renderParticles,
     // Mini-map
     renderMiniMap,
     // Title
