@@ -58,6 +58,9 @@
     // Conversation practice
     conversationMenuOpen: false,
     conversationMenuIdx: 0,
+    // Service Counter practice
+    serviceCounterMenuOpen: false,
+    serviceCounterMenuIdx: 0,
     // Progress dashboard
     progressDashOpen: false,
     // Combo counter system
@@ -420,6 +423,29 @@
       }
       if (Engine.inputB()) {
         state.conversationMenuOpen = false;
+        GameAudio.playSelect();
+      }
+      return;
+    }
+
+    // Handle service counter scenario menu overlay
+    if (state.serviceCounterMenuOpen) {
+      const dir = Engine.inputDir();
+      const scenarioList = NPCs.getServiceCounterScenarioList();
+      if (dir === 'up' && state.serviceCounterMenuIdx > 0) {
+        state.serviceCounterMenuIdx--;
+        GameAudio.playMove && GameAudio.playMove();
+      } else if (dir === 'down' && state.serviceCounterMenuIdx < scenarioList.length - 1) {
+        state.serviceCounterMenuIdx++;
+        GameAudio.playMove && GameAudio.playMove();
+      }
+      if (Engine.inputA()) {
+        state.serviceCounterMenuOpen = false;
+        GameAudio.playSelect();
+        startServiceCounterScenario(scenarioList[state.serviceCounterMenuIdx].id);
+      }
+      if (Engine.inputB()) {
+        state.serviceCounterMenuOpen = false;
         GameAudio.playSelect();
       }
       return;
@@ -871,6 +897,11 @@
     // Check if this is the Conversation Practice NPC
     if (npc.isConversationCoach) {
       interactWithConversationCoach(npc);
+      return;
+    }
+    // Check if this is the Service Counter Coach NPC (Tetsuya)
+    if (npc.isServiceCoach) {
+      interactWithServiceCoach(npc);
       return;
     }
     // Check if this is the Onomatopoeia Coach NPC
@@ -2858,6 +2889,219 @@
 
 
 
+  // ============ SERVICE COUNTER PRACTICE ============
+  // Tetsuya teaches the konbini lifeline: bills, packages, ATM, tickets
+  const serviceCounterGameState = {
+    inServiceCounter: false,
+    scenario: null,
+    turnIdx: 0,
+    correct: 0,
+    total: 0,
+  };
+
+  function interactWithServiceCoach(npc) {
+    if (!NPCs.isServiceCounterReady()) {
+      Dialogue.show('Tetsuya', [
+        'コンビニはライフライン！ The konbini is your lifeline!',
+        'Pay bills, pick up packages, use ATMs, buy tickets...',
+        'Complete at least one store level first.',
+        'Then come back -- I\'ll teach you all four service counter skills!'
+      ]);
+      return;
+    }
+
+    state.serviceCounterMenuOpen = true;
+    state.serviceCounterMenuIdx = 0;
+    GameAudio.playAlert();
+  }
+
+  function startServiceCounterScenario(scenarioId) {
+    const scenario = NPCs.SERVICE_COUNTER_SCENARIOS.find(s => s.id === scenarioId);
+    if (!scenario) return;
+
+    serviceCounterGameState.inServiceCounter = true;
+    serviceCounterGameState.scenario = scenario;
+    serviceCounterGameState.turnIdx = 0;
+    serviceCounterGameState.correct = 0;
+    serviceCounterGameState.total = scenario.turns.length;
+
+    // Preload all Japanese phrases for this scenario
+    preloadServiceCounterPhrases(scenario);
+
+    Dialogue.show('Tetsuya', [
+      `${scenario.emoji} ${scenario.titleJp}! ${scenario.title}`,
+      scenario.intro,
+      'いきましょう！ Let\'s go!'
+    ], () => {
+      runServiceCounterTurn();
+    });
+  }
+
+  function preloadServiceCounterPhrases(scenario) {
+    if (!scenario || !scenario.turns) return;
+    const phrases = new Set();
+    for (const turn of scenario.turns) {
+      if (turn.lineJp) phrases.add(turn.lineJp);
+      if (turn.options) {
+        for (const opt of turn.options) {
+          const text = opt.text || '';
+          if (/[\u3000-\u9fff\uff00-\uffef]/.test(text) && !text.startsWith('[')) {
+            phrases.add(text);
+          }
+        }
+      }
+    }
+    for (const phrase of phrases) {
+      GameAudio.speakJapanese(phrase);
+    }
+  }
+
+  function runServiceCounterTurn() {
+    if (serviceCounterGameState.turnIdx >= serviceCounterGameState.scenario.turns.length) {
+      finishServiceCounter();
+      return;
+    }
+
+    const turn = serviceCounterGameState.scenario.turns[serviceCounterGameState.turnIdx];
+    const tNum = serviceCounterGameState.turnIdx + 1;
+    const tTotal = serviceCounterGameState.total;
+    const header = `Turn ${tNum}/${tTotal}`;
+
+    if (turn.speaker === 'clerk' || turn.speaker === 'narrator') {
+      const lines = [];
+      if (turn.lineJp) {
+        if (turn.speaker === 'clerk') GameAudio.speakJapanese(turn.lineJp);
+        lines.push(turn.lineJp);
+      }
+      if (turn.lineEn) lines.push(turn.lineEn);
+      if (turn.question) lines.push(turn.question);
+
+      const speakerName = turn.speaker === 'clerk' ? 'Clerk' : header;
+      Dialogue.show(speakerName, lines, () => {
+        showServiceCounterQuiz(turn);
+      });
+    } else {
+      const lines = [];
+      if (turn.lineEn) lines.push(turn.lineEn);
+      if (turn.question) lines.push(turn.question);
+
+      Dialogue.show(header, lines, () => {
+        showServiceCounterQuiz(turn);
+      });
+    }
+  }
+
+  function showServiceCounterQuiz(turn) {
+    const options = turn.options.map(o => ({
+      text: o.text || '',
+      correct: o.correct,
+      romaji: o.romaji,
+      en: o.en,
+    }));
+
+    const shuffled = [...options].sort(() => Math.random() - 0.5);
+
+    Dialogue.showChoices(shuffled, (selectedIdx) => {
+      const selected = shuffled[selectedIdx];
+      handleServiceCounterAnswer(turn, selected);
+    });
+  }
+
+  function handleServiceCounterAnswer(turn, selected) {
+    Dialogue.hideChoices();
+
+    if (selected.correct) {
+      Dialogue.flash('rgba(46,204,113,0.5)', 400);
+      GameAudio.playCorrect();
+      onCorrectAnswer();
+      GameAudio.playRegisterBeep();
+      Engine.spawnSparkles();
+      serviceCounterGameState.correct++;
+
+      // Speak correct Japanese response
+      const responseText = selected.text || '';
+      if (/[\u3000-\u9fff\uff00-\uffef]/.test(responseText) && !responseText.startsWith('[')) {
+        setTimeout(() => GameAudio.speakJapanese(responseText), 500);
+      }
+
+      tryVariableReward();
+
+      const encouragements = [
+        '正解! Correct!', 'いいね! Nice!',
+        'スムーズ! Smooth!', 'サービス上手! Great service skills!'
+      ];
+      const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+      const explanation = turn.correctExplanation || '';
+
+      Dialogue.show('Tetsuya', explanation ? [msg, explanation] : msg, () => {
+        serviceCounterGameState.turnIdx++;
+        runServiceCounterTurn();
+      });
+    } else {
+      Dialogue.flash('rgba(231,76,60,0.5)', 400);
+      GameAudio.playWrong();
+      onWrongAnswer();
+
+      const correctOpt = turn.options ? turn.options.find(o => o.correct) : null;
+      NPCs.recordMistake({
+        clerkJp: turn.lineJp || turn.question || '',
+        clerkEn: turn.lineEn || '',
+        chosenText: selected.text || '',
+        correctText: correctOpt ? (correctOpt.text || '') : '',
+        correctEn: correctOpt ? (correctOpt.en || '') : '',
+        source: 'ServiceCounter',
+      });
+
+      const explanation = turn.wrongExplanation || 'Not quite...';
+      Dialogue.show('Tetsuya', [
+        'もう一回! Let\'s think again...',
+        explanation
+      ], () => {
+        serviceCounterGameState.turnIdx++;
+        runServiceCounterTurn();
+      });
+    }
+  }
+
+  function finishServiceCounter() {
+    const correct = serviceCounterGameState.correct;
+    const total = serviceCounterGameState.total;
+    const scenario = serviceCounterGameState.scenario;
+    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
+
+    NPCs.completeServiceCounterScenario(scenario.id, correct, total);
+    const stats = NPCs.getServiceCounterStats();
+
+    GameAudio.playLevelComplete();
+    Engine.spawnStarBurst();
+
+    let rating;
+    if (pct === 100) rating = '完璧! Perfect service! ★★★';
+    else if (pct >= 60) rating = 'いいね! Good job! ★★☆';
+    else rating = 'もう少し! Keep practicing! ★☆☆';
+
+    const resultLines = [
+      `Service Counter: ${correct}/${total} correct!`,
+      rating,
+      `Skills mastered: ${stats.scenariosUnlocked}/${stats.totalScenarios}`,
+    ];
+
+    if (stats.scenariosUnlocked >= stats.totalScenarios) {
+      resultLines.push('\u{1F389} サービスマスター! You\'ve mastered all konbini services!');
+    } else {
+      resultLines.push('Come back to learn more services!');
+    }
+
+    Dialogue.show('Tetsuya', resultLines, () => {
+      serviceCounterGameState.inServiceCounter = false;
+      serviceCounterGameState.scenario = null;
+      setTimeout(() => triggerAchievementCheck(), 300);
+      autoSave();
+    });
+  }
+
+
+
   // ============ ONOMATOPOEIA COACH ============
   const onomatopoeiaGameState = {
     inOnomatopoeia: false,
@@ -3934,7 +4178,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !state.progressDashOpen && !pitchGuideState.active && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !state.serviceCounterMenuOpen && !state.progressDashOpen && !pitchGuideState.active && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -4027,6 +4271,13 @@
       const scenarioList = NPCs.getConversationScenarioList();
       const stats = NPCs.getConversationStats();
       Sprites.drawConversationMenu(ctx, Engine.CANVAS_W, Engine.CANVAS_H, scenarioList, state.conversationMenuIdx, stats);
+    }
+
+    // Service Counter scenario selection menu
+    if (state.serviceCounterMenuOpen) {
+      const scenarioList = NPCs.getServiceCounterScenarioList();
+      const stats = NPCs.getServiceCounterStats();
+      Sprites.drawServiceCounterMenu(ctx, Engine.CANVAS_W, Engine.CANVAS_H, scenarioList, state.serviceCounterMenuIdx, stats);
     }
 
     // Cultural notes collection overlay

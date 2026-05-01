@@ -727,6 +727,37 @@ const Sprites = (() => {
     'L': '#2c3e50', 'l': '#1a252f', // dark navy pants
   };
 
+  // Service Counter Coach (Tetsuya) — friendly clerk holding a parcel/clipboard for service window practice
+  const npcServiceCoach = `
+....HHHH....
+...HhHhHh...
+..HHHHHHHH..
+..HSSSSSSH..
+..SSEESSEE..
+..SSSMSSSS..
+..SSbbSSSS..
+..VVVVVVVV..
+..VVNNVVNV..
+..VnnnnnnV..
+..VVVVVVVV..
+..VVTTVVTV..
+..VVVVVVVV..
+..PP..PP....
+..PP..PP....
+..OO..OO....`;
+
+  const npcServiceCoachPalette = {
+    'H': '#1a3a5c', 'h': '#2a5078', // dark blue cap/hair (clerk hat tone)
+    'S': '#f5d0a9', 's': '#e0b88a', // skin
+    'E': '#1a1a2e', // eyes
+    'M': '#7a4a30', 'b': '#d06070', // mustache hint + smile
+    'V': '#2980b9', 'v': '#1f6391', // service uniform vest (blue)
+    'N': '#f5f5dc', 'n': '#e8e8c8', // package/clipboard cream
+    'T': '#f39c12', // service tag/badge gold
+    'P': '#34495e', // dark slacks
+    'O': '#1a1a1a', // black shoes
+  };
+
   // Night Shift Salaryman — tired, loosened tie, rumpled suit, holding Strong Zero
   const npcNightSalaryman = `
 ....HHHH....
@@ -831,6 +862,7 @@ const Sprites = (() => {
     speedcoach: { frames: [npcSpeedCoach], palette: npcSpeedCoachPalette },
     pronunciationguide: { frames: [npcPronunciationGuide], palette: npcPronunciationGuidePalette },
     conversationcoach: { frames: [npcConversationCoach], palette: npcConversationCoachPalette },
+    servicecoach: { frames: [npcServiceCoach], palette: npcServiceCoachPalette },
     onomatopoeiacoach: { frames: [npcOnomatopoeiaCoach], palette: npcOnomatopoeiaCoachPalette },
     rainperson: { frames: [npcRainPerson], palette: npcRainPersonPalette },
     hanami: { frames: [npcHanami], palette: npcHanamiPalette },
@@ -1682,6 +1714,66 @@ const Sprites = (() => {
   }
 
   // Conversation scenario selection overlay
+  function drawServiceCounterMenu(ctx, canvasW, canvasH, scenarios, selectedIdx, stats) {
+    // Dark overlay background
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Title header (blue tone for service counter)
+    ctx.fillStyle = '#2980b9';
+    ctx.font = 'bold 10px monospace';
+    const title = 'サービスカウンター Service Counter';
+    const titleW = ctx.measureText(title).width;
+    ctx.fillText(title, (canvasW - titleW) / 2, 18);
+
+    // Stats line
+    ctx.fillStyle = '#aaa';
+    ctx.font = '7px monospace';
+    const statsText = `Completed: ${stats.scenariosUnlocked}/${stats.totalScenarios} | Score: ${stats.totalCorrect}/${stats.totalAttempted}`;
+    const statsW = ctx.measureText(statsText).width;
+    ctx.fillText(statsText, (canvasW - statsW) / 2, 30);
+
+    // Scenario list
+    const startY = 42;
+    const itemH = 22;
+    ctx.font = '8px monospace';
+
+    for (let i = 0; i < scenarios.length; i++) {
+      const s = scenarios[i];
+      const y = startY + i * itemH;
+      const isSelected = i === selectedIdx;
+
+      if (isSelected) {
+        ctx.fillStyle = 'rgba(41, 128, 185, 0.35)';
+        ctx.fillRect(8, y - 9, canvasW - 16, itemH - 2);
+        if (Math.floor(Date.now() / 400) % 2 === 0) {
+          ctx.fillStyle = '#2980b9';
+          ctx.fillText('▶', 12, y + 2);
+        }
+      }
+
+      ctx.fillStyle = s.completed ? '#2ecc71' : '#fff';
+      const label = `${s.emoji} ${s.titleJp} - ${s.title}`;
+      ctx.fillText(label, 24, y + 2);
+
+      ctx.fillStyle = '#f39c12';
+      for (let d = 0; d < s.difficulty; d++) {
+        ctx.fillRect(canvasW - 22 + d * 5, y - 1, 3, 3);
+      }
+
+      if (s.completed) {
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillText('✓', canvasW - 36, y + 2);
+      }
+    }
+
+    ctx.fillStyle = '#888';
+    ctx.font = '7px monospace';
+    const hint = '[↑↓] Select  [A] Start  [B] Close';
+    const hintW = ctx.measureText(hint).width;
+    ctx.fillText(hint, (canvasW - hintW) / 2, canvasH - 8);
+  }
+
   function drawConversationMenu(ctx, canvasW, canvasH, scenarios, selectedIdx, stats) {
     // Dark overlay background
     ctx.fillStyle = 'rgba(0,0,0,0.85)';
@@ -3932,6 +4024,7 @@ const Sprites = (() => {
     drawSpeedBubble,
     drawConversationBubble,
     drawConversationMenu,
+    drawServiceCounterMenu,
     drawSpeedTimer,
     drawSpeedResultBanner,
     // Onomatopoeia coach

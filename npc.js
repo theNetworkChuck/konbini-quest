@@ -138,6 +138,15 @@ const NPCs = (() => {
         "At konbini, sounds are everywhere: ピッピッ, ガチャ, チン... let me teach you!"
       ]
     },
+    // Service Counter Coach NPC (bill payment, package pickup, ATM, tickets)
+    { map: 0, x: 2, y: 10, type: 'servicecoach', name: 'Tetsuya', dir: 'right',
+      isServiceCoach: true,
+      dialogues: [
+        "\u30b5\u30fc\u30d3\u30b9\u30ab\u30a6\u30f3\u30bf\u30fc! Konbini are more than stores -- they're life support!",
+        "I'm Tetsuya, the Lifeline Clerk. Bills, packages, ATM, tickets -- I teach 'em all!",
+        "\u516c\u5171\u6599\u91d1 (koukyou-ryoukin) means utility bills. Master this and you\u2019ll feel like a local!"
+      ]
+    },
     // Night Shift Salaryman NPC (only visible at night)
     { map: 0, x: 9, y: 14, type: 'nightsalaryman', name: 'Suzuki', dir: 'down',
       isNightShift: true,
@@ -3547,6 +3556,314 @@ const NPCs = (() => {
     };
   }
 
+  // ============ SERVICE COUNTER SYSTEM ============
+  // Real konbini are not just stores -- they are utility hubs.
+  // Locals come in to pay bills, pick up packages, use the ATM, and buy event tickets.
+  // This NPC (Tetsuya, the Lifeline Clerk) teaches the phrases needed for each service.
+  // Available after 2 store levels completed.
+  const SERVICE_COUNTER_SCENARIOS = [
+    {
+      id: 'bill_payment',
+      title: 'Pay a Utility Bill',
+      titleJp: '公共料金の支払い',
+      emoji: '\u{1F4B0}',
+      difficulty: 1,
+      intro: 'You walk in holding an electric bill (払込票). Time to pay it at the konbini -- the most common way in Japan!',
+      turns: [
+        {
+          speaker: 'clerk',
+          lineJp: 'いらっしゃいませ。お会計ですか？',
+          lineEn: 'Welcome. Are you here to pay?',
+          question: 'You hand over the bill. How do you say "please pay this"?',
+          options: [
+            { text: '払込のお願いします', romaji: 'Haraikomi no onegaishimasu', en: 'Bill payment, please', correct: true },
+            { text: 'これ、お願いします', romaji: 'Kore, onegaishimasu', en: 'This one, please (gesture to bill)', correct: true },
+            { text: 'Pay this please', en: '(in English)', correct: false },
+          ],
+          correctExplanation: '払込 (haraikomi) literally means "payment-in." これお願いします works too -- just point at the bill!',
+          wrongExplanation: 'Say 払込お願いします or simply これお願いします (this, please) while handing them the bill. The barcode does the work!',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'バーコードをお預かりします。三千八百円になります。',
+          lineEn: 'I will scan the barcode. The total is 3,800 yen.',
+          question: 'The clerk states the amount. Confirm and prepare to pay.',
+          options: [
+            { text: 'はい、現金でお願いします', romaji: 'Hai, genkin de onegaishimasu', en: 'Yes, cash please', correct: true },
+            { text: 'カードでお願いします', romaji: 'Kaado de onegaishimasu', en: 'By card, please', correct: false },
+            { text: 'Suicaで', romaji: 'Suica de', en: 'With Suica', correct: false },
+          ],
+          correctExplanation: 'Bill payments at konbini are CASH ONLY (or specific apps like FamiPay). Credit cards and Suica usually don\u2019t work for utility bills!',
+          wrongExplanation: 'Important cultural rule: bill payments (払込票) at konbini are CASH ONLY. Say 現金で (genkin de) -- with cash.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '一万円からお預かりします。お釣りと領収書です。',
+          lineEn: 'Out of 10,000 yen. Here is your change and receipt.',
+          question: 'Important: keep the receipt as proof of payment! How do you respond?',
+          options: [
+            { text: 'ありがとうございます', romaji: 'Arigatou gozaimasu', en: 'Thank you', correct: true },
+            { text: 'レシートはいりません', romaji: 'Reshiito wa irimasen', en: 'I don\'t need the receipt', correct: false },
+            { text: '大丈夫です', romaji: 'Daijoubu desu', en: 'I\'m fine (don\'t need receipt)', correct: false },
+          ],
+          correctExplanation: 'Always keep the 領収書 (ryoushuusho) -- it has a stamp proving you paid. Save it for tax season or in case of disputes!',
+          wrongExplanation: 'Never refuse the 領収書 (receipt) on a bill payment! It\'s your only proof of payment. Just say ありがとうございます.',
+        },
+      ]
+    },
+    {
+      id: 'package_pickup',
+      title: 'Pick Up a Package',
+      titleJp: '宅配便の受け取り',
+      emoji: '\u{1F4E6}',
+      difficulty: 2,
+      intro: 'You ordered something on Amazon and shipped it to the konbini for pickup. Time to grab it!',
+      turns: [
+        {
+          speaker: 'narrator',
+          lineJp: '',
+          lineEn: 'You approach the counter with your phone showing the pickup QR code.',
+          question: 'How do you tell the clerk you are here for a package?',
+          options: [
+            { text: '荷物の受け取りに来ました', romaji: 'Nimotsu no uketori ni kimashita', en: 'I came to pick up a package', correct: true },
+            { text: 'コンビニ受け取りです', romaji: 'Konbini uketori desu', en: 'Konbini pickup, please', correct: true },
+            { text: 'Package pickup', en: '(in English)', correct: false },
+          ],
+          correctExplanation: '受け取り (uketori) means "pickup/receipt." 荷物 (nimotsu) means luggage/package. Both phrases work perfectly!',
+          wrongExplanation: 'Say 荷物の受け取りに来ました (I came to pick up a package) or コンビニ受け取りです (konbini pickup, please).',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'QRコードを見せていただけますか？',
+          lineEn: 'Could you show me the QR code?',
+          question: 'The clerk wants to see your pickup code.',
+          options: [
+            { text: 'はい、こちらです', romaji: 'Hai, kochira desu', en: 'Yes, here it is', correct: true },
+            { text: 'どうぞ', romaji: 'Douzo', en: 'Here you go', correct: true },
+            { text: 'Wait, where?', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'こちらです (kochira desu) = "here it is." Polite way to present anything. どうぞ also works -- it means "please, go ahead."',
+          wrongExplanation: 'Say こちらです (here it is) or どうぞ (here you go) when handing something to staff.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '本人確認のため、お名前をお願いします。',
+          lineEn: 'For ID verification, your name please.',
+          question: 'They need your name for confirmation.',
+          options: [
+            { text: '田中太郎です', romaji: 'Tanaka Tarou desu', en: 'I\'m Tanaka Tarou', correct: true },
+            { text: '田中と申します', romaji: 'Tanaka to moushimasu', en: 'My name is Tanaka (humble)', correct: true },
+            { text: 'Just Tanaka', en: '(in English)', correct: false },
+          ],
+          correctExplanation: 'Both work! 〜と申します (to moushimasu) is humble keigo -- the most polite way to give your name.',
+          wrongExplanation: 'Give your name in Japanese: [Name] です or [Name] と申します for extra politeness.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'こちらにサインをお願いします。',
+          lineEn: 'Please sign here.',
+          question: 'They hand you a tablet/paper to sign.',
+          options: [
+            { text: 'はい', romaji: 'Hai', en: 'Yes (and sign)', correct: true },
+            { text: 'わかりました', romaji: 'Wakarimashita', en: 'Understood', correct: true },
+            { text: '[ignore and grab package]', en: '[grab without signing]', correct: false },
+          ],
+          correctExplanation: 'はい or わかりました are both fine. Then sign with your name in any script -- katakana for foreign names is standard.',
+          wrongExplanation: 'You MUST sign for package pickup. Say はい or わかりました and then sign your name (katakana is fine for non-Japanese names).',
+        },
+      ]
+    },
+    {
+      id: 'atm_use',
+      title: 'Use the Konbini ATM',
+      titleJp: 'コンビニATMを使う',
+      emoji: '\u{1F3E7}',
+      difficulty: 2,
+      intro: 'You need cash. Konbini ATMs (especially 7-Eleven\'s) accept foreign cards! But what if the machine eats your card?',
+      turns: [
+        {
+          speaker: 'narrator',
+          lineJp: '',
+          lineEn: 'You approach the ATM. The screen shows menu options.',
+          question: 'You want to withdraw cash. Which button?',
+          options: [
+            { text: 'お引き出し', romaji: 'O-hikidashi', en: 'Withdrawal', correct: true },
+            { text: 'お預け入れ', romaji: 'O-azukeire', en: 'Deposit', correct: false },
+            { text: '残高照会', romaji: 'Zandaka shoukai', en: 'Balance inquiry', correct: false },
+          ],
+          correctExplanation: 'お引き出し (o-hikidashi) = withdrawal. The kanji 引 means "pull/draw." Memorize this -- it\'s on every Japanese ATM!',
+          wrongExplanation: 'Withdrawal is お引き出し (o-hikidashi). 預け入れ is deposit, 残高照会 is balance check. Look for 引き出し!',
+        },
+        {
+          speaker: 'narrator',
+          lineJp: '暗証番号を入力してください。',
+          lineEn: 'Please enter your PIN.',
+          question: 'The ATM asks for your 暗証番号 (anshou bangou). What is that?',
+          options: [
+            { text: 'My 4-digit PIN', en: 'PIN code (4 digits)', correct: true },
+            { text: 'My account number', en: 'Account number', correct: false },
+            { text: 'My phone number', en: 'Phone number', correct: false },
+          ],
+          correctExplanation: '暗証番号 (anshou bangou) literally means "secret-proof number" -- your PIN. Always 4 digits in Japan!',
+          wrongExplanation: '暗証番号 (anshou bangou) = PIN. 暗 (dark/secret) + 証 (proof) + 番号 (number). Just 4 digits, like home!',
+        },
+        {
+          speaker: 'narrator',
+          lineJp: 'お引き出し金額を入力してください。',
+          lineEn: 'Please enter the withdrawal amount.',
+          question: 'You want to withdraw 10,000 yen. How do you read it?',
+          options: [
+            { text: '一万円 (ichiman-en)', en: 'Ten thousand yen', correct: true },
+            { text: '十千円 (juusen-en)', en: '(WRONG -- not how Japanese counts)', correct: false },
+            { text: '百円 (hyaku-en)', en: 'One hundred yen', correct: false },
+          ],
+          correctExplanation: 'Japanese counts in 万 (man = 10,000) units, not thousands. 1万 = 10,000. 10万 = 100,000. Critical for ATM use!',
+          wrongExplanation: 'Big number alert! Japanese groups by 10,000 (万). 10,000 yen = 一万円 (ichiman-en), NOT 十千円. Memorize this!',
+        },
+        {
+          speaker: 'narrator',
+          lineJp: 'カードが詰まりました！',
+          lineEn: 'EMERGENCY: Your card got stuck! What do you say to the clerk?',
+          question: 'How do you describe the problem?',
+          options: [
+            { text: 'ATMにカードが詰まりました', romaji: 'ATM ni kaado ga tsumarimashita', en: 'My card is stuck in the ATM', correct: true },
+            { text: 'カードが出てきません', romaji: 'Kaado ga dete kimasen', en: 'The card won\'t come out', correct: true },
+            { text: 'Help! Card!', en: '(in panic English)', correct: false },
+          ],
+          correctExplanation: 'Both phrases work in an emergency. 詰まる (tsumaru) = to be stuck. 出てこない (dete konai) = won\'t come out. The clerk will call the bank for you!',
+          wrongExplanation: 'Stay calm. Say カードが詰まりました (card is stuck) or カードが出てきません (card won\'t come out). Konbini staff are trained for this!',
+        },
+      ]
+    },
+    {
+      id: 'concert_ticket',
+      title: 'Buy a Concert Ticket',
+      titleJp: 'チケットを買う',
+      emoji: '\u{1F3AB}',
+      difficulty: 3,
+      intro: 'You spotted a band you love at the Loppi (Lawson) machine. Time to print the ticket and pay at the counter!',
+      turns: [
+        {
+          speaker: 'narrator',
+          lineJp: '',
+          lineEn: 'You used the Loppi terminal to reserve the ticket. It printed a slip with a barcode and 30-minute deadline.',
+          question: 'You walk to the counter. What do you say?',
+          options: [
+            { text: '申込券のお会計お願いします', romaji: 'Moushikomi-ken no o-kaikei onegaishimasu', en: 'Payment for the application slip, please', correct: true },
+            { text: 'これお願いします', romaji: 'Kore onegaishimasu', en: 'This, please (and hand over slip)', correct: true },
+            { text: 'Concert ticket', en: '(in English)', correct: false },
+          ],
+          correctExplanation: '申込券 (moushikomi-ken) is the Loppi reservation slip. これお願いします works perfectly -- the barcode does the rest!',
+          wrongExplanation: 'Say 申込券のお会計お願いします or just これお願いします while handing over the slip. They\'ll scan the barcode.',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'チケット代、合計八千五百円になります。',
+          lineEn: 'Ticket price totals 8,500 yen.',
+          question: '8,500 yen. How do you read this number?',
+          options: [
+            { text: '八千五百円 (hassen gohyaku en)', en: '8,500 yen', correct: true },
+            { text: '八百五十円 (happyaku gojuu en)', en: '850 yen (wrong)', correct: false },
+            { text: '八万五千円 (hachi-man gosen en)', en: '85,000 yen (wrong)', correct: false },
+          ],
+          correctExplanation: '8,500 = 八千五百 (hassen gohyaku). 千 (sen) = 1,000, 百 (hyaku) = 100. Build up: 8x1000 + 5x100!',
+          wrongExplanation: '8,500 yen = 八千五百円 (hassen gohyaku en). Eight-thousands plus five-hundreds. Practice: 千 = 1,000, 百 = 100!',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'お支払い方法はいかがなさいますか？',
+          lineEn: 'How would you like to pay?',
+          question: 'You want to use a credit card.',
+          options: [
+            { text: 'クレジットカードでお願いします', romaji: 'Kurejitto kaado de onegaishimasu', en: 'Credit card, please', correct: true },
+            { text: 'カードで', romaji: 'Kaado de', en: 'By card (short)', correct: true },
+            { text: 'Visa', en: '(just brand name)', correct: false },
+          ],
+          correctExplanation: 'Tickets CAN be paid with credit card (unlike utility bills!). カードで or クレジットカードで -- both fine.',
+          wrongExplanation: 'Say カードで or クレジットカードでお願いします. Konbini ticket purchases accept credit cards!',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: '一括払いでよろしいですか？',
+          lineEn: 'Lump-sum payment, OK?',
+          question: '一括 (ikkatsu) means "one shot" / lump sum. They\'re asking about installments.',
+          options: [
+            { text: 'はい、一括でお願いします', romaji: 'Hai, ikkatsu de onegaishimasu', en: 'Yes, lump sum please', correct: true },
+            { text: 'はい、お願いします', romaji: 'Hai, onegaishimasu', en: 'Yes, please', correct: true },
+            { text: '分割でお願いします', romaji: 'Bunkatsu de onegaishimasu', en: 'Installments, please (rare for foreigners)', correct: false },
+          ],
+          correctExplanation: '一括 (ikkatsu) = pay in full. 分割 (bunkatsu) = installments. Foreign cards usually only support 一括! Just say はい!',
+          wrongExplanation: 'Foreign credit cards in Japan almost always require 一括 (lump sum). Say はい、一括でお願いします or just はい!',
+        },
+        {
+          speaker: 'clerk',
+          lineJp: 'こちらがチケットになります。当日、忘れずにお持ちください。',
+          lineEn: 'Here is your ticket. Please don\'t forget to bring it on the day!',
+          question: 'You receive the ticket. Last response?',
+          options: [
+            { text: 'ありがとうございます！', romaji: 'Arigatou gozaimasu!', en: 'Thank you very much!', correct: true },
+            { text: '楽しみにしています', romaji: 'Tanoshimi ni shite imasu', en: 'I\'m looking forward to it', correct: true },
+            { text: '[silently leave]', en: '[walk away silent]', correct: false },
+          ],
+          correctExplanation: '楽しみにしています is a beautiful natural response -- shows real Japanese fluency!',
+          wrongExplanation: 'Say ありがとうございます at minimum. Adding 楽しみにしています (looking forward to it) is a fluent flourish!',
+        },
+      ]
+    },
+  ];
+
+  const serviceCounterState = {
+    practicesCompleted: 0,
+    scenariosCompleted: [], // IDs of completed scenarios
+    lastPracticeTime: 0,
+    totalCorrect: 0,
+    totalAttempted: 0,
+  };
+
+  function isServiceCounterReady() {
+    return completedLevelsCount >= 2;
+  }
+
+  function getNextServiceCounterScenario() {
+    const unseen = SERVICE_COUNTER_SCENARIOS.filter(s => !serviceCounterState.scenariosCompleted.includes(s.id));
+    if (unseen.length > 0) {
+      unseen.sort((a, b) => a.difficulty - b.difficulty);
+      return unseen[0];
+    }
+    return SERVICE_COUNTER_SCENARIOS[Math.floor(Math.random() * SERVICE_COUNTER_SCENARIOS.length)];
+  }
+
+  function getServiceCounterScenarioList() {
+    return SERVICE_COUNTER_SCENARIOS.map(s => ({
+      id: s.id,
+      title: s.title,
+      titleJp: s.titleJp,
+      emoji: s.emoji,
+      difficulty: s.difficulty,
+      completed: serviceCounterState.scenariosCompleted.includes(s.id),
+    }));
+  }
+
+  function completeServiceCounterScenario(scenarioId, correct, total) {
+    if (!serviceCounterState.scenariosCompleted.includes(scenarioId)) {
+      serviceCounterState.scenariosCompleted.push(scenarioId);
+    }
+    serviceCounterState.practicesCompleted++;
+    serviceCounterState.totalCorrect += correct;
+    serviceCounterState.totalAttempted += total;
+    serviceCounterState.lastPracticeTime = Date.now();
+  }
+
+  function getServiceCounterStats() {
+    return {
+      completed: serviceCounterState.practicesCompleted,
+      scenariosUnlocked: serviceCounterState.scenariosCompleted.length,
+      totalScenarios: SERVICE_COUNTER_SCENARIOS.length,
+      totalCorrect: serviceCounterState.totalCorrect,
+      totalAttempted: serviceCounterState.totalAttempted,
+    };
+  }
+
   // ============ SAVE / LOAD SYSTEM ============
   // Persist all game progress to browser storage so nothing is lost on page reload
   const SAVE_KEY = 'konbiniquest_save_v1';
@@ -3732,6 +4049,13 @@ const NPCs = (() => {
         lessonsCompleted: nightShiftState.lessonsCompleted,
         topicsCompleted: [...nightShiftState.topicsCompleted],
       },
+      // Service counter (bills, packages, ATM, tickets)
+      serviceCounterState: {
+        practicesCompleted: serviceCounterState.practicesCompleted,
+        scenariosCompleted: [...serviceCounterState.scenariosCompleted],
+        totalCorrect: serviceCounterState.totalCorrect,
+        totalAttempted: serviceCounterState.totalAttempted,
+      },
       // Pronunciation guide
       pitchGuideState: {
         lessonsViewed: [...pitchGuideState.lessonsViewed],
@@ -3867,6 +4191,13 @@ const NPCs = (() => {
       if (data.nightShiftState) {
         nightShiftState.lessonsCompleted = data.nightShiftState.lessonsCompleted || 0;
         nightShiftState.topicsCompleted = data.nightShiftState.topicsCompleted || [];
+      }
+      // Service counter
+      if (data.serviceCounterState) {
+        serviceCounterState.practicesCompleted = data.serviceCounterState.practicesCompleted || 0;
+        serviceCounterState.scenariosCompleted = data.serviceCounterState.scenariosCompleted || [];
+        serviceCounterState.totalCorrect = data.serviceCounterState.totalCorrect || 0;
+        serviceCounterState.totalAttempted = data.serviceCounterState.totalAttempted || 0;
       }
       // Pronunciation guide
       if (data.pitchGuideState) {
@@ -4216,6 +4547,13 @@ const NPCs = (() => {
     getNextNightShiftLesson,
     completeNightShiftLesson,
     getNightShiftStats,
+    // Service counter (bills, packages, ATM, tickets)
+    SERVICE_COUNTER_SCENARIOS,
+    isServiceCounterReady,
+    getNextServiceCounterScenario,
+    getServiceCounterScenarioList,
+    completeServiceCounterScenario,
+    getServiceCounterStats,
     // Progress dashboard
     getProgressDashboard,
     // Ambient speech bubbles
