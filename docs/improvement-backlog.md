@@ -846,3 +846,27 @@
 **Why it matters for learning:** Passive exposure is one of the most powerful techniques in language acquisition. By overhearing realistic phrases that real people in Japan would say in everyday situations, players absorb natural Japanese without explicit study. The phrases capture authentic registers: salaryman fatigue ("kyou mo zangyou ka"), schoolgirl slang ("yabai", "ukeru"), elderly speech patterns ("ja", "nou"), Kansai dialect ("nandeyanen", "ookini"), and konbini-relevant utterances ("koohii nomitai", "kasa wasurechatta"). This creates a living Japanese street where players feel immersed in the language. It also reinforces phrases learned elsewhere in the game by hearing them used naturally in context, which is the gold standard for retention.
 
 **Files modified:** npc.js (phrase pools + state), engine.js (rendering), game.js (update loop hook). 227 lines added.
+
+### 2026-05-01 -- #35 Reaction Emotes for Quiz Answers
+**Commit:** `75028f3`
+
+**What was added:**
+- **Pokemon-style 8-bit reaction emotes** that pop above the quiz dialogue area when the player answers a question. Each emote uses a satisfying squash-and-stretch pop-in animation, gentle horizontal bobble, then fades smoothly.
+- **Five distinct kawaii sprites** drawn pixel-by-pixel as 16x16 fillRect art:
+  - **Happy face** (yellow, closed-eye smile ^^, pink cheeks) -- correct answers
+  - **Sweatdrop** (anime-style light blue teardrop with white shine) -- wrong answers
+  - **Heart** (pink kawaii heart with shine) -- correct answer during a small combo (every 3rd in a streak)
+  - **Fire** (red/orange/yellow flame with white-hot core) -- correct answer in a 5+ combo streak
+  - **Star** (golden 5-pointed star with highlight) -- combo milestones (10, 20, 30...)
+- **Combo-aware feedback logic** in `onCorrectAnswer`/`onWrongAnswer`:
+  - Wrong → sweatdrop
+  - Combo milestone hit → star (celebratory)
+  - Combo >= 5 and divisible by 5 → fire (streak intensity)
+  - Combo > 0 and divisible by 3 → heart (sweet reward)
+  - Otherwise → happy
+- **Pop-in animation** uses an overshoot bounce: scale starts at 0.4, peaks above 1.0 with `sin(popPhase * PI) * 0.25`, settles at 1.0. Combined with horizontal bobble (`sin(time * 4 + bobble) * 1.5`), the emotes feel alive and responsive.
+- **Sweatdrop falls** (positive vy + gravity) while celebratory emotes rise (negative vy with slight gravity), reinforcing the emotional valence visually.
+
+**Why it matters for learning:** Immediate visual feedback is one of the most powerful tools in skill acquisition. Studies of educational games show that anthropomorphic, expressive reactions to player input significantly boost engagement and retention versus dry "correct/incorrect" markers. The kawaii emotes give players micro-doses of dopamine on every correct answer (mimicking the Pokemon games' satisfying battle reactions), and the combo-tier emotes (heart → fire → star) create a sense of escalating reward that makes long study sessions feel cinematic rather than grindy. Sweatdrops on wrong answers are gentle and humorous rather than punitive, keeping learners psychologically safe. The variety also creates surprise: players don't know which emote they'll get, so each correct answer carries a tiny reveal moment, the same hook that makes slot machines (and Pokemon battles) addictive in a positive way.
+
+**Files modified:** engine.js (+253 lines: spawnEmote, renderEmote, 5 draw functions, particle render branch, export), game.js (+13 lines: combo-aware emote spawn calls in onCorrectAnswer/onWrongAnswer).
