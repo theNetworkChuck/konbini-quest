@@ -890,3 +890,25 @@
 **Why it matters for learning:** Most Japanese textbooks (and most other konbini-themed games) ONLY teach the front-counter checkout flow: 〜円になります、レジ袋いりますか、お会計お願いします. But konbini in Japan are a literal lifeline — people pay utility bills, pick up Amazon orders, withdraw cash, buy concert tickets, ship packages, and apply for tax forms there. Knowing only checkout vocabulary leaves learners stranded the moment they walk in holding an electric bill. This update fills that exact gap with linguistically authentic phrases verified against real-world konbini interaction patterns. Each scenario also embeds critical cultural rules that even intermediate textbooks miss: bills are cash-only, foreign cards usually require 一括 (one-time payment), the 領収書 is your only proof of payment, the konbini will print your concert ticket from a Loppi machine after payment, and 一万円 means 10,000 yen because Japanese counts in 万 (man) units. The mistake-journal integration means wrong answers immediately become spaced-repetition material, so a single playthrough of these 4 scenarios builds genuine survival fluency for daily life in Japan.
 
 **Files modified:** npc.js (+251 lines: SERVICE_COUNTER_SCENARIOS, serviceCounterState, 5 service-counter functions, NPC def, save/load hooks, exports). sprites.js (+91 lines: npcServiceCoach pixel-art + palette, npcSprites registration, drawServiceCounterMenu, exports). game.js (+212 lines: serviceCounterMenuOpen state, menu input handler, NPC dispatch, menu render call, mini-map gate, full quiz flow with 7 functions). 554 lines added total.
+
+### 2026-06-01 -- #37 Konbini Receipt System (authentic thermal-paper receipts)
+**Commit:** `f933286`
+
+**What was added:**
+- **Every level completion now prints a pixel-art konbini receipt** that mirrors the exact format of real Japanese POS systems. The receipt slides in from above after the cash register sound, gives the player time to read the breakdown, and is dismissable with any button before the level-complete dialogue continues.
+- **Receipt layout matches real konbini receipts line-for-line:**
+  - Store header: Japanese branding (セブンイレブン, ローソン, ファミリーマート) plus English name and branch (渋谷中央店, 新宿駅前店, 原宿店)
+  - Transaction metadata: date YYYY/MM/DD HH:MM, receipt number, レジ NN register ID, 担当 cashier line
+  - Line item: Japanese product name with reduced-tax asterisk (*), `1 × ¥580`
+  - Subtotal/tax block: 小計 + 消費税 with correct rate annotation -- 内税* for 8% 軽減税率 (food/drink) or 内税 for 10% standard rate (alcohol). Tax is shown as informational because konbini use tax-inclusive 内税 pricing, so subtotal == total.
+  - Boxed 合計 TOTAL with inverse-color highlight
+  - お預かり (tendered) and お釣り (change) computed from realistic rounded denominations
+  - ポイント: 1pt per 200 yen + 1 bonus for zero-mistake transactions
+  - 軽減税率対象 disclaimer when applicable
+  - Polite footer: ありがとうございました / Arigatou gozaimashita! / 又のご来店をお待ちしております
+- **Authentic visuals:** off-white thermal paper, jagged perforated edges, faint horizontal tint lines, cubic-ease slide-in animation with gentle bobble, decorative pixel barcode that animates in after the slide completes, blinking [Z] Continue prompt
+- **Realistic 2024-2026 konbini prices** added to every item: Gum ¥110, Onigiri ¥150, Bento ¥580, Coffee ¥180, Makunouchi ¥680, Beer ¥270, etc. Beer correctly uses the 10% standard tax rate while all food/non-alcoholic drinks use the 8% 軽減税率 reduced rate.
+
+**Why it matters for learning:** Reading a real Japanese receipt is one of the most-overlooked survival skills for living in Japan. Every transaction at every konbini, supermarket, restaurant, and store ends with a receipt the player needs to scan for 合計 (total), 内税 (tax-inclusive) vs 外税 (tax-exclusive), お預かり / お釣り (tendered/change), and the 軽減税率 marker showing which items qualified for the reduced 8% food rate. After 12 levels the player has seen the same vocabulary 12 times in authentic context — far better retention than flashcards. The receipt also teaches the cultural rule embedded in pricing: alcohol jumps from 8% to 10% tax at the konbini register, which is exactly the kind of "wait why did my receipt say something different?" moment that confuses tourists.
+
+**Files modified:** npc.js (+123 lines: priceYen/taxRate on KONBINI_ITEMS, buildReceiptData, formatYen, computeTendered, receipt counter, exports). sprites.js (+236 lines: drawKonbiniReceipt, drawReceiptDivider helper, exports). game.js (+54 lines: state.receiptOverlay, input handler with animation gate, render call, mini-map gate update, finishLevel integration with 700ms printer delay).
