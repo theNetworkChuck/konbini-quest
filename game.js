@@ -40,6 +40,8 @@
     stampNotification: null, // {text, timer} for new stamp earned
     // Receipt overlay shown after completing a level
     receiptOverlay: null, // {data, elapsed, onDismiss}
+    // Customer queue overlay shown on store entry when another customer is already in line
+    customerQueue: null, // {phase, lineIdx, lines, options, selectedIdx, wasCorrect, elapsed, onDismiss, ...}
     // Variable rewards
     rewardNotification: null, // {reward, timer} for bonus phrase drops
     phraseBookOpen: false,
@@ -421,6 +423,91 @@
       return;
     }
 
+    // Handle customer queue overlay (Improvement #38) -- blocks all other input.
+    // The player waits in line, listens to the dialogue between the customer ahead
+    // and the clerk, then answers a quick comprehension question.
+    if (state.customerQueue) {
+      state.customerQueue.elapsed += dt;
+      const q = state.customerQueue;
+      // Wait for slide-in animation before accepting input
+      if (q.elapsed < 0.4) return;
+
+      if (q.phase === 'dialogue') {
+        // [Z]/[A] advances to next line. When the speaker changes or the current
+        // line is a Japanese line, play the TTS so the player actually hears it.
+        const line = q.lines[q.lineIdx];
+        // Auto-speak when the line first appears (not every frame)
+        if (line && !q.spoken) {
+          q.spoken = true;
+          if (line.jp) {
+            try { GameAudio.speakJapanese && GameAudio.speakJapanese(line.jp); } catch (e) { /* ignore */ }
+          }
+        }
+        if (Engine.inputA()) {
+          // Advance to next line; if past the end, move to the quiz phase
+          q.lineIdx++;
+          q.spoken = false;
+          GameAudio.playMove && GameAudio.playMove();
+          if (q.lineIdx >= q.lines.length) {
+            q.phase = 'question';
+            q.selectedIdx = 0;
+            GameAudio.playRegisterBeep && GameAudio.playRegisterBeep();
+          }
+        }
+        return;
+      }
+
+      if (q.phase === 'question') {
+        const dir = Engine.inputDir();
+        if (dir === 'up' && q.selectedIdx > 0) {
+          q.selectedIdx--;
+          GameAudio.playMove && GameAudio.playMove();
+        } else if (dir === 'down' && q.selectedIdx < q.options.length - 1) {
+          q.selectedIdx++;
+          GameAudio.playMove && GameAudio.playMove();
+        }
+        if (Engine.inputA()) {
+          const picked = q.options[q.selectedIdx];
+          q.wasCorrect = !!picked.correct;
+          q.answeredIdx = q.selectedIdx;
+          q.phase = 'result';
+          // Record stats + journal
+          try { NPCs.recordCustomerQueueResult(q.id, q.wasCorrect); } catch (e) { /* ignore */ }
+          if (q.wasCorrect) {
+            GameAudio.playCorrect && GameAudio.playCorrect();
+            Engine.spawnSparkles && Engine.spawnSparkles(Engine.CANVAS_W / 2, Engine.CANVAS_H / 2);
+            if (typeof onCorrectAnswer === 'function') onCorrectAnswer();
+          } else {
+            GameAudio.playWrong && GameAudio.playWrong();
+            // Log to mistake journal so wrong answers feed spaced repetition
+            try {
+              NPCs.recordMistake && NPCs.recordMistake({
+                clerkJp: q.lines.map(l => l.jp).join(' / '),
+                clerkEn: q.question.en,
+                wrongJp: picked.jp,
+                wrongEn: picked.en,
+                correctJp: (q.options.find(o => o.correct) || {}).jp || '',
+                correctEn: (q.options.find(o => o.correct) || {}).en || '',
+                source: 'CustomerQueue',
+              });
+            } catch (e) { /* ignore */ }
+            if (typeof onWrongAnswer === 'function') onWrongAnswer();
+          }
+        }
+        return;
+      }
+
+      if (q.phase === 'result') {
+        if (Engine.inputA() || Engine.inputB()) {
+          const cb = q.onDismiss;
+          state.customerQueue = null;
+          GameAudio.playSelect && GameAudio.playSelect();
+          if (cb) cb();
+        }
+        return;
+      }
+    }
+
     // Handle conversation scenario menu overlay
     if (state.conversationMenuOpen) {
       const dir = Engine.inputDir();
@@ -754,15 +841,53 @@
           const bannerColor = STORE_COLORS[targetMap.store] || '#888';
           Engine.showLocationBanner(targetMap.nameJp, targetMap.name, bannerColor);
 
-          // Show greeting after fade-in
+          // Helper to run the actual clerk greeting (extracted so we can chain
+          // it after the optional customer queue overlay).
+          const showClerkGreeting = () => {
+            if (state.greetingShown) return;
+            state.greetingShown = true;
+            Dialogue.show('Clerk', 'いらっしゃいませ！', () => {
+              GameAudio.speakJapanese('いらっしゃいませ');
+              // Try showing a cultural note on store entry
+              tryCulturalNote('store_entry');
+            });
+          };
+
+          // Show greeting (or customer queue first) after fade-in
           setTimeout(() => {
-            if (!state.greetingShown) {
-              state.greetingShown = true;
-              Dialogue.show('Clerk', 'いらっしゃいませ！', () => {
-                GameAudio.speakJapanese('いらっしゃいませ');
-                // Try showing a cultural note on store entry
-                tryCulturalNote('store_entry');
-              });
+            // Improvement #38: occasionally another customer is already at the
+            // register. Show the queue overlay first; the clerk greeting fires
+            // after the player finishes the listening comprehension question.
+            let triggered = false;
+            try {
+              if (NPCs.shouldTriggerCustomerQueue && NPCs.shouldTriggerCustomerQueue()) {
+                const queue = NPCs.buildCustomerQueue();
+                if (queue) {
+                  state.customerQueue = {
+                    id: queue.id,
+                    customer: queue.customer,
+                    sprite: queue.sprite,
+                    lines: queue.lines,
+                    lineIdx: 0,
+                    phase: 'dialogue',
+                    question: queue.question,
+                    options: queue.options,
+                    selectedIdx: 0,
+                    wasCorrect: false,
+                    answeredIdx: -1,
+                    tip: queue.tip,
+                    storeName: targetMap.store,
+                    storeColor: bannerColor,
+                    elapsed: 0,
+                    spoken: false,
+                    onDismiss: showClerkGreeting,
+                  };
+                  triggered = true;
+                }
+              }
+            } catch (e) { /* fall through to plain greeting */ }
+            if (!triggered) {
+              showClerkGreeting();
             }
           }, 600);
 
@@ -4218,7 +4343,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !state.serviceCounterMenuOpen && !state.progressDashOpen && !state.receiptOverlay && !pitchGuideState.active && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !state.serviceCounterMenuOpen && !state.progressDashOpen && !state.receiptOverlay && !state.customerQueue && !pitchGuideState.active && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -4464,6 +4589,15 @@
       );
     }
 
+    // Customer queue overlay (above scene, below particles/fade/banners)
+    if (state.customerQueue) {
+      Sprites.drawCustomerQueueOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        state.customerQueue,
+        state.time
+      );
+    }
+
     // Particle effects (sparkles + star bursts — above dialogue/overlays)
     Engine.renderParticles(state.time);
 
@@ -4662,6 +4796,34 @@
   // Testing hook: toggle progress dashboard
   window.toggleProgressDash = () => {
     state.progressDashOpen = !state.progressDashOpen;
+  };
+
+  // Testing hook: force a customer queue overlay (Improvement #38)
+  window.forceCustomerQueue = (opts) => {
+    opts = opts || {};
+    let queue;
+    try { queue = NPCs.buildCustomerQueue(); } catch (e) { console.warn(e); return; }
+    if (!queue) return;
+    state.customerQueue = {
+      id: queue.id,
+      customer: queue.customer,
+      sprite: queue.sprite,
+      lines: queue.lines,
+      lineIdx: 0,
+      phase: 'dialogue',
+      question: queue.question,
+      options: queue.options,
+      selectedIdx: 0,
+      wasCorrect: false,
+      answeredIdx: -1,
+      tip: queue.tip,
+      storeName: opts.storeName || '7-Eleven',
+      storeColor: opts.storeColor || '#d4380d',
+      elapsed: 0,
+      spoken: false,
+      onDismiss: () => { console.log('queue dismissed'); },
+    };
+    return state.customerQueue;
   };
 
   // Testing hook: set combo for visual testing

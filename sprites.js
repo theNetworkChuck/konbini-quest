@@ -4093,6 +4093,327 @@ const Sprites = (() => {
     ctx.restore();
   }
 
+  // ============ CUSTOMER QUEUE OVERLAY (Improvement #38) ============
+  // Pokemon-style overlay shown when the player enters a store and another customer
+  // is already at the register. Renders a wooden frame around the dialogue, the
+  // customer's pixel sprite + clerk sprite at the counter, a speech bubble for the
+  // current line, and (after the dialogue) a 3-choice listening comprehension quiz.
+  //
+  // Queue object shape:
+  //   phase    'dialogue' | 'question' | 'result'
+  //   lineIdx  index into lines array for 'dialogue' phase
+  //   lines    [{ speaker, jp, en, romaji }]
+  //   customer label string ('Salaryman', 'Schoolgirl', ...)
+  //   sprite   key in npcSprites for the customer pixel art
+  //   question { jp, en }
+  //   options  [{ jp, en, correct }]
+  //   selectedIdx  highlighted option for 'question' phase
+  //   answeredIdx  which option was picked (for 'result' phase)
+  //   wasCorrect   bool for 'result' phase
+  //   storeName    optional, drawn in the corner ribbon
+  //   storeColor   '#d4380d' etc for the accent stripe
+  //   elapsed      ms-equivalent in seconds since the overlay opened (slide-in)
+  function drawCustomerQueueOverlay(ctx, canvasW, canvasH, queue, time) {
+    if (!queue) return;
+
+    // --- Dim background ---
+    ctx.fillStyle = 'rgba(8,8,18,0.78)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // --- Slide-in animation (from top) ---
+    const animT = Math.min(1, (queue.elapsed || 0) / 0.4);
+    const ease = 1 - Math.pow(1 - animT, 3); // ease-out cubic
+    const slideOffset = (1 - ease) * -canvasH;
+
+    ctx.save();
+    ctx.translate(0, slideOffset);
+
+    // ============ TOP RIBBON: "ご会計中" (CHECKOUT IN PROGRESS) ============
+    const ribbonY = 8;
+    const ribbonH = 14;
+    const ribbonColor = queue.storeColor || '#d4380d';
+    ctx.fillStyle = ribbonColor;
+    ctx.fillRect(0, ribbonY, canvasW, ribbonH);
+    // Subtle bottom shadow band
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.fillRect(0, ribbonY + ribbonH - 2, canvasW, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ご会計中  IN LINE', canvasW / 2, ribbonY + ribbonH / 2 + 1);
+
+    // ============ COUNTER SCENE PANEL ============
+    const sceneY = ribbonY + ribbonH + 6;
+    const sceneH = 56;
+    const sceneX = 8;
+    const sceneW = canvasW - 16;
+    // Wall (cream) + dark floor band evoke konbini interior
+    ctx.fillStyle = '#f4e4c1';
+    ctx.fillRect(sceneX, sceneY, sceneW, sceneH - 12);
+    // Counter front
+    ctx.fillStyle = '#7b5230';
+    ctx.fillRect(sceneX, sceneY + sceneH - 12, sceneW, 12);
+    // Counter top edge
+    ctx.fillStyle = '#a87445';
+    ctx.fillRect(sceneX, sceneY + sceneH - 14, sceneW, 2);
+    // Cash register (small box on counter, right side)
+    const regX = sceneX + sceneW - 38;
+    const regY = sceneY + sceneH - 26;
+    ctx.fillStyle = '#2b2b2b';
+    ctx.fillRect(regX, regY, 22, 12);
+    ctx.fillStyle = '#3aaee0';
+    ctx.fillRect(regX + 2, regY + 2, 18, 4); // tiny screen
+    ctx.fillStyle = '#666';
+    ctx.fillRect(regX + 2, regY + 8, 18, 2); // keypad row
+    // Frame around the scene
+    ctx.strokeStyle = ribbonColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sceneX + 0.5, sceneY + 0.5, sceneW - 1, sceneH - 1);
+
+    // ============ CHARACTERS ============
+    // Customer on the left, clerk on the right of the counter
+    // Sprites are 16x16. Position them so feet touch the counter front.
+    const charY = sceneY + sceneH - 14 - 16; // 16 high, touching counter top
+    const customerX = sceneX + 14;
+    const clerkX = sceneX + sceneW - 14 - 16;
+    // Gentle bobble for both characters (different phases so they feel alive)
+    const customerBob = Math.floor(Math.sin(time * 3) * 0.5);
+    const clerkBob = Math.floor(Math.sin(time * 3 + 1.7) * 0.5);
+    // Customer sprite (faces right, toward the clerk)
+    drawNPC(ctx, customerX, charY + customerBob, queue.sprite || 'businessman', 'right', 0);
+    // Clerk sprite (faces left, toward the customer)
+    // Reuse drawClerk for authenticity — it takes a store argument; default 7-Eleven
+    drawClerk(ctx, clerkX, charY + clerkBob, queue.storeName || '7-Eleven', 'left');
+
+    // ============ SPEECH BUBBLE (above the speaker for dialogue phase) ============
+    if (queue.phase === 'dialogue' && queue.lines && queue.lineIdx >= 0 && queue.lineIdx < queue.lines.length) {
+      const line = queue.lines[queue.lineIdx];
+      const isCustomer = line.speaker === 'Customer';
+      // Bubble position (above the speaker)
+      const bubbleX = isCustomer ? sceneX + 4 : sceneX + sceneW / 2 - 4;
+      drawQueueSpeechBubble(ctx, bubbleX, sceneY - 2, sceneW / 2 - 4, line, isCustomer);
+    }
+
+    // ============ LOWER PANEL: SPEAKER LABEL OR QUESTION / RESULT ============
+    const panelY = sceneY + sceneH + 6;
+    const panelH = canvasH - panelY - 8;
+    const panelX = 8;
+    const panelW = canvasW - 16;
+    // Wooden / paper panel background
+    ctx.fillStyle = '#1a1024';
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.fillStyle = '#2a1c3a';
+    ctx.fillRect(panelX, panelY, panelW, 1);
+    ctx.fillRect(panelX, panelY + panelH - 1, panelW, 1);
+    ctx.strokeStyle = ribbonColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+    if (queue.phase === 'dialogue') {
+      // Show dialogue line text + speaker tag + progress
+      drawQueueDialoguePanel(ctx, panelX, panelY, panelW, panelH, queue, time);
+    } else if (queue.phase === 'question') {
+      drawQueueQuestionPanel(ctx, panelX, panelY, panelW, panelH, queue, time);
+    } else if (queue.phase === 'result') {
+      drawQueueResultPanel(ctx, panelX, panelY, panelW, panelH, queue, time);
+    }
+
+    ctx.restore();
+  }
+
+  // Small kawaii speech bubble for queue dialogue (manga-style tail)
+  function drawQueueSpeechBubble(ctx, x, y, maxW, line, pointDown) {
+    const w = Math.min(maxW, 120);
+    const h = 10;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x, y, w, 1);
+    ctx.fillRect(x, y + h - 1, w, 1);
+    ctx.fillRect(x, y, 1, h);
+    ctx.fillRect(x + w - 1, y, 1, h);
+    // Tail (down arrow pointing to speaker)
+    const tailX = pointDown ? x + 6 : x + w - 10;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(tailX, y + h, 4, 1);
+    ctx.fillRect(tailX + 1, y + h + 1, 2, 1);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(tailX - 1, y + h, 1, 1);
+    ctx.fillRect(tailX + 4, y + h, 1, 1);
+    ctx.fillRect(tailX, y + h + 1, 1, 1);
+    ctx.fillRect(tailX + 3, y + h + 1, 1, 1);
+    ctx.fillRect(tailX + 1, y + h + 2, 2, 1);
+    // Three dots inside ("..." indicates speech is in dialogue panel below)
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + w / 2 - 5, y + 4, 2, 2);
+    ctx.fillRect(x + w / 2 - 1, y + 4, 2, 2);
+    ctx.fillRect(x + w / 2 + 3, y + 4, 2, 2);
+  }
+
+  function drawQueueDialoguePanel(ctx, px, py, pw, ph, queue, time) {
+    const line = queue.lines[queue.lineIdx];
+    if (!line) return;
+
+    // Speaker tag in top-left
+    ctx.fillStyle = line.speaker === 'Customer' ? '#ffd166' : '#7fdbff';
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const speakerLabel = line.speaker === 'Customer'
+      ? (queue.customer || 'Customer') + ':'
+      : 'Clerk:';
+    ctx.fillText(speakerLabel, px + 6, py + 5);
+
+    // Progress dots (right side): one dot per line, current line highlighted
+    if (queue.lines && queue.lines.length) {
+      const totalDots = queue.lines.length;
+      const dotSize = 3;
+      const gap = 3;
+      const startX = px + pw - 6 - (totalDots * (dotSize + gap));
+      for (let i = 0; i < totalDots; i++) {
+        ctx.fillStyle = (i <= queue.lineIdx) ? '#ffd166' : '#555';
+        ctx.fillRect(startX + i * (dotSize + gap), py + 6, dotSize, dotSize);
+      }
+    }
+
+    // Japanese line (large)
+    ctx.fillStyle = '#fff';
+    ctx.font = '9px "Press Start 2P", monospace, sans-serif';
+    ctx.textAlign = 'left';
+    wrapTextSimple(ctx, line.jp, px + 6, py + 18, pw - 12, 11);
+
+    // English translation
+    ctx.fillStyle = '#bbbbbb';
+    ctx.font = '6px "Press Start 2P", monospace';
+    wrapTextSimple(ctx, line.en, px + 6, py + ph - 22, pw - 12, 7);
+
+    // Continue hint (blinking)
+    const blink = Math.floor(time * 2) % 2 === 0;
+    if (blink) {
+      ctx.fillStyle = '#ffd166';
+      ctx.textAlign = 'right';
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.fillText('[Z] Listen', px + pw - 6, py + ph - 8);
+    }
+  }
+
+  function drawQueueQuestionPanel(ctx, px, py, pw, ph, queue, time) {
+    // Question header
+    ctx.fillStyle = '#ffd166';
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('耳を澄まして... LISTENING QUIZ', px + 6, py + 4);
+
+    // Japanese question
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px "Press Start 2P", monospace';
+    wrapTextSimple(ctx, queue.question.jp, px + 6, py + 14, pw - 12, 10);
+
+    // English subtitle
+    ctx.fillStyle = '#aaa';
+    ctx.font = '6px "Press Start 2P", monospace';
+    wrapTextSimple(ctx, queue.question.en, px + 6, py + 28, pw - 12, 7);
+
+    // Options (3 rows)
+    const optStartY = py + 50;
+    const optH = 18;
+    queue.options.forEach((opt, i) => {
+      const oy = optStartY + i * optH;
+      const selected = i === queue.selectedIdx;
+      // Highlight bar
+      if (selected) {
+        ctx.fillStyle = '#3aaee0';
+        ctx.fillRect(px + 4, oy - 1, pw - 8, optH - 2);
+      }
+      // Cursor arrow
+      ctx.fillStyle = selected ? '#fff' : '#666';
+      ctx.font = '7px "Press Start 2P", monospace';
+      ctx.textBaseline = 'top';
+      ctx.fillText(selected ? '>' : ' ', px + 6, oy + 1);
+      // Option text (jp + en)
+      ctx.fillStyle = '#fff';
+      ctx.font = '7px "Press Start 2P", monospace';
+      ctx.fillText(opt.jp, px + 16, oy + 1);
+      ctx.fillStyle = selected ? '#cde9ff' : '#888';
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.fillText(opt.en, px + 16, oy + 11);
+    });
+
+    // Hint footer
+    const blink = Math.floor(time * 2) % 2 === 0;
+    if (blink) {
+      ctx.fillStyle = '#ffd166';
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('Arrows + [Z]', px + pw - 6, py + ph - 6);
+    }
+  }
+
+  function drawQueueResultPanel(ctx, px, py, pw, ph, queue, time) {
+    const correct = queue.wasCorrect;
+    // Result header banner across top
+    ctx.fillStyle = correct ? '#27ae60' : '#c0392b';
+    ctx.fillRect(px, py, pw, 14);
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(correct ? '正解！ CORRECT' : '不正解 INCORRECT', px + pw / 2, py + 7);
+
+    // Correct answer line
+    const ansOpt = queue.options.find(o => o.correct);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#7fdbff';
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('Answer:', px + 6, py + 20);
+    ctx.fillStyle = '#fff';
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.fillText(ansOpt ? ansOpt.jp : '', px + 6, py + 30);
+    ctx.fillStyle = '#bbbbbb';
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText(ansOpt ? ansOpt.en : '', px + 6, py + 40);
+
+    // Tip / cultural note
+    if (queue.tip) {
+      ctx.fillStyle = '#ffd166';
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.fillText('TIP:', px + 6, py + 52);
+      ctx.fillStyle = '#ddd';
+      wrapTextSimple(ctx, queue.tip, px + 6, py + 60, pw - 12, 7);
+    }
+
+    // Continue prompt
+    const blink = Math.floor(time * 2) % 2 === 0;
+    if (blink) {
+      ctx.fillStyle = '#ffd166';
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('[Z] Continue', px + pw - 6, py + ph - 6);
+    }
+  }
+
+  // Tiny word-wrap helper used by all 3 queue panels
+  function wrapTextSimple(ctx, text, x, y, maxW, lineH) {
+    if (!text) return;
+    // For Japanese text we can't easily split on spaces. Use a simple char-by-char
+    // breaker that respects the ctx.measureText width.
+    let line = '';
+    let yy = y;
+    for (let i = 0; i < text.length; i++) {
+      const test = line + text[i];
+      if (ctx.measureText(test).width > maxW && line.length > 0) {
+        ctx.fillText(line, x, yy);
+        line = text[i];
+        yy += lineH;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, x, yy);
+  }
+
   // ============ COMBO COUNTER DISPLAY ============
   function drawComboCounter(ctx, canvasW, canvasH, combo, showTimer, maxCombo, multiplier) {
     if (combo < 2) return; // Only show at 2+ combo
@@ -4271,6 +4592,8 @@ const Sprites = (() => {
     // Progress dashboard
     drawProgressDashboard,
     drawKonbiniReceipt,
+    // Customer queue (listening comprehension on store entry)
+    drawCustomerQueueOverlay,
     // Combo counter
     drawComboCounter,
     drawComboMilestoneBanner,

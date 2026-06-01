@@ -3957,6 +3957,195 @@ const NPCs = (() => {
     };
   }
 
+  // ============ CUSTOMER QUEUE SYSTEM (Improvement #38) ============
+  // When the player enters a store, occasionally another customer is already at the
+  // register. The player must listen (passive comprehension) to the clerk-customer
+  // exchange, then answer ONE quick question about what they overheard. This drills
+  // real ear training in the most authentic context possible: standing in line.
+  //
+  // Each scenario has:
+  //   id          unique key
+  //   customer    label shown in the queue overlay (e.g., 'Salaryman', 'Schoolgirl')
+  //   sprite      key in npcSprites for the customer in line
+  //   lines       [{ speaker: 'Clerk'|'Customer', jp, en, romaji }] — the dialogue
+  //   question    { jp, en } the post-queue comprehension question
+  //   options     [{ jp, en, correct }] three choices (one correct)
+  //   tip         short cultural / linguistic explanation shown after the answer
+  const CUSTOMER_QUEUE_SCENARIOS = [
+    {
+      id: 'salaryman_coffee_warm',
+      customer: 'Salaryman',
+      sprite: 'businessman',
+      lines: [
+        { speaker: 'Clerk', jp: 'いらっしゃいませ。', en: 'Welcome.', romaji: 'irasshaimase' },
+        { speaker: 'Customer', jp: 'ホットコーヒーのMをお願いします。', en: 'A medium hot coffee, please.', romaji: 'hotto koohii no M wo onegai shimasu' },
+        { speaker: 'Clerk', jp: 'かしこまりました。300円になります。', en: 'Certainly. That\'ll be 300 yen.', romaji: 'kashikomarimashita. sanbyaku-en ni narimasu' },
+      ],
+      question: { jp: 'お客さんは何を注文しましたか？', en: 'What did the customer order?' },
+      options: [
+        { jp: 'ホットコーヒー M', en: 'Medium hot coffee', correct: true },
+        { jp: 'アイスコーヒー L', en: 'Large iced coffee', correct: false },
+        { jp: '紅茶 S', en: 'Small black tea', correct: false },
+      ],
+      tip: 'Drink sizes at konbini follow the English S/M/L convention. 「ホット」 means hot, 「アイス」 means iced.',
+    },
+    {
+      id: 'obaachan_bento_heat',
+      customer: 'Obaa-chan',
+      sprite: 'seasonalguide',
+      lines: [
+        { speaker: 'Customer', jp: 'このお弁当ください。', en: 'I\'ll have this bento.', romaji: 'kono obentou kudasai' },
+        { speaker: 'Clerk', jp: '温めますか？', en: 'Would you like it heated?', romaji: 'atatamemasu ka' },
+        { speaker: 'Customer', jp: 'はい、お願いします。', en: 'Yes, please.', romaji: 'hai, onegai shimasu' },
+      ],
+      question: { jp: '店員さんは何と聞きましたか？', en: 'What did the clerk ask?' },
+      options: [
+        { jp: '温めますか？', en: 'Would you like it heated?', correct: true },
+        { jp: 'お箸はおつけしますか？', en: 'Shall I add chopsticks?', correct: false },
+        { jp: 'レジ袋はご利用ですか？', en: 'Do you need a bag?', correct: false },
+      ],
+      tip: '「温めますか？」(atatamemasu ka) is THE most common konbini question for bento, frozen pasta, and meat buns. Memorize this one.',
+    },
+    {
+      id: 'schoolgirl_onigiri_bag',
+      customer: 'Schoolgirl',
+      sprite: 'schoolgirl',
+      lines: [
+        { speaker: 'Customer', jp: 'おにぎり二つお願いします。', en: 'Two rice balls, please.', romaji: 'onigiri futatsu onegai shimasu' },
+        { speaker: 'Clerk', jp: 'レジ袋はご利用ですか？', en: 'Would you like a bag?', romaji: 'rejibukuro wa goriyou desu ka' },
+        { speaker: 'Customer', jp: '大丈夫です。', en: 'I\'m fine (no thanks).', romaji: 'daijoubu desu' },
+      ],
+      question: { jp: 'お客さんは袋を使いますか？', en: 'Will the customer use a bag?' },
+      options: [
+        { jp: 'いいえ、使いません', en: 'No, she declined', correct: true },
+        { jp: 'はい、使います', en: 'Yes, she wants one', correct: false },
+        { jp: 'もう一つ追加した', en: 'She added another item', correct: false },
+      ],
+      tip: '「大丈夫です」(daijoubu desu) literally means "I\'m fine" but is the polite way to refuse anything — bags, receipts, chopsticks, refills.',
+    },
+    {
+      id: 'oldman_beer_age',
+      customer: 'Old Man',
+      sprite: 'oldman',
+      lines: [
+        { speaker: 'Customer', jp: 'これお願いします。', en: 'This, please.', romaji: 'kore onegai shimasu' },
+        { speaker: 'Clerk', jp: '年齢確認のボタンをお願いします。', en: 'Please tap the age verification button.', romaji: 'nenrei kakunin no botan wo onegai shimasu' },
+        { speaker: 'Customer', jp: 'はい、押しました。', en: 'OK, pressed.', romaji: 'hai, oshimashita' },
+      ],
+      question: { jp: 'お客さんは何を買っていますか？', en: 'What is the customer buying?' },
+      options: [
+        { jp: 'お酒（ビールなど）', en: 'Alcohol (e.g. beer)', correct: true },
+        { jp: '雑誌', en: 'A magazine', correct: false },
+        { jp: 'ガム', en: 'Gum', correct: false },
+      ],
+      tip: '「年齢確認」(nenrei kakunin) means age verification — required only for お酒 (alcohol) and タバコ (cigarettes). Legal drinking age in Japan is 20.',
+    },
+    {
+      id: 'businessman_paypay',
+      customer: 'Businessman',
+      sprite: 'businessman',
+      lines: [
+        { speaker: 'Clerk', jp: 'お支払い方法は？', en: 'How would you like to pay?', romaji: 'oshiharai houhou wa' },
+        { speaker: 'Customer', jp: 'PayPayで。', en: 'PayPay.', romaji: 'PayPay de' },
+        { speaker: 'Clerk', jp: 'QRコードをかざしてください。', en: 'Please scan the QR code.', romaji: 'QR koodo wo kazashite kudasai' },
+      ],
+      question: { jp: 'お客さんはどう支払いますか？', en: 'How is the customer paying?' },
+      options: [
+        { jp: 'PayPay（QRコード）', en: 'PayPay (QR code)', correct: true },
+        { jp: '現金', en: 'Cash', correct: false },
+        { jp: 'Suica', en: 'IC card (Suica)', correct: false },
+      ],
+      tip: '「〜で」after a payment name = "with ~". PayPayで, Suicaで, 現金で. The verb 「かざす」(kazasu) means to hold up / wave over a scanner — used for QR and IC cards alike.',
+    },
+    {
+      id: 'tourist_chopsticks_request',
+      customer: 'Tourist',
+      sprite: 'oldman',
+      lines: [
+        { speaker: 'Customer', jp: 'これとこれをお願いします。', en: 'This and this, please.', romaji: 'kore to kore wo onegai shimasu' },
+        { speaker: 'Clerk', jp: 'お箸はおつけしますか？', en: 'Shall I add chopsticks?', romaji: 'ohashi wa otsuke shimasu ka' },
+        { speaker: 'Customer', jp: '二膳お願いします。', en: 'Two pairs, please.', romaji: 'ni-zen onegai shimasu' },
+      ],
+      question: { jp: 'お客さんはお箸を何膳もらいましたか？', en: 'How many pairs of chopsticks did the customer get?' },
+      options: [
+        { jp: '二膳（にぜん）', en: 'Two pairs', correct: true },
+        { jp: '一膳（いちぜん）', en: 'One pair', correct: false },
+        { jp: 'もらわなかった', en: 'They declined', correct: false },
+      ],
+      tip: 'Chopsticks use the counter 「〜膳」(zen). 一膳 (ichi-zen) = 1 pair, 二膳 (ni-zen) = 2 pairs. Different counters for different things is core Japanese.',
+    },
+  ];
+
+  // Queue state — tracks listening progress and statistics
+  const customerQueueState = {
+    encountersCompleted: 0,
+    correctAnswers: 0,
+    totalAttempts: 0,
+    scenariosHeard: [],   // scenario IDs the player has overheard at least once
+    lastTriggerTime: 0,   // throttle: avoid back-to-back queues
+    triggerChance: 0.45,  // base chance per store entry once unlocked
+  };
+
+  // Pick the next scenario, favoring unheard scenarios for variety. Falls back to
+  // random selection once everything has been heard at least once.
+  function pickNextQueueScenario() {
+    const unheard = CUSTOMER_QUEUE_SCENARIOS.filter(
+      s => !customerQueueState.scenariosHeard.includes(s.id)
+    );
+    const pool = unheard.length > 0 ? unheard : CUSTOMER_QUEUE_SCENARIOS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // Should we trigger a queue on store entry? Requires the player to have completed
+  // at least 1 store level (so the basic flow is familiar), throttles to once per
+  // ~25 seconds, and rolls against triggerChance.
+  function shouldTriggerCustomerQueue() {
+    if (completedLevelsCount < 1) return false;
+    const now = Date.now();
+    if (now - customerQueueState.lastTriggerTime < 25000) return false;
+    return Math.random() < customerQueueState.triggerChance;
+  }
+
+  // Build a single queue encounter: returns scenario + shuffled options.
+  function buildCustomerQueue() {
+    const scenario = pickNextQueueScenario();
+    customerQueueState.lastTriggerTime = Date.now();
+    // Shuffle options so position memorization doesn't help
+    const options = scenario.options.slice();
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+    return {
+      id: scenario.id,
+      customer: scenario.customer,
+      sprite: scenario.sprite,
+      lines: scenario.lines,
+      question: scenario.question,
+      options: options,
+      tip: scenario.tip,
+    };
+  }
+
+  function recordCustomerQueueResult(scenarioId, correct) {
+    if (!customerQueueState.scenariosHeard.includes(scenarioId)) {
+      customerQueueState.scenariosHeard.push(scenarioId);
+    }
+    customerQueueState.encountersCompleted++;
+    customerQueueState.totalAttempts++;
+    if (correct) customerQueueState.correctAnswers++;
+  }
+
+  function getCustomerQueueStats() {
+    return {
+      encounters: customerQueueState.encountersCompleted,
+      heard: customerQueueState.scenariosHeard.length,
+      total: CUSTOMER_QUEUE_SCENARIOS.length,
+      correct: customerQueueState.correctAnswers,
+      attempts: customerQueueState.totalAttempts,
+    };
+  }
+
   // ============ SAVE / LOAD SYSTEM ============
   // Persist all game progress to browser storage so nothing is lost on page reload
   const SAVE_KEY = 'konbiniquest_save_v1';
@@ -4155,6 +4344,13 @@ const NPCs = (() => {
         quizCorrect: pitchGuideState.quizCorrect,
         quizTotal: pitchGuideState.quizTotal,
       },
+      // Customer queue (listening comprehension on store entry)
+      customerQueueState: {
+        encountersCompleted: customerQueueState.encountersCompleted,
+        correctAnswers: customerQueueState.correctAnswers,
+        totalAttempts: customerQueueState.totalAttempts,
+        scenariosHeard: [...customerQueueState.scenariosHeard],
+      },
     };
   }
 
@@ -4297,6 +4493,13 @@ const NPCs = (() => {
         pitchGuideState.lessonsViewed = new Set(data.pitchGuideState.lessonsViewed || []);
         pitchGuideState.quizCorrect = data.pitchGuideState.quizCorrect || 0;
         pitchGuideState.quizTotal = data.pitchGuideState.quizTotal || 0;
+      }
+      // Customer queue
+      if (data.customerQueueState) {
+        customerQueueState.encountersCompleted = data.customerQueueState.encountersCompleted || 0;
+        customerQueueState.correctAnswers = data.customerQueueState.correctAnswers || 0;
+        customerQueueState.totalAttempts = data.customerQueueState.totalAttempts || 0;
+        customerQueueState.scenariosHeard = data.customerQueueState.scenariosHeard || [];
       }
       return true;
     } catch (e) {
@@ -4649,6 +4852,12 @@ const NPCs = (() => {
     getServiceCounterScenarioList,
     completeServiceCounterScenario,
     getServiceCounterStats,
+    // Customer queue (listening comprehension on store entry)
+    CUSTOMER_QUEUE_SCENARIOS,
+    shouldTriggerCustomerQueue,
+    buildCustomerQueue,
+    recordCustomerQueueResult,
+    getCustomerQueueStats,
     // Progress dashboard
     getProgressDashboard,
     // Ambient speech bubbles
