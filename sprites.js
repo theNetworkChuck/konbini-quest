@@ -4414,6 +4414,211 @@ const Sprites = (() => {
     if (line) ctx.fillText(line, x, yy);
   }
 
+  // ============ IMPROVEMENT #39: GREETING RESPONSE TRAINING OVERLAY ============
+  // Cultural-correction overlay: clerk says a greeting variant in a speech bubble,
+  // player picks the most natural response. Two phases: 'question' and 'result'.
+  function drawGreetingResponseOverlay(ctx, canvasW, canvasH, gr, time) {
+    if (!gr) return;
+
+    // --- Dim background ---
+    ctx.fillStyle = 'rgba(8,8,18,0.78)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // --- Slide-up from bottom animation ---
+    const animT = Math.min(1, (gr.elapsed || 0) / 0.4);
+    const ease = 1 - Math.pow(1 - animT, 3);
+    const slideOffset = (1 - ease) * canvasH;
+
+    ctx.save();
+    ctx.translate(0, slideOffset);
+
+    // ============ TOP RIBBON: GREETING ETIQUETTE ============
+    const ribbonY = 8;
+    const ribbonH = 14;
+    const ribbonColor = gr.storeColor || '#b67dd9';
+    ctx.fillStyle = ribbonColor;
+    ctx.fillRect(0, ribbonY, canvasW, ribbonH);
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.fillRect(0, ribbonY + ribbonH - 2, canvasW, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('挨拶マナー  GREETING', canvasW / 2, ribbonY + ribbonH / 2 + 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+
+    // ============ CLERK SCENE PANEL (smaller than queue) ============
+    const sceneY = ribbonY + ribbonH + 6;
+    const sceneH = 44;
+    const sceneX = 8;
+    const sceneW = canvasW - 16;
+    // Wall
+    ctx.fillStyle = '#f4e4c1';
+    ctx.fillRect(sceneX, sceneY, sceneW, sceneH - 10);
+    // Counter front
+    ctx.fillStyle = '#7b5230';
+    ctx.fillRect(sceneX, sceneY + sceneH - 10, sceneW, 10);
+    ctx.fillStyle = '#a87445';
+    ctx.fillRect(sceneX, sceneY + sceneH - 12, sceneW, 2);
+    // Cash register
+    const regX = sceneX + sceneW - 38;
+    const regY = sceneY + sceneH - 22;
+    ctx.fillStyle = '#2b2b2b';
+    ctx.fillRect(regX, regY, 22, 10);
+    ctx.fillStyle = '#3aaee0';
+    ctx.fillRect(regX + 2, regY + 2, 18, 3);
+    // Frame
+    ctx.strokeStyle = ribbonColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sceneX + 0.5, sceneY + 0.5, sceneW - 1, sceneH - 1);
+
+    // ============ CLERK (centered, facing player) ============
+    const clerkX = sceneX + sceneW / 2 - 8;
+    const clerkY = sceneY + sceneH - 12 - 16;
+    const clerkBob = Math.floor(Math.sin(time * 3) * 0.5);
+    drawClerk(ctx, clerkX, clerkY + clerkBob, gr.storeName || '7-Eleven', 'down');
+
+    // ============ CLERK SPEECH BUBBLE (kawaii, above clerk) ============
+    drawGreetingSpeechBubble(ctx, sceneX + 4, sceneY - 2, sceneW - 8, gr.clerkLine, gr.clerkEn);
+
+    // ============ LOWER PANEL ============
+    const panelY = sceneY + sceneH + 6;
+    const panelH = canvasH - panelY - 8;
+    const panelX = 8;
+    const panelW = canvasW - 16;
+    ctx.fillStyle = '#1a1024';
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.fillStyle = '#2a1c3a';
+    ctx.fillRect(panelX, panelY, panelW, 1);
+    ctx.fillRect(panelX, panelY + panelH - 1, panelW, 1);
+    ctx.strokeStyle = ribbonColor;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+    if (gr.phase === 'question') {
+      drawGreetingQuestionPanel(ctx, panelX, panelY, panelW, panelH, gr, time);
+    } else if (gr.phase === 'result') {
+      drawGreetingResultPanel(ctx, panelX, panelY, panelW, panelH, gr, time);
+    }
+
+    ctx.restore();
+  }
+
+  // Speech bubble for clerk greeting -- shows JP line large + EN small underneath
+  function drawGreetingSpeechBubble(ctx, x, y, w, jp, en) {
+    const bubbleH = 22;
+    const bubbleY = y - bubbleH + 2;
+    // Bubble body
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x, bubbleY, w, bubbleH);
+    ctx.strokeStyle = '#2a1c3a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, bubbleY + 0.5, w - 1, bubbleH - 1);
+    // Tail (small triangle pointing down-right toward clerk)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + w / 2 - 1, bubbleY + bubbleH, 4, 1);
+    ctx.fillRect(x + w / 2, bubbleY + bubbleH + 1, 2, 1);
+    // JP text
+    ctx.fillStyle = '#1a1024';
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText(jp, x + 4, bubbleY + 3);
+    // EN subtitle
+    ctx.fillStyle = '#888';
+    ctx.font = '5px "Press Start 2P", monospace';
+    ctx.fillText(en, x + 4, bubbleY + 13);
+  }
+
+  function drawGreetingQuestionPanel(ctx, px, py, pw, ph, gr, time) {
+    // Header
+    ctx.fillStyle = '#f5d27d';
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText('どう返事しますか?  YOUR REPLY?', px + 6, py + 4);
+
+    // Context line (italicized vibe via dim color, wrap as needed)
+    ctx.fillStyle = '#c8b8d8';
+    ctx.font = '5px "Press Start 2P", monospace';
+    wrapTextSimple(ctx, gr.context, px + 6, py + 16, pw - 12, 7);
+
+    // Options (4 rows). Each row shows JP + EN translation
+    // Context can be 2-3 lines @ 7px = ~21px, so start options at py + 40
+    const optStartY = py + 42;
+    const optH = 16;
+    gr.options.forEach((opt, i) => {
+      const oy = optStartY + i * optH;
+      const selected = i === gr.selectedIdx;
+      if (selected) {
+        ctx.fillStyle = '#b67dd9';
+        ctx.fillRect(px + 4, oy - 1, pw - 8, optH - 2);
+      }
+      // Cursor arrow
+      ctx.fillStyle = selected ? '#fff' : '#666';
+      ctx.font = '7px "Press Start 2P", monospace';
+      ctx.textBaseline = 'top';
+      ctx.fillText(selected ? '>' : ' ', px + 6, oy + 1);
+      // JP
+      ctx.fillStyle = '#fff';
+      ctx.font = '7px "Press Start 2P", monospace';
+      ctx.fillText(opt.jp, px + 16, oy + 1);
+      // EN sub
+      ctx.fillStyle = selected ? '#f0e0ff' : '#888';
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.fillText(opt.en, px + 16, oy + 10);
+    });
+
+    // Hint footer
+    const blink = Math.floor(time * 2) % 2 === 0;
+    ctx.fillStyle = blink ? '#f5d27d' : '#a88f4d';
+    ctx.font = '5px "Press Start 2P", monospace';
+    ctx.fillText('Arrows + [Z]', px + pw - 64, py + ph - 6);
+  }
+
+  function drawGreetingResultPanel(ctx, px, py, pw, ph, gr, time) {
+    // Banner: correct (green) / incorrect (orange)
+    const correct = gr.wasCorrect;
+    const bannerColor = correct ? '#3ec97a' : '#e88a3c';
+    const bannerH = 18;
+    ctx.fillStyle = bannerColor;
+    ctx.fillRect(px, py, pw, bannerH);
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.fillRect(px, py + bannerH - 2, pw, 2);
+    ctx.fillStyle = '#fff';
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(correct ? '正解!  NATURAL!' : '惜しい!  CLOSE -- BUT', px + pw / 2, py + bannerH / 2 + 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    // "Best reply:" label + the correct option text
+    const bestOpt = gr.options.find(o => o.correct);
+    ctx.fillStyle = '#a3d8ff';
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('Best reply:', px + 6, py + bannerH + 6);
+    ctx.fillStyle = '#fff';
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.fillText(bestOpt ? bestOpt.jp : '', px + 6, py + bannerH + 16);
+    ctx.fillStyle = '#888';
+    ctx.font = '5px "Press Start 2P", monospace';
+    ctx.fillText(bestOpt ? bestOpt.en : '', px + 6, py + bannerH + 26);
+
+    // Cultural tip box
+    ctx.fillStyle = '#f5d27d';
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.fillText('TIP:', px + 6, py + bannerH + 38);
+    ctx.fillStyle = '#e8e0f0';
+    ctx.font = '5px "Press Start 2P", monospace';
+    wrapTextSimple(ctx, gr.tip, px + 6, py + bannerH + 48, pw - 12, 7);
+
+    // Hint footer
+    const blink = Math.floor(time * 2) % 2 === 0;
+    ctx.fillStyle = blink ? '#f5d27d' : '#a88f4d';
+    ctx.font = '5px "Press Start 2P", monospace';
+    ctx.fillText('[Z] Continue', px + pw - 64, py + ph - 6);
+  }
+
   // ============ COMBO COUNTER DISPLAY ============
   function drawComboCounter(ctx, canvasW, canvasH, combo, showTimer, maxCombo, multiplier) {
     if (combo < 2) return; // Only show at 2+ combo
@@ -4594,6 +4799,7 @@ const Sprites = (() => {
     drawKonbiniReceipt,
     // Customer queue (listening comprehension on store entry)
     drawCustomerQueueOverlay,
+    drawGreetingResponseOverlay,
     // Combo counter
     drawComboCounter,
     drawComboMilestoneBanner,

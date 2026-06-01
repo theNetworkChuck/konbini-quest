@@ -42,6 +42,7 @@
     receiptOverlay: null, // {data, elapsed, onDismiss}
     // Customer queue overlay shown on store entry when another customer is already in line
     customerQueue: null, // {phase, lineIdx, lines, options, selectedIdx, wasCorrect, elapsed, onDismiss, ...}
+    greetingResponse: null, // Improvement #39: {phase, options, selectedIdx, wasCorrect, elapsed, onDismiss, ...}
     // Variable rewards
     rewardNotification: null, // {reward, timer} for bonus phrase drops
     phraseBookOpen: false,
@@ -508,6 +509,72 @@
       }
     }
 
+    // Handle greeting response overlay (Improvement #39) -- blocks all other input.
+    // The clerk says a greeting in a speech bubble, and the player picks the most
+    // natural reply. Teaches the counter-intuitive rule that silent-nod is often correct.
+    if (state.greetingResponse) {
+      state.greetingResponse.elapsed += dt;
+      const gr = state.greetingResponse;
+      // Wait for slide-in animation before accepting input
+      if (gr.elapsed < 0.4) return;
+
+      // Auto-speak the clerk's line once when the question phase first appears
+      if (gr.phase === 'question' && !gr.spoken) {
+        gr.spoken = true;
+        if (gr.clerkLine) {
+          try { GameAudio.speakJapanese && GameAudio.speakJapanese(gr.clerkLine); } catch (e) { /* ignore */ }
+        }
+      }
+
+      if (gr.phase === 'question') {
+        const dir = Engine.inputDir();
+        if (dir === 'up' && gr.selectedIdx > 0) {
+          gr.selectedIdx--;
+          GameAudio.playMove && GameAudio.playMove();
+        } else if (dir === 'down' && gr.selectedIdx < gr.options.length - 1) {
+          gr.selectedIdx++;
+          GameAudio.playMove && GameAudio.playMove();
+        }
+        if (Engine.inputA()) {
+          const picked = gr.options[gr.selectedIdx];
+          gr.wasCorrect = !!picked.correct;
+          gr.answeredIdx = gr.selectedIdx;
+          gr.phase = 'result';
+          try { NPCs.recordGreetingResponseResult(gr.id, gr.wasCorrect); } catch (e) { /* ignore */ }
+          if (gr.wasCorrect) {
+            GameAudio.playCorrect && GameAudio.playCorrect();
+            Engine.spawnSparkles && Engine.spawnSparkles(Engine.CANVAS_W / 2, Engine.CANVAS_H / 2);
+            if (typeof onCorrectAnswer === 'function') onCorrectAnswer();
+          } else {
+            GameAudio.playWrong && GameAudio.playWrong();
+            try {
+              NPCs.recordMistake && NPCs.recordMistake({
+                clerkJp: gr.clerkLine,
+                clerkEn: gr.clerkEn,
+                wrongJp: picked.jp,
+                wrongEn: picked.en,
+                correctJp: (gr.options.find(o => o.correct) || {}).jp || '',
+                correctEn: (gr.options.find(o => o.correct) || {}).en || '',
+                source: 'GreetingResponse',
+              });
+            } catch (e) { /* ignore */ }
+            if (typeof onWrongAnswer === 'function') onWrongAnswer();
+          }
+        }
+        return;
+      }
+
+      if (gr.phase === 'result') {
+        if (Engine.inputA() || Engine.inputB()) {
+          const cb = gr.onDismiss;
+          state.greetingResponse = null;
+          GameAudio.playSelect && GameAudio.playSelect();
+          if (cb) cb();
+        }
+        return;
+      }
+    }
+
     // Handle conversation scenario menu overlay
     if (state.conversationMenuOpen) {
       const dir = Engine.inputDir();
@@ -853,11 +920,56 @@
             });
           };
 
-          // Show greeting (or customer queue first) after fade-in
+          // Helper to optionally show the Improvement #39 Greeting Response overlay
+          // BEFORE the plain clerk greeting. If it doesn't fire, fall through to
+          // the standard clerk greeting line.
+          const maybeShowGreetingResponse = (onAfter) => {
+            try {
+              if (NPCs.shouldTriggerGreetingResponse && NPCs.shouldTriggerGreetingResponse()) {
+                const greet = NPCs.buildGreetingResponse();
+                if (greet) {
+                  state.greetingResponse = {
+                    id: greet.id,
+                    clerkLine: greet.clerkLine,
+                    clerkRomaji: greet.clerkRomaji,
+                    clerkEn: greet.clerkEn,
+                    context: greet.context,
+                    options: greet.options,
+                    selectedIdx: 0,
+                    wasCorrect: false,
+                    answeredIdx: -1,
+                    tip: greet.tip,
+                    storeName: targetMap.store,
+                    storeColor: bannerColor,
+                    elapsed: 0,
+                    spoken: false,
+                    phase: 'question',
+                    // After the player dismisses the result, run the normal greeting
+                    onDismiss: onAfter,
+                  };
+                  return true;
+                }
+              }
+            } catch (e) { /* fall through */ }
+            return false;
+          };
+
+          // Show greeting (or customer queue first, or greeting-response quiz) after fade-in.
+          // Priority order on store entry:
+          //   1. Customer queue (#38) -- if it fires, then -> greeting-response (#39) -> clerk greeting
+          //   2. Greeting-response quiz (#39) -- if it fires, then -> clerk greeting
+          //   3. Plain clerk greeting fallback
           setTimeout(() => {
-            // Improvement #38: occasionally another customer is already at the
-            // register. Show the queue overlay first; the clerk greeting fires
-            // after the player finishes the listening comprehension question.
+            // Build the chain right-to-left: after the (possible) greeting-response
+            // overlay, run the actual showClerkGreeting; after the (possible) customer
+            // queue, attempt the greeting-response overlay (and fall through to
+            // showClerkGreeting if it doesn't fire).
+            const afterQueue = () => {
+              if (!maybeShowGreetingResponse(showClerkGreeting)) {
+                showClerkGreeting();
+              }
+            };
+
             let triggered = false;
             try {
               if (NPCs.shouldTriggerCustomerQueue && NPCs.shouldTriggerCustomerQueue()) {
@@ -880,14 +992,15 @@
                     storeColor: bannerColor,
                     elapsed: 0,
                     spoken: false,
-                    onDismiss: showClerkGreeting,
+                    onDismiss: afterQueue,
                   };
                   triggered = true;
                 }
               }
-            } catch (e) { /* fall through to plain greeting */ }
+            } catch (e) { /* fall through */ }
             if (!triggered) {
-              showClerkGreeting();
+              // No customer queue this time -- try greeting-response, else plain greeting
+              afterQueue();
             }
           }, 600);
 
@@ -4589,6 +4702,15 @@
       );
     }
 
+    // Greeting response overlay (#39) -- mutually exclusive with customer queue
+    if (state.greetingResponse) {
+      Sprites.drawGreetingResponseOverlay(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        state.greetingResponse,
+        state.time,
+      );
+    }
+
     // Customer queue overlay (above scene, below particles/fade/banners)
     if (state.customerQueue) {
       Sprites.drawCustomerQueueOverlay(
@@ -4824,6 +4946,33 @@
       onDismiss: () => { console.log('queue dismissed'); },
     };
     return state.customerQueue;
+  };
+
+  // Testing hook: force a greeting response overlay (Improvement #39)
+  window.forceGreetingResponse = (opts) => {
+    opts = opts || {};
+    let greet;
+    try { greet = NPCs.buildGreetingResponse(); } catch (e) { console.warn(e); return; }
+    if (!greet) return;
+    state.greetingResponse = {
+      id: greet.id,
+      clerkLine: greet.clerkLine,
+      clerkRomaji: greet.clerkRomaji,
+      clerkEn: greet.clerkEn,
+      context: greet.context,
+      options: greet.options,
+      selectedIdx: 0,
+      wasCorrect: false,
+      answeredIdx: -1,
+      tip: greet.tip,
+      storeName: opts.storeName || '7-Eleven',
+      storeColor: opts.storeColor || '#b67dd9',
+      elapsed: 0,
+      spoken: false,
+      phase: 'question',
+      onDismiss: () => { console.log('greeting response dismissed'); },
+    };
+    return state.greetingResponse;
   };
 
   // Testing hook: set combo for visual testing

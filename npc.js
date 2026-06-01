@@ -4146,6 +4146,176 @@ const NPCs = (() => {
     };
   }
 
+  // ============ IMPROVEMENT #39: GREETING RESPONSE TRAINING ============
+  // Teach the SINGLE most counter-intuitive konbini etiquette rule:
+  // when the clerk says いらっしゃいませ, the culturally correct response
+  // is typically NO verbal reply -- just a small nod, or nothing at all.
+  // Learners often default to "arigatou gozaimasu" or "konnichiwa" which
+  // are technically polite but feel slightly off in a chain konbini.
+  // Each scenario presents the clerk's greeting variant and asks the
+  // player to pick the most natural response.
+  const GREETING_RESPONSE_SCENARIOS = [
+    {
+      id: 'standard_irasshaimase',
+      clerkLine: 'いらっしゃいませ！',
+      clerkRomaji: 'irasshaimase!',
+      clerkEn: 'Welcome!',
+      context: 'You walk into a Lawson at 2pm. The clerk barely glances up while restocking the magazine rack and calls out the standard greeting.',
+      options: [
+        { jp: '〔軽く会釈する〕', en: '(Small nod, no words)', romaji: '(keiku eshaku suru)', correct: true },
+        { jp: 'ありがとうございます！', en: 'Thank you very much!', romaji: 'arigatou gozaimasu!', correct: false },
+        { jp: 'こんにちは！', en: 'Hello!', romaji: 'konnichiwa!', correct: false },
+        { jp: 'いらっしゃいませ！', en: 'Welcome! (echo it back)', romaji: 'irasshaimase!', correct: false },
+      ],
+      tip: 'いらっしゃいませ is a one-way service phrase, not a real greeting. No verbal reply is expected -- a small nod is the textbook native response. Saying ありがとう here feels premature (you haven\'t bought anything yet), and echoing いらっしゃいませ back is what staff say to *you*, not the other way around.',
+      learnerTrap: 'Many learners reflex-reply "arigatou" or "konnichiwa" -- both are technically polite but mark you instantly as a tourist.',
+    },
+    {
+      id: 'morning_greeting',
+      clerkLine: 'おはようございます、いらっしゃいませ。',
+      clerkRomaji: 'ohayou gozaimasu, irasshaimase.',
+      clerkEn: 'Good morning, welcome.',
+      context: 'You enter a 7-Eleven at 7am on your way to work. The morning-shift clerk is actually looking at you and says good morning first.',
+      options: [
+        { jp: 'おはようございます。', en: 'Good morning.', romaji: 'ohayou gozaimasu.', correct: true },
+        { jp: '〔無言で会釈〕', en: '(Silent nod)', romaji: '(mugon de eshaku)', correct: false },
+        { jp: 'こんにちは。', en: 'Hello.', romaji: 'konnichiwa.', correct: false },
+        { jp: 'おはよう！', en: 'Mornin\'!', romaji: 'ohayou!', correct: false },
+      ],
+      tip: 'When the clerk uses a time-specific greeting (おはようございます / こんばんは), that IS a real greeting and warrants a verbal reply in the same register. Silent nod becomes slightly cold here. Watch out: おはよう (without ございます) is reserved for friends/family -- inappropriate to staff.',
+      learnerTrap: 'こんにちは would be wrong at 7am. The casual おはよう is too familiar for a stranger.',
+    },
+    {
+      id: 'evening_familymart',
+      clerkLine: 'こんばんは、いらっしゃいませ〜。',
+      clerkRomaji: 'konbanwa, irasshaimase~.',
+      clerkEn: 'Good evening, welcome~.',
+      context: 'You stop into a FamilyMart at 10pm. The night-shift clerk knows you as a regular and gives you a real personal greeting.',
+      options: [
+        { jp: 'こんばんは。', en: 'Good evening.', romaji: 'konbanwa.', correct: true },
+        { jp: 'おつかれさまです。', en: 'Thanks for your hard work.', romaji: 'otsukaresama desu.', correct: false },
+        { jp: 'すみません。', en: 'Excuse me.', romaji: 'sumimasen.', correct: false },
+        { jp: 'はい。', en: 'Yes.', romaji: 'hai.', correct: false },
+      ],
+      tip: 'こんばんは is the textbook reply when a clerk greets you with こんばんは. お疲れさまです is reserved for colleagues / people finishing work -- using it on a clerk-customer relationship is a common learner overreach. はい alone is a non-response that sounds curt.',
+      learnerTrap: 'お疲れさまです feels polite but it implies a shared workplace context that doesn\'t exist between customer and store clerk.',
+    },
+    {
+      id: 'busy_clerk_greeting',
+      clerkLine: 'いらっしゃいませ、こんにちは〜！',
+      clerkRomaji: 'irasshaimase, konnichiwa~!',
+      clerkEn: 'Welcome, hello~!',
+      context: 'You walk into a tiny mom-and-pop Lawson at 1pm. The owner is the only one working and looks straight at you with a warm smile.',
+      options: [
+        { jp: 'こんにちは。', en: 'Hello.', romaji: 'konnichiwa.', correct: true },
+        { jp: '〔無言で会釈〕', en: '(Silent nod, no words)', romaji: '(mugon de eshaku)', correct: false },
+        { jp: 'いらっしゃいませ！', en: 'Welcome! (echo)', romaji: 'irasshaimase!', correct: false },
+        { jp: 'お邪魔します。', en: 'Pardon my intrusion.', romaji: 'ojama shimasu.', correct: false },
+      ],
+      tip: 'In a small shop with a single owner-clerk making real eye contact, the silent-nod rule reverses -- you SHOULD reply with こんにちは to mirror their こんにちは. Silent nods in tiny shops feel cold. お邪魔します is for entering someone\'s home or office, not a shop.',
+      learnerTrap: 'The "no reply needed" rule applies only to big-chain konbini where the greeting is reflexive. Small shops with eye contact = real greeting = real reply.',
+    },
+    {
+      id: 'returning_customer',
+      clerkLine: 'あ、いらっしゃいませ！',
+      clerkRomaji: 'a, irasshaimase!',
+      clerkEn: 'Oh, welcome!',
+      context: 'You walk into the 7-Eleven you visit every morning. The clerk recognizes you and adds a friendly あ before the greeting.',
+      options: [
+        { jp: '〔微笑んで会釈〕', en: '(Smile + small nod)', romaji: '(hohoende eshaku)', correct: true },
+        { jp: 'はい、どうも。', en: 'Yeah, thanks.', romaji: 'hai, doumo.', correct: false },
+        { jp: 'またお願いします。', en: 'Counting on you again.', romaji: 'mata onegai shimasu.', correct: false },
+        { jp: 'お世話になります。', en: 'Thank you for your service.', romaji: 'osewa ni narimasu.', correct: false },
+      ],
+      tip: 'The あ signals recognition -- the clerk knows your face. A warm smile + nod is the perfect response. Verbal replies feel forced here because you have no shared task to discuss yet. お世話になります is business-relationship language; お願いします is a request opener, not a greeting.',
+      learnerTrap: 'Learners often want to "do something extra" to acknowledge regular-customer status. The native move is just to smile back -- doing less is doing more.',
+    },
+    {
+      id: 'rapid_double_greeting',
+      clerkLine: 'いらっしゃいませ！ いらっしゃいませ！',
+      clerkRomaji: 'irasshaimase! irasshaimase!',
+      clerkEn: 'Welcome! Welcome!',
+      context: 'You enter a packed Lawson during the lunch rush. Two clerks behind the counter call out the greeting in rapid succession, but neither looks at you -- they\'re both ringing up customers.',
+      options: [
+        { jp: '〔何も言わず店内へ〕', en: '(Say nothing, head into the store)', romaji: '(nani mo iwazu tennai e)', correct: true },
+        { jp: 'すみません！', en: 'Excuse me!', romaji: 'sumimasen!', correct: false },
+        { jp: 'ありがとうございます！', en: 'Thank you!', romaji: 'arigatou gozaimasu!', correct: false },
+        { jp: 'お願いします！', en: 'Please!', romaji: 'onegai shimasu!', correct: false },
+      ],
+      tip: 'Rapid double / overlapping いらっしゃいませ during rush hour is the most automatic version of the phrase -- staff aren\'t even tracking who entered. The expected response is literally nothing. すみません is for getting attention you need (you don\'t), and replying loudly during rush draws attention away from paying customers.',
+      learnerTrap: 'The instinct to "acknowledge" both clerks individually is a tourist tell. Native flow: walk in, head to the aisle, don\'t interrupt the workflow.',
+    },
+  ];
+
+  const greetingResponseState = {
+    encountersCompleted: 0,
+    correctAnswers: 0,
+    totalAttempts: 0,
+    scenariosShown: [],
+    lastTriggerTime: 0,
+    triggerChance: 0.40,
+  };
+
+  function shouldTriggerGreetingResponse() {
+    // Don't fire in tutorial; needs at least 1 completed level
+    if (completedLevelsCount < 1) return false;
+    // Don't fire if the customer queue overlay is already going to fire this entry
+    // (caller guarantees mutual exclusion -- we check anyway to be safe)
+    const now = Date.now();
+    if (now - greetingResponseState.lastTriggerTime < 30000) return false;
+    return Math.random() < greetingResponseState.triggerChance;
+  }
+
+  function pickGreetingScenario() {
+    // Prefer scenarios the player hasn't seen yet
+    const unseen = GREETING_RESPONSE_SCENARIOS.filter(
+      s => !greetingResponseState.scenariosShown.includes(s.id)
+    );
+    const pool = unseen.length > 0 ? unseen : GREETING_RESPONSE_SCENARIOS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function buildGreetingResponse() {
+    const scenario = pickGreetingScenario();
+    if (!scenario) return null;
+    greetingResponseState.lastTriggerTime = Date.now();
+    // Shuffle options so the correct answer isn't always first
+    const shuffled = [...scenario.options];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return {
+      id: scenario.id,
+      clerkLine: scenario.clerkLine,
+      clerkRomaji: scenario.clerkRomaji,
+      clerkEn: scenario.clerkEn,
+      context: scenario.context,
+      options: shuffled,
+      tip: scenario.tip,
+      learnerTrap: scenario.learnerTrap,
+    };
+  }
+
+  function recordGreetingResponseResult(scenarioId, correct) {
+    if (!greetingResponseState.scenariosShown.includes(scenarioId)) {
+      greetingResponseState.scenariosShown.push(scenarioId);
+    }
+    greetingResponseState.encountersCompleted++;
+    greetingResponseState.totalAttempts++;
+    if (correct) greetingResponseState.correctAnswers++;
+  }
+
+  function getGreetingResponseStats() {
+    return {
+      encounters: greetingResponseState.encountersCompleted,
+      shown: greetingResponseState.scenariosShown.length,
+      total: GREETING_RESPONSE_SCENARIOS.length,
+      correct: greetingResponseState.correctAnswers,
+      attempts: greetingResponseState.totalAttempts,
+    };
+  }
+
   // ============ SAVE / LOAD SYSTEM ============
   // Persist all game progress to browser storage so nothing is lost on page reload
   const SAVE_KEY = 'konbiniquest_save_v1';
@@ -4351,6 +4521,13 @@ const NPCs = (() => {
         totalAttempts: customerQueueState.totalAttempts,
         scenariosHeard: [...customerQueueState.scenariosHeard],
       },
+      // Greeting response training (cultural correction on store entry)
+      greetingResponseState: {
+        encountersCompleted: greetingResponseState.encountersCompleted,
+        correctAnswers: greetingResponseState.correctAnswers,
+        totalAttempts: greetingResponseState.totalAttempts,
+        scenariosShown: [...greetingResponseState.scenariosShown],
+      },
     };
   }
 
@@ -4500,6 +4677,13 @@ const NPCs = (() => {
         customerQueueState.correctAnswers = data.customerQueueState.correctAnswers || 0;
         customerQueueState.totalAttempts = data.customerQueueState.totalAttempts || 0;
         customerQueueState.scenariosHeard = data.customerQueueState.scenariosHeard || [];
+      }
+      // Greeting response training
+      if (data.greetingResponseState) {
+        greetingResponseState.encountersCompleted = data.greetingResponseState.encountersCompleted || 0;
+        greetingResponseState.correctAnswers = data.greetingResponseState.correctAnswers || 0;
+        greetingResponseState.totalAttempts = data.greetingResponseState.totalAttempts || 0;
+        greetingResponseState.scenariosShown = data.greetingResponseState.scenariosShown || [];
       }
       return true;
     } catch (e) {
@@ -4858,6 +5042,12 @@ const NPCs = (() => {
     buildCustomerQueue,
     recordCustomerQueueResult,
     getCustomerQueueStats,
+    // Greeting response training (cultural correction on store entry)
+    GREETING_RESPONSE_SCENARIOS,
+    shouldTriggerGreetingResponse,
+    buildGreetingResponse,
+    recordGreetingResponseResult,
+    getGreetingResponseStats,
     // Progress dashboard
     getProgressDashboard,
     // Ambient speech bubbles
