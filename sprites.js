@@ -3635,6 +3635,241 @@ const Sprites = (() => {
   }
 
   // ============ PROGRESS DASHBOARD OVERLAY ============
+  // ============ KONBINI RECEIPT (レシート) ============
+  // Renders an authentic Japanese konbini thermal-paper receipt as a centered
+  // overlay. Layout matches real-world receipts: store branding header,
+  // transaction metadata, line items with unit prices, tax breakdown
+  // (軽減税率 reduced rate marked with *), total, tendered, change, points,
+  // and the polite 又のご来店をお待ちしております footer.
+  function drawKonbiniReceipt(ctx, canvasW, canvasH, receipt, time) {
+    if (!receipt) return;
+
+    // Dim background
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Slide-in animation: paper slides down from above with bobble
+    const animT = Math.min(1, (receipt.elapsed || 0) / 0.5); // 0.5s slide
+    const ease = 1 - Math.pow(1 - animT, 3); // ease-out cubic
+    const bobble = Math.sin(time * 1.5) * 0.5;
+
+    // Receipt paper dimensions (thermal paper, narrow & tall)
+    const W = 148;
+    const H = 198;
+    const X = Math.floor((canvasW - W) / 2);
+    const Y = Math.floor((canvasH - H) / 2 - 20 + (1 - ease) * -240) + bobble;
+
+    // Paper shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(X + 3, Y + 3, W, H);
+
+    // Thermal paper (off-white)
+    ctx.fillStyle = '#fdfaf2';
+    ctx.fillRect(X, Y, W, H);
+
+    // Torn-edge effect at top (jagged perforation)
+    ctx.fillStyle = '#fdfaf2';
+    for (let i = 0; i < W; i += 4) {
+      const h = (i % 8 === 0) ? 2 : 1;
+      ctx.fillRect(X + i, Y - h, 4, h);
+    }
+    // Torn edge bottom
+    for (let i = 0; i < W; i += 4) {
+      const h = (i % 8 === 4) ? 2 : 1;
+      ctx.fillRect(X + i, Y + H, 4, h);
+    }
+
+    // Faint paper tint lines for thermal-paper authenticity
+    ctx.fillStyle = 'rgba(180,160,120,0.05)';
+    for (let i = 0; i < H; i += 3) {
+      ctx.fillRect(X, Y + i, W, 1);
+    }
+
+    // All text in dark thermal ink color
+    ctx.fillStyle = '#1a1a1a';
+
+    let y = Y + 8;
+    const cx = X + W / 2;
+    const padX = X + 6;
+    const rightX = X + W - 6;
+
+    // ---- Header: store name (Japanese, large) ----
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(receipt.storeJp, cx, y);
+    y += 9;
+
+    // English name + branch
+    ctx.font = '6px monospace';
+    ctx.fillText(receipt.storeEn, cx, y);
+    y += 7;
+    ctx.fillText(receipt.branch, cx, y);
+    y += 9;
+
+    // Divider
+    drawReceiptDivider(ctx, padX, rightX, y);
+    y += 5;
+
+    // ---- Transaction metadata ----
+    ctx.font = '6px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(receipt.dateStr + ' ' + receipt.timeStr, padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText(receipt.receiptNo, rightX, y);
+    y += 7;
+
+    ctx.textAlign = 'left';
+    ctx.fillText('レジ ' + receipt.registerNo, padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('担当: スタッフ', rightX, y);
+    y += 9;
+
+    drawReceiptDivider(ctx, padX, rightX, y);
+    y += 6;
+
+    // ---- Line item ----
+    // Japanese item name (top line, full width)
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'left';
+    const itemMark = receipt.isReducedTax ? '*' : '';
+    ctx.fillText(itemMark + receipt.itemJp, padX, y);
+    y += 7;
+
+    // Unit price line: qty x unit price = total
+    ctx.font = '6px monospace';
+    ctx.fillText('  ' + receipt.qty + ' × ¥' + receipt.unitPrice, padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('¥' + receipt.unitPrice.toLocaleString(), rightX, y);
+    y += 9;
+
+    drawReceiptDivider(ctx, padX, rightX, y);
+    y += 6;
+
+    // ---- Subtotal / tax / total block ----
+    ctx.font = '6px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('小計 (Subtotal)', padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('¥' + receipt.subtotal.toLocaleString(), rightX, y);
+    y += 7;
+
+    // Tax line with rate annotation
+    ctx.textAlign = 'left';
+    const taxPct = Math.round(receipt.taxRate * 100);
+    const taxLabel = receipt.isReducedTax
+      ? '消費税 ' + taxPct + '% (内税*)'
+      : '消費税 ' + taxPct + '% (内税)';
+    ctx.fillText(taxLabel, padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('¥' + receipt.taxAmount.toLocaleString(), rightX, y);
+    y += 9;
+
+    drawReceiptDivider(ctx, padX, rightX, y);
+    y += 6;
+
+    // ---- TOTAL (合計) -- bold and boxed for emphasis ----
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(padX - 1, y - 6, W - 12 + 2, 11);
+    ctx.fillStyle = '#fdfaf2';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('合計 TOTAL', padX + 1, y + 2);
+    ctx.textAlign = 'right';
+    ctx.fillText('¥' + receipt.total.toLocaleString(), rightX - 1, y + 2);
+    y += 12;
+    ctx.fillStyle = '#1a1a1a';
+
+    // ---- Tendered / Change ----
+    ctx.font = '6px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('お預かり (Tendered)', padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('¥' + receipt.tendered.toLocaleString(), rightX, y);
+    y += 7;
+
+    ctx.textAlign = 'left';
+    ctx.fillText('お釣り (Change)', padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('¥' + receipt.change.toLocaleString(), rightX, y);
+    y += 9;
+
+    drawReceiptDivider(ctx, padX, rightX, y);
+    y += 6;
+
+    // ---- Loyalty points ----
+    ctx.textAlign = 'left';
+    ctx.fillText('ポイント Points', padX, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('+' + receipt.pointsEarned + ' pt', rightX, y);
+    y += 9;
+
+    // Reduced-tax disclaimer (only if applicable)
+    if (receipt.isReducedTax) {
+      ctx.font = '5px monospace';
+      ctx.fillStyle = '#555';
+      ctx.textAlign = 'left';
+      ctx.fillText('* 軽減税率対象 (reduced tax)', padX, y);
+      y += 6;
+      ctx.fillStyle = '#1a1a1a';
+    }
+
+    // ---- Footer: thank-you message ----
+    y += 2;
+    ctx.font = 'bold 6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ありがとうございました', cx, y);
+    y += 7;
+    ctx.font = '5px monospace';
+    ctx.fillText('Arigatou gozaimashita!', cx, y);
+    y += 7;
+    ctx.fillText('又のご来店をお待ちしております', cx, y);
+
+    // Bottom barcode (decorative, animated reveal)
+    ctx.textAlign = 'left';
+    if (animT >= 1) {
+      const bcY = Y + H - 12;
+      const bcX = X + 14;
+      const bcW = W - 28;
+      ctx.fillStyle = '#1a1a1a';
+      // Stripes of varying width
+      const stripes = [2,1,3,1,2,2,1,3,2,1,2,3,1,2,1,3,2,1,2,1,3,1,2,2,1,3,2,1,2,1,3,2,1,2];
+      let bx = bcX;
+      let i = 0;
+      while (bx < bcX + bcW && i < stripes.length) {
+        const sw = stripes[i % stripes.length];
+        if (i % 2 === 0) {
+          ctx.fillRect(bx, bcY, sw, 8);
+        }
+        bx += sw + 1;
+        i++;
+      }
+    }
+
+    // Reset
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fff';
+
+    // ---- Hint at bottom of screen ----
+    if (animT >= 1) {
+      ctx.font = '6px monospace';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      const blink = Math.floor(time * 2) % 2 === 0;
+      if (blink) {
+        ctx.fillText('[Z] Continue', canvasW / 2, canvasH - 6);
+      }
+      ctx.textAlign = 'left';
+    }
+  }
+
+  function drawReceiptDivider(ctx, x1, x2, y) {
+    // Dotted divider line characteristic of thermal-paper receipts
+    ctx.fillStyle = '#1a1a1a';
+    for (let x = x1; x < x2; x += 3) {
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
   function drawProgressDashboard(ctx, canvasW, canvasH, data, time) {
     ctx.save();
 
@@ -4035,6 +4270,7 @@ const Sprites = (() => {
     drawPronunciationOverlay,
     // Progress dashboard
     drawProgressDashboard,
+    drawKonbiniReceipt,
     // Combo counter
     drawComboCounter,
     drawComboMilestoneBanner,

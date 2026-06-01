@@ -2124,32 +2124,35 @@ const NPCs = (() => {
   }
 
   // ============ INVENTORY SYSTEM ============
-  // Items the player "buys" at each level, with Japanese vocabulary
+  // Items the player "buys" at each level, with Japanese vocabulary.
+  // Prices in yen reflect realistic 2024-2026 konbini pricing. Food items
+  // generally fall under Japan's reduced 8% consumption tax (軽減税率);
+  // alcohol, dine-in food, and non-essentials use the standard 10% rate.
   const KONBINI_ITEMS = [
     // Level 1: Welcome at 7-Eleven (just entering, no purchase)
-    { levelId: 1, jp: 'ガム', romaji: 'Gamu', en: 'Gum', store: '7-Eleven', icon: 'gum', category: 'snack' },
+    { levelId: 1, jp: 'ガム', romaji: 'Gamu', en: 'Gum', store: '7-Eleven', icon: 'gum', category: 'snack', priceYen: 110, taxRate: 0.08 },
     // Level 2: Thank You at Lawson (leaving after buying something)
-    { levelId: 2, jp: 'お茶', romaji: 'Ocha', en: 'Green Tea', store: 'Lawson', icon: 'tea', category: 'drink' },
+    { levelId: 2, jp: 'お茶', romaji: 'Ocha', en: 'Green Tea', store: 'Lawson', icon: 'tea', category: 'drink', priceYen: 160, taxRate: 0.08 },
     // Level 3: The Bag at FamilyMart
-    { levelId: 3, jp: 'おにぎり', romaji: 'Onigiri', en: 'Rice Ball', store: 'FamilyMart', icon: 'onigiri', category: 'food' },
+    { levelId: 3, jp: 'おにぎり', romaji: 'Onigiri', en: 'Rice Ball', store: 'FamilyMart', icon: 'onigiri', category: 'food', priceYen: 150, taxRate: 0.08 },
     // Level 4: Point Card at 7-Eleven
-    { levelId: 4, jp: 'サンドイッチ', romaji: 'Sandoicchi', en: 'Egg Sandwich', store: '7-Eleven', icon: 'sandwich', category: 'food' },
+    { levelId: 4, jp: 'サンドイッチ', romaji: 'Sandoicchi', en: 'Egg Sandwich', store: '7-Eleven', icon: 'sandwich', category: 'food', priceYen: 320, taxRate: 0.08 },
     // Level 5: Heat It Up at Lawson (bento)
-    { levelId: 5, jp: 'お弁当', romaji: 'Obento', en: 'Bento Box', store: 'Lawson', icon: 'bento', category: 'food' },
+    { levelId: 5, jp: 'お弁当', romaji: 'Obento', en: 'Bento Box', store: 'Lawson', icon: 'bento', category: 'food', priceYen: 580, taxRate: 0.08 },
     // Level 6: Chopsticks at FamilyMart (soup)
-    { levelId: 6, jp: 'スープ', romaji: 'Suupu', en: 'Soup', store: 'FamilyMart', icon: 'soup', category: 'food' },
+    { levelId: 6, jp: 'スープ', romaji: 'Suupu', en: 'Soup', store: 'FamilyMart', icon: 'soup', category: 'food', priceYen: 220, taxRate: 0.08 },
     // Level 7: How Much at 7-Eleven
-    { levelId: 7, jp: 'コーヒー', romaji: 'Koohii', en: 'Coffee', store: '7-Eleven', icon: 'coffee', category: 'drink' },
+    { levelId: 7, jp: 'コーヒー', romaji: 'Koohii', en: 'Coffee', store: '7-Eleven', icon: 'coffee', category: 'drink', priceYen: 180, taxRate: 0.08 },
     // Level 8: Where Is It at Lawson (onigiri)
-    { levelId: 8, jp: 'ツナマヨおにぎり', romaji: 'Tuna mayo onigiri', en: 'Tuna Mayo Onigiri', store: 'Lawson', icon: 'onigiri', category: 'food' },
+    { levelId: 8, jp: 'ツナマヨおにぎり', romaji: 'Tuna mayo onigiri', en: 'Tuna Mayo Onigiri', store: 'Lawson', icon: 'onigiri', category: 'food', priceYen: 160, taxRate: 0.08 },
     // Level 9: Famichiki at FamilyMart
-    { levelId: 9, jp: 'ファミチキ', romaji: 'Famichiki', en: 'Famichiki (Fried Chicken)', store: 'FamilyMart', icon: 'chicken', category: 'food' },
+    { levelId: 9, jp: 'ファミチキ', romaji: 'Famichiki', en: 'Famichiki (Fried Chicken)', store: 'FamilyMart', icon: 'chicken', category: 'food', priceYen: 240, taxRate: 0.08 },
     // Level 10: Full Checkout at 7-Eleven (bento + more)
-    { levelId: 10, jp: '幕の内弁当', romaji: 'Makunouchi bento', en: 'Makunouchi Bento', store: '7-Eleven', icon: 'bento', category: 'food' },
-    // Level 11: Age Check at Lawson (beer)
-    { levelId: 11, jp: 'ビール', romaji: 'Biiru', en: 'Beer', store: 'Lawson', icon: 'beer', category: 'drink' },
+    { levelId: 10, jp: '幕の内弁当', romaji: 'Makunouchi bento', en: 'Makunouchi Bento', store: '7-Eleven', icon: 'bento', category: 'food', priceYen: 680, taxRate: 0.08 },
+    // Level 11: Age Check at Lawson (beer) -- alcohol = 10% tax
+    { levelId: 11, jp: 'ビール', romaji: 'Biiru', en: 'Beer', store: 'Lawson', icon: 'beer', category: 'drink', priceYen: 270, taxRate: 0.10 },
     // Level 12: Master at FamilyMart (full shopping)
-    { levelId: 12, jp: 'メロンパン', romaji: 'Meronpan', en: 'Melon Bread', store: 'FamilyMart', icon: 'bread', category: 'food' },
+    { levelId: 12, jp: 'メロンパン', romaji: 'Meronpan', en: 'Melon Bread', store: 'FamilyMart', icon: 'bread', category: 'food', priceYen: 180, taxRate: 0.08 },
   ];
 
   // Player's collected inventory
@@ -2169,6 +2172,96 @@ const NPCs = (() => {
 
   function getInventory() {
     return inventory;
+  }
+
+  // ============ KONBINI RECEIPT (レシート) ============
+  // Build authentic Japanese receipt data for a completed level. Captures the
+  // exact format printed by real konbini POS systems: store header, transaction
+  // metadata, line item with unit price, subtotal, consumption tax (消費税),
+  // total, amount tendered (お預かり), change (お釣り), and the polite footer.
+  let receiptCounter = 1000;
+  function getNextReceiptNumber() {
+    receiptCounter++;
+    return receiptCounter;
+  }
+
+  // Format a number with Japanese-style thousand separators and a yen symbol
+  function formatYen(amount) {
+    return '\u00A5' + amount.toLocaleString('en-US');
+  }
+
+  // Compute a plausible "amount tendered" -- player paid with the next round
+  // bill or convenient coin combination, just like a real shopper would.
+  function computeTendered(total) {
+    // Round up to the next 100, 500, 1000, or 5000-yen denomination based on size
+    if (total <= 100) return Math.ceil(total / 100) * 100;
+    if (total <= 500) return 500;
+    if (total <= 1000) return 1000;
+    if (total <= 5000) return Math.ceil(total / 1000) * 1000;
+    return Math.ceil(total / 5000) * 5000;
+  }
+
+  function buildReceiptData(levelId, store, mistakes) {
+    const item = KONBINI_ITEMS.find(i => i.levelId === levelId);
+    if (!item) return null;
+
+    const subtotal = item.priceYen;
+    // Japanese konbini use tax-inclusive pricing (内税). Tax is shown on the
+    // receipt as informational, not added on top: subtotal already includes it.
+    const taxAmount = Math.round(subtotal - subtotal / (1 + item.taxRate));
+    const total = subtotal;
+    const tendered = computeTendered(total);
+    const change = tendered - total;
+
+    // Real konbini receipts have a register/cashier number
+    const registerNo = ['01', '02', '03'][levelId % 3];
+    const receiptNo = getNextReceiptNumber();
+
+    // Date/time -- use current time formatted Japanese-style
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const dateStr = yyyy + '/' + mm + '/' + dd;
+    const timeStr = hh + ':' + min;
+
+    // Store-specific Japanese branding text (matches real receipts)
+    const STORE_HEADER = {
+      '7-Eleven': { jp: 'セブンイレブン', en: '7-Eleven', branch: '渋谷中央店' },
+      'Lawson':   { jp: 'ローソン',         en: 'Lawson',   branch: '新宿駅前店' },
+      'FamilyMart': { jp: 'ファミリーマート', en: 'FamilyMart', branch: '原宿店' },
+    };
+    const header = STORE_HEADER[store] || { jp: store, en: store, branch: '' };
+
+    // Loyalty points earned -- konbini point card systems award roughly 1 pt
+    // per 200 yen spent (rounded down). Bonus points for clean transactions.
+    const basePoints = Math.floor(total / 200);
+    const bonusPoints = mistakes === 0 ? 1 : 0;
+    const pointsEarned = basePoints + bonusPoints;
+
+    return {
+      storeJp: header.jp,
+      storeEn: header.en,
+      branch: header.branch,
+      dateStr: dateStr,
+      timeStr: timeStr,
+      registerNo: registerNo,
+      receiptNo: 'No.' + receiptNo,
+      itemJp: item.jp,
+      itemEn: item.en,
+      unitPrice: item.priceYen,
+      qty: 1,
+      subtotal: subtotal,
+      taxRate: item.taxRate,
+      taxAmount: taxAmount,
+      total: total,
+      tendered: tendered,
+      change: change,
+      pointsEarned: pointsEarned,
+      isReducedTax: item.taxRate === 0.08,
+    };
   }
 
   function getInventoryCount() {
@@ -4485,6 +4578,8 @@ const NPCs = (() => {
     // Inventory system
     KONBINI_ITEMS,
     addToInventory,
+    buildReceiptData,
+    formatYen,
     getInventory,
     getInventoryCount,
     getTotalItems,

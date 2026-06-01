@@ -38,6 +38,8 @@
     // Stamp card overlay
     stampCardOpen: false,
     stampNotification: null, // {text, timer} for new stamp earned
+    // Receipt overlay shown after completing a level
+    receiptOverlay: null, // {data, elapsed, onDismiss}
     // Variable rewards
     rewardNotification: null, // {reward, timer} for bonus phrase drops
     phraseBookOpen: false,
@@ -403,6 +405,20 @@
       if (speedGameState.resultTimer <= 0) {
         speedGameState.showingResult = false;
       }
+    }
+
+    // Handle receipt overlay -- highest priority, blocks all other input
+    if (state.receiptOverlay) {
+      state.receiptOverlay.elapsed += dt;
+      // Allow dismiss only after the slide-in animation completes
+      if (state.receiptOverlay.elapsed >= 0.5 && (Engine.inputA() || Engine.inputB())) {
+        const cb = state.receiptOverlay.onDismiss;
+        state.receiptOverlay = null;
+        GameAudio.playPaperRustle && GameAudio.playPaperRustle();
+        GameAudio.playSelect && GameAudio.playSelect();
+        if (cb) cb();
+      }
+      return;
     }
 
     // Handle conversation scenario menu overlay
@@ -4028,24 +4044,48 @@
     // Show stamp notification popup
     state.stampNotification = { text: stampMsg, timer: 3.0 };
 
-    Dialogue.show('', [
-      `Level Complete: ${level.name}!`,
-      `${starText}`,
-      `${stampMsg}${masterMsg}`,
-      NPCs.isStoreComplete(store)
-        ? `You've mastered ${store}!`
-        : `Next level unlocked! [TAB] View Stamp Card`
-    ], () => {
-      state.interacting = false;
-      state.currentInteractionStore = null;
-      state.currentInteractionLevel = null;
-      // Check for achievement unlocks after level completion
-      setTimeout(() => triggerAchievementCheck(), 500);
-      // Try showing a cultural note after completing a level
-      setTimeout(() => tryCulturalNote('general'), 1500);
-      // Auto-save after completing a level
-      autoSave();
-    });
+    // Build the konbini receipt for this transaction. Real konbini print a
+    // receipt for every purchase -- this gives the player a satisfying paper
+    // trail and reinforces price/tax vocabulary (合計, お預かり, お釣り, etc.)
+    const receiptData = NPCs.buildReceiptData(level.id, store, state.interactionMistakes);
+
+    // Helper to show the level-complete dialogue after the receipt is dismissed
+    const showLevelCompleteDialogue = () => {
+      Dialogue.show('', [
+        `Level Complete: ${level.name}!`,
+        `${starText}`,
+        `${stampMsg}${masterMsg}`,
+        NPCs.isStoreComplete(store)
+          ? `You've mastered ${store}!`
+          : `Next level unlocked! [TAB] View Stamp Card`
+      ], () => {
+        state.interacting = false;
+        state.currentInteractionStore = null;
+        state.currentInteractionLevel = null;
+        // Check for achievement unlocks after level completion
+        setTimeout(() => triggerAchievementCheck(), 500);
+        // Try showing a cultural note after completing a level
+        setTimeout(() => tryCulturalNote('general'), 1500);
+        // Auto-save after completing a level
+        autoSave();
+      });
+    };
+
+    if (receiptData) {
+      // Slight delay so the cash register sound finishes before the printer
+      // "prints" the receipt -- mimics the real konbini transaction rhythm
+      setTimeout(() => {
+        // Print sound (re-use register beep series as printer tick)
+        if (GameAudio.playRegisterBeep) GameAudio.playRegisterBeep();
+        state.receiptOverlay = {
+          data: receiptData,
+          elapsed: 0,
+          onDismiss: showLevelCompleteDialogue,
+        };
+      }, 700);
+    } else {
+      showLevelCompleteDialogue();
+    }
   }
 
   // ============ WRITING MODE DISPLAY ============
@@ -4178,7 +4218,7 @@
     Engine.renderHUD(state.currentMap);
 
     // Mini-map (street map only, hidden during overlays/dialogue)
-    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !state.serviceCounterMenuOpen && !state.progressDashOpen && !pitchGuideState.active && !Dialogue.isActive()) {
+    if (!state.stampCardOpen && !state.phraseBookOpen && !state.inventoryOpen && !state.achievementOpen && !state.mistakeJournalOpen && !state.culturalNotesOpen && !state.conversationMenuOpen && !state.serviceCounterMenuOpen && !state.progressDashOpen && !state.receiptOverlay && !pitchGuideState.active && !Dialogue.isActive()) {
       Engine.renderMiniMap(state.currentMap, state.player.x, state.player.y, state.time);
     }
 
@@ -4412,6 +4452,15 @@
       Sprites.drawComboMilestoneBanner(
         ctx, Engine.CANVAS_W, Engine.CANVAS_H,
         state.comboMilestone.combo, state.comboMilestone.timer
+      );
+    }
+
+    // Konbini receipt overlay (above everything except particles/fade/save)
+    if (state.receiptOverlay) {
+      Sprites.drawKonbiniReceipt(
+        ctx, Engine.CANVAS_W, Engine.CANVAS_H,
+        Object.assign({}, state.receiptOverlay.data, { elapsed: state.receiptOverlay.elapsed }),
+        state.time
       );
     }
 
