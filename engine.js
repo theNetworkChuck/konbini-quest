@@ -923,6 +923,20 @@ const Engine = (() => {
   }
 
   function getWeatherType() { return weather.type; }
+
+  // Test hook (Improvement #42): force a specific weather type. Values match
+  // WEATHER_TYPES: 'clear', 'cherry_blossoms', 'rain'. Also resets the cycle
+  // timer so the forced weather stays put for a full cycleDuration.
+  function setWeatherType(t) {
+    if (typeof t !== 'string') return;
+    if (['clear', 'cherry_blossoms', 'rain', 'night'].indexOf(t) === -1) return;
+    weather.type = t;
+    weather.cycleTimer = weather.cycleDuration;
+    // Sync weatherIdx so the natural cycle picks up correctly from here.
+    const idx = WEATHER_TYPES.indexOf(t);
+    if (idx >= 0) weatherIdx = idx;
+    spawnWeatherParticles();
+  }
   function getTimeOfDay() { return weather.timeOfDay; }
 
   // ============ PARTICLE EFFECTS (Correct Answers + Level Complete) ============
@@ -1990,7 +2004,7 @@ const Engine = (() => {
     startDoorAnimation, updateDoorAnimation, renderDoorAnimation, isDoorAnimating,
     // Weather
     initWeather, updateWeather, renderWeather, renderTimeOfDayTint,
-    getWeatherType, getTimeOfDay,
+    getWeatherType, setWeatherType, getTimeOfDay,
     // Particle effects
     spawnSparkles, spawnStarBurst, spawnEmote, updateParticles, renderParticles,
     // Mini-map

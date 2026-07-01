@@ -4994,6 +4994,13 @@
     return state.greetingResponse;
   };
 
+  // Testing hook: force the weather type (Improvement #42)
+  // Usage: window.forceWeather('clear' | 'cherry_blossoms' | 'rain' | 'night')
+  window.forceWeather = (t) => {
+    if (Engine && Engine.setWeatherType) Engine.setWeatherType(t);
+    return Engine.getWeatherType();
+  };
+
   // Testing hook: force the time-of-day bucket (Improvement #41)
   // Usage: window.forceTimeOfDay('morning' | 'midday' | 'evening' | 'night' | null)
   window.forceTimeOfDay = (bucket) => {

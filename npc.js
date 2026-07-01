@@ -5098,6 +5098,63 @@ const NPCs = (() => {
   // lines still dominate but time-of-day flavor comes through consistently.
   const TIME_OF_DAY_BUBBLE_CHANCE = 0.35;
 
+  // ============ WEATHER-LINKED AMBIENT LINES (Improvement #42) ============
+  // Extends the time-of-day system to a second axis: real-world weather in
+  // the game world. Every ambient bubble roll now first checks the time-of-day
+  // pool, then the weather pool, then finally falls back to the NPC personality
+  // pool. Weather buckets match Engine.getWeatherType() output: clear /
+  // cherry_blossoms / rain / night. Every phrase is one a learner will
+  // actually overhear on the street in that specific weather.
+  const WEATHER_LINES = {
+    clear: [
+      { jp: 'いい天気ですね', en: 'Nice weather', romaji: 'ii tenki desu ne' },
+      { jp: '空が青い！', en: 'The sky is blue!', romaji: 'sora ga aoi!' },
+      { jp: '散歩日和だね', en: 'Perfect day for a walk', romaji: 'sanpo biyori da ne' },
+      { jp: '日差しが気持ちいい', en: 'The sunlight feels great', romaji: 'hizashi ga kimochi ii' },
+      { jp: '洗濯物が乾くね', en: 'Laundry will dry well today', romaji: 'sentakumono ga kawaku ne' },
+      { jp: 'アイス日和！', en: 'Ice cream weather!', romaji: 'aisu biyori!' },
+      { jp: '外で食べようかな', en: 'Maybe I will eat outside', romaji: 'soto de tabeyou kana' },
+      { jp: '公園行きたい', en: 'I want to go to the park', romaji: 'kouen ikitai' },
+    ],
+    cherry_blossoms: [
+      { jp: '桜が満開！', en: 'The cherry blossoms are in full bloom!', romaji: 'sakura ga mankai!' },
+      { jp: 'お花見しよう', en: 'Let us do hanami', romaji: 'ohanami shiyou' },
+      { jp: '春が来た〜', en: 'Spring has come~', romaji: 'haru ga kita~' },
+      { jp: '花びらがきれい', en: 'The petals are so pretty', romaji: 'hanabira ga kirei' },
+      { jp: '桜餅食べたい！', en: 'I want sakura mochi!', romaji: 'sakura mochi tabetai!' },
+      { jp: '写真撮ろう', en: 'Let us take a photo', romaji: 'shashin torou' },
+      { jp: 'この時期だけだね', en: 'Only around this time of year', romaji: 'kono jiki dake da ne' },
+      { jp: 'いい香り〜', en: 'Such a nice scent~', romaji: 'ii kaori~' },
+    ],
+    rain: [
+      { jp: '傘忘れた！', en: 'I forgot my umbrella!', romaji: 'kasa wasureta!' },
+      { jp: 'よく降るね', en: 'It really is coming down', romaji: 'yoku furu ne' },
+      { jp: 'コンビニで傘買おう', en: 'Let us buy an umbrella at konbini', romaji: 'konbini de kasa kaou' },
+      { jp: 'ずぶ濡れ...', en: 'Soaking wet...', romaji: 'zubunure...' },
+      { jp: '雨宿りしよう', en: 'Let us take shelter from the rain', romaji: 'amayadori shiyou' },
+      { jp: '梅雨だね〜', en: 'It is the rainy season, huh', romaji: 'tsuyu da ne~' },
+      { jp: '雨の音落ち着く', en: 'The sound of rain is calming', romaji: 'ame no oto ochitsuku' },
+      { jp: '長靴履けばよかった', en: 'I should have worn my rain boots', romaji: 'nagagutsu hakeba yokatta' },
+    ],
+    night: [
+      { jp: '星がきれい', en: 'The stars are pretty', romaji: 'hoshi ga kirei' },
+      { jp: '涼しくなってきた', en: 'It has gotten cooler', romaji: 'suzushiku natte kita' },
+      { jp: '月が明るいね', en: 'The moon is bright', romaji: 'tsuki ga akarui ne' },
+      { jp: '夜風が気持ちいい', en: 'The night breeze feels good', romaji: 'yokaze ga kimochi ii' },
+      { jp: '静かだね', en: 'It is quiet', romaji: 'shizuka da ne' },
+      { jp: 'ネオンきれい', en: 'The neon lights are pretty', romaji: 'neon kirei' },
+    ],
+  };
+
+  const WEATHER_BUBBLE_CHANCE = 0.30;
+
+  function pickWeatherLine(weatherType) {
+    if (!weatherType) return null;
+    const pool = WEATHER_LINES[weatherType];
+    if (!pool || pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   function updateAmbientBubbles(dt) {
     const streetNPCs = getNPCsOnMap(0);
     for (let i = 0; i < streetNPCs.length; i++) {
@@ -5127,16 +5184,24 @@ const NPCs = (() => {
       } else {
         bs.cooldown -= dt;
         if (bs.cooldown <= 0) {
-          // Improvement #41: with configured probability, pull from the
-          // time-of-day pool instead of the NPC's personality pool. Coaches
-          // (sensei / paymentcoach / etc) stay on-topic more often, so we
-          // reduce the time-of-day chance for those types.
+          // Improvement #41/#42: with configured probability, pull from the
+          // time-of-day or weather pool instead of the NPC's personality pool.
+          // Coaches (sensei / paymentcoach / etc) stay on-topic more often, so
+          // we reduce the ambient-context chance for those types.
           const isCoach = typeof npc.type === 'string' && /coach|sensei|guide/i.test(npc.type);
           const timeOfDayChance = isCoach ? TIME_OF_DAY_BUBBLE_CHANCE * 0.5 : TIME_OF_DAY_BUBBLE_CHANCE;
+          const weatherChance = isCoach ? WEATHER_BUBBLE_CHANCE * 0.5 : WEATHER_BUBBLE_CHANCE;
 
           let picked = null;
           if (Math.random() < timeOfDayChance) {
             picked = pickTimeOfDayLine();
+          }
+          // Weather pool checked next -- read the current weather type from the
+          // Engine module (guard for the case where Engine isn't loaded yet).
+          if (!picked && Math.random() < weatherChance) {
+            let wt = null;
+            try { wt = (typeof Engine !== 'undefined' && Engine.getWeatherType) ? Engine.getWeatherType() : null; } catch (e) { wt = null; }
+            picked = pickWeatherLine(wt);
           }
           if (!picked) {
             const phrases = AMBIENT_PHRASES[npc.type];
@@ -5403,6 +5468,9 @@ const NPCs = (() => {
     getTimeOfDayBucket,
     pickTimeOfDayLine,
     setTimeOfDayOverride,
+    // Weather-linked ambient lines (Improvement #42)
+    WEATHER_LINES,
+    pickWeatherLine,
     getAmbientBubble,
     // Save / Load system
     saveGame,
