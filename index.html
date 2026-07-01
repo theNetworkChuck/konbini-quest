@@ -124,13 +124,16 @@
     <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer">Created with Perplexity Computer</a>
   </footer>
 
-  <script src="audio.js"></script>
-  <script src="levels.js"></script>
-  <script src="sprites.js"></script>
-  <script src="maps.js"></script>
-  <script src="dialogue.js"></script>
-  <script src="npc.js"></script>
-  <script src="engine.js"></script>
-  <script src="game.js"></script>
+  <!-- crossorigin="anonymous" lets the window.onerror listener above see
+       the actual error message and stack across origins (CDN proxy),
+       instead of the browser masking it as "Script error." -->
+  <script src="audio.js" crossorigin="anonymous"></script>
+  <script src="levels.js" crossorigin="anonymous"></script>
+  <script src="sprites.js" crossorigin="anonymous"></script>
+  <script src="maps.js" crossorigin="anonymous"></script>
+  <script src="dialogue.js" crossorigin="anonymous"></script>
+  <script src="npc.js" crossorigin="anonymous"></script>
+  <script src="engine.js" crossorigin="anonymous"></script>
+  <script src="game.js" crossorigin="anonymous"></script>
 </body>
 </html>

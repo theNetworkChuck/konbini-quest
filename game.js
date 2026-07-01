@@ -222,18 +222,39 @@
     Engine.spawnEmote('sweatdrop', cw / 2, emoteY);
   }
 
+  // Surfaces a real error to the on-screen boot overlay so cross-origin
+  // "Script error." masking doesn't hide the actual failure.
+  function reportBootError(phase, err) {
+    try {
+      const body = document.getElementById('boot-error-body');
+      const el = document.getElementById('boot-error');
+      if (!body || !el) return;
+      const msg = '[' + phase + '] ' + (err && err.message ? err.message : String(err))
+        + (err && err.stack ? '\n' + err.stack : '');
+      body.textContent = (body.textContent === '(no details yet)' ? '' : body.textContent + '\n\n') + msg;
+      el.style.display = 'block';
+    } catch (e) { /* nothing more we can do */ }
+  }
+
   // ============ GAME LOOP ============
+  let __loopDied = false;
   function gameLoop(timestamp) {
-    const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
-    lastTimestamp = timestamp;
-    state.time += dt;
+    if (__loopDied) return;
+    try {
+      const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.1);
+      lastTimestamp = timestamp;
+      state.time += dt;
 
-    update(dt);
-    render();
+      update(dt);
+      render();
 
-    Engine.clearJustPressed();
-    Engine.clearMobileJust();
-    requestAnimationFrame(gameLoop);
+      Engine.clearJustPressed();
+      Engine.clearMobileJust();
+      requestAnimationFrame(gameLoop);
+    } catch (e) {
+      __loopDied = true;
+      reportBootError('gameLoop', e);
+    }
   }
 
   // ============ UPDATE ============
@@ -5120,20 +5141,27 @@
 
   // ============ INIT ============
   function init() {
-    Engine.setupMobile();
-    Engine.resizeCanvas();
+    try {
+      Engine.setupMobile();
+      Engine.resizeCanvas();
 
-    // Show mobile controls on touch devices only
-    const mc = document.getElementById('mobile-controls');
-    if (mc && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-      mc.style.display = 'flex';
+      // Show mobile controls on touch devices only
+      const mc = document.getElementById('mobile-controls');
+      if (mc && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        mc.style.display = 'flex';
+      }
+
+      // Start game loop
+      lastTimestamp = performance.now();
+      requestAnimationFrame(gameLoop);
+    } catch (e) {
+      reportBootError('init', e);
     }
-
-    // Start game loop
-    lastTimestamp = performance.now();
-    requestAnimationFrame(gameLoop);
   }
 
-  // Wait for fonts then init
-  document.fonts.ready.then(init);
+  // Wait for fonts then init. Even if fonts fail, still try to boot.
+  document.fonts.ready.then(init, function(err){
+    reportBootError('fonts.ready', err);
+    init();
+  });
 })();
