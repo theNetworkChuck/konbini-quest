@@ -5007,8 +5007,96 @@ const NPCs = (() => {
     ],
   };
 
+  // ============ TIME-OF-DAY AMBIENT LINES (Improvement #41) ============
+  // A pool of ambient one-liners bucketed by real-world hour so the streetscape
+  // feels alive at different times of day. Each street NPC has ~35% chance per
+  // bubble roll to pull from the current time-of-day bucket instead of their
+  // personality-specific pool -- this way personality lines still show up, but
+  // players who play at 7am hear morning phrases and players at 11pm hear night
+  // phrases. Every line is a phrase learners will actually overhear in Japan.
+  //
+  // Buckets:
+  //   morning  05:00 - 10:59   commute / rush / breakfast
+  //   midday   11:00 - 16:59   lunch / errands / afternoon
+  //   evening  17:00 - 20:59   return home / dinner / after-work
+  //   night    21:00 - 04:59   late-night / last train / quiet streets
+  const TIME_OF_DAY_LINES = {
+    morning: [
+      { jp: 'おはようございます', en: 'Good morning', romaji: 'ohayou gozaimasu' },
+      { jp: '今日も一日がんばろう', en: 'Let\'s do our best today', romaji: 'kyou mo ichinichi ganbarou' },
+      { jp: '朝ごはん食べた？', en: 'Did you eat breakfast?', romaji: 'asa-gohan tabeta?' },
+      { jp: '電車混んでるなぁ', en: 'The train is packed', romaji: 'densha kondeiru naa' },
+      { jp: '眠い...コーヒー買おう', en: 'So sleepy... let\'s buy coffee', romaji: 'nemui... koohii kaou' },
+      { jp: '朝から暑いね', en: 'Hot already this morning', romaji: 'asa kara atsui ne' },
+      { jp: '出勤前にコンビニ寄ろ', en: 'Konbini stop before work', romaji: 'shukkin mae ni konbini yoro' },
+      { jp: 'ゴミの日だった...', en: 'It was trash day...', romaji: 'gomi no hi datta...' },
+    ],
+    midday: [
+      { jp: 'こんにちは', en: 'Good afternoon', romaji: 'konnichiwa' },
+      { jp: 'お昼何食べる？', en: 'What are you having for lunch?', romaji: 'ohiru nani taberu?' },
+      { jp: 'お腹空いた～', en: 'I\'m so hungry~', romaji: 'onaka suita~' },
+      { jp: 'ランチ休憩！', en: 'Lunch break!', romaji: 'ranchi kyuukei!' },
+      { jp: 'コンビニでお弁当買お', en: 'Grab a bento from konbini', romaji: 'konbini de obentou kao' },
+      { jp: '午後の会議だるい', en: 'Afternoon meeting is a drag', romaji: 'gogo no kaigi darui' },
+      { jp: 'アイス食べたい', en: 'I want ice cream', romaji: 'aisu tabetai' },
+      { jp: 'ちょっと休憩しよう', en: 'Let\'s take a little break', romaji: 'chotto kyuukei shiyou' },
+    ],
+    evening: [
+      { jp: 'お疲れさまでした', en: 'Good work today', romaji: 'otsukaresama deshita' },
+      { jp: '早く帰りたい', en: 'I want to go home', romaji: 'hayaku kaeritai' },
+      { jp: '晩ごはん何にしよう', en: 'What\'s for dinner tonight?', romaji: 'ban-gohan nani ni shiyou' },
+      { jp: '駅前混むね', en: 'The station area is busy', romaji: 'ekimae komu ne' },
+      { jp: '一杯飲んで帰ろっか', en: 'Let\'s grab a drink on the way home', romaji: 'ippai nonde kaerokka' },
+      { jp: '夕焼けきれい', en: 'The sunset is beautiful', romaji: 'yuuyake kirei' },
+      { jp: 'お風呂入りたい～', en: 'I want a bath~', romaji: 'ofuro hairitai~' },
+      { jp: 'コンビニで夜ごはん', en: 'Konbini dinner tonight', romaji: 'konbini de yoru-gohan' },
+    ],
+    night: [
+      { jp: 'こんばんは', en: 'Good evening', romaji: 'konbanwa' },
+      { jp: '終電間に合うかな', en: 'Will I make the last train?', romaji: 'shuuden ma ni au kana' },
+      { jp: '夜食買いに行こ', en: 'Let\'s go buy midnight snacks', romaji: 'yashoku kai ni iko' },
+      { jp: 'もう寝る時間', en: 'Time for bed already', romaji: 'mou neru jikan' },
+      { jp: 'この時間のコンビニ好き', en: 'I love konbini at this hour', romaji: 'kono jikan no konbini suki' },
+      { jp: 'タクシーつかまらない', en: 'Can\'t find a taxi', romaji: 'takushii tsukamaranai' },
+      { jp: '明日も仕事だ...', en: 'Work again tomorrow...', romaji: 'ashita mo shigoto da...' },
+      { jp: 'コンビニの明かりだけ', en: 'Only the konbini lights are on', romaji: 'konbini no akari dake' },
+    ],
+  };
+
+  // Test-hook override: if set (via window.forceTimeOfDayBucket) this replaces
+  // the real-world clock reading. Values: 'morning' | 'midday' | 'evening' | 'night'.
+  let _timeOfDayOverride = null;
+
+  function setTimeOfDayOverride(bucket) {
+    if (bucket === null || bucket === undefined) { _timeOfDayOverride = null; return; }
+    if (['morning', 'midday', 'evening', 'night'].indexOf(bucket) === -1) return;
+    _timeOfDayOverride = bucket;
+  }
+
+  function getTimeOfDayBucket() {
+    if (_timeOfDayOverride) return _timeOfDayOverride;
+    let h;
+    try { h = new Date().getHours(); } catch (e) { h = 12; }
+    if (h >= 5 && h < 11) return 'morning';
+    if (h >= 11 && h < 17) return 'midday';
+    if (h >= 17 && h < 21) return 'evening';
+    return 'night';
+  }
+
+  function pickTimeOfDayLine() {
+    const bucket = getTimeOfDayBucket();
+    const pool = TIME_OF_DAY_LINES[bucket];
+    if (!pool || pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
   // State for ambient bubbles: { npcIdx: { phrase, timer, active, cooldown } }
   const ambientBubbleState = {};
+
+  // Chance that any given ambient bubble roll pulls from the time-of-day pool
+  // instead of the NPC's personality-specific pool. Kept moderate so personality
+  // lines still dominate but time-of-day flavor comes through consistently.
+  const TIME_OF_DAY_BUBBLE_CHANCE = 0.35;
 
   function updateAmbientBubbles(dt) {
     const streetNPCs = getNPCsOnMap(0);
@@ -5039,13 +5127,29 @@ const NPCs = (() => {
       } else {
         bs.cooldown -= dt;
         if (bs.cooldown <= 0) {
-          const phrases = AMBIENT_PHRASES[npc.type];
-          if (phrases && phrases.length > 0) {
-            bs.phrase = phrases[Math.floor(Math.random() * phrases.length)];
+          // Improvement #41: with configured probability, pull from the
+          // time-of-day pool instead of the NPC's personality pool. Coaches
+          // (sensei / paymentcoach / etc) stay on-topic more often, so we
+          // reduce the time-of-day chance for those types.
+          const isCoach = typeof npc.type === 'string' && /coach|sensei|guide/i.test(npc.type);
+          const timeOfDayChance = isCoach ? TIME_OF_DAY_BUBBLE_CHANCE * 0.5 : TIME_OF_DAY_BUBBLE_CHANCE;
+
+          let picked = null;
+          if (Math.random() < timeOfDayChance) {
+            picked = pickTimeOfDayLine();
+          }
+          if (!picked) {
+            const phrases = AMBIENT_PHRASES[npc.type];
+            if (phrases && phrases.length > 0) {
+              picked = phrases[Math.floor(Math.random() * phrases.length)];
+            }
+          }
+          if (picked) {
+            bs.phrase = picked;
             bs.timer = 3.5; // show for 3.5 seconds
             bs.active = true;
           } else {
-            bs.cooldown = 20; // no phrases for this type, try again later
+            bs.cooldown = 20; // nothing to say for this type right now, try again later
           }
         }
       }
@@ -5294,6 +5398,11 @@ const NPCs = (() => {
     getProgressDashboard,
     // Ambient speech bubbles
     updateAmbientBubbles,
+    // Time-of-day ambient lines (Improvement #41)
+    TIME_OF_DAY_LINES,
+    getTimeOfDayBucket,
+    pickTimeOfDayLine,
+    setTimeOfDayOverride,
     getAmbientBubble,
     // Save / Load system
     saveGame,

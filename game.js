@@ -4994,6 +4994,13 @@
     return state.greetingResponse;
   };
 
+  // Testing hook: force the time-of-day bucket (Improvement #41)
+  // Usage: window.forceTimeOfDay('morning' | 'midday' | 'evening' | 'night' | null)
+  window.forceTimeOfDay = (bucket) => {
+    NPCs.setTimeOfDayOverride(bucket || null);
+    return NPCs.getTimeOfDayBucket();
+  };
+
   // Testing hook: force a daily-special banner (Improvement #40)
   window.forceDailySpecial = (opts) => {
     opts = opts || {};
