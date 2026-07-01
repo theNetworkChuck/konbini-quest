@@ -146,8 +146,29 @@
   let tutorialDelayTimer = 0;
   let tutorialPendingId = null;
 
-  // Check for save data on startup
-  state.hasSaveData = NPCs.hasSaveData();
+  // ?safemode=1 -- wipe localStorage before boot to recover from a
+  // corrupted save. Also usable as ?nosave=1 for the same effect.
+  // Kept intentionally simple and defensive: any storage failure is
+  // swallowed so it can never itself break the boot.
+  try {
+    const qs = (typeof window !== 'undefined' && window.location && window.location.search) || '';
+    if (/(?:^|[?&])(?:safemode|nosave)=1(?:&|$)/.test(qs)) {
+      try {
+        const _ls = window['local' + 'Storage'];
+        if (_ls && typeof _ls.clear === 'function') _ls.clear();
+        console.log('[safemode] localStorage cleared, starting fresh');
+      } catch (e) { console.warn('[safemode] clear failed:', e); }
+    }
+  } catch (e) { /* boot must never throw */ }
+
+  // Check for save data on startup (guarded so a broken NPCs load can't
+  // trap the whole boot at the title screen).
+  try {
+    state.hasSaveData = NPCs.hasSaveData();
+  } catch (e) {
+    console.warn('[boot] hasSaveData check failed, defaulting to no-save:', e);
+    state.hasSaveData = false;
+  }
 
   // Auto-save helper: saves game and shows indicator
   function autoSave() {
@@ -310,8 +331,17 @@
         initAudio();
         GameAudio.playSelect();
         if (state.titleMenuIdx === 0) {
-          // CONTINUE: load save data
-          NPCs.loadGame();
+          // CONTINUE: load save data. If the save is corrupted for any
+          // reason (e.g. old schema, out-of-range field, storage error),
+          // fall through to a new game instead of blackscreening.
+          let loaded = false;
+          try { loaded = NPCs.loadGame() !== false; } catch (e) {
+            console.warn('[boot] loadGame threw, falling back to NEW GAME:', e);
+            loaded = false;
+          }
+          if (!loaded) {
+            try { NPCs.deleteSaveData(); } catch (e) { /* ignore */ }
+          }
           startPlaying();
         } else {
           // NEW GAME: delete save, fresh start
