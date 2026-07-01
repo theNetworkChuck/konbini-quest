@@ -30,6 +30,79 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Boot error overlay: renders on top of the canvas if any script fails
+       to load or throws. Better a visible error than a black screen. -->
+  <div id="boot-error" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#111;color:#fff;font-family:monospace;font-size:12px;padding:16px;z-index:99999;overflow:auto;white-space:pre-wrap;">
+    <div style="font-size:16px;color:#ff8080;margin-bottom:8px;">Konbini Quest failed to start</div>
+    <div id="boot-error-body">(no details yet)</div>
+    <div style="margin-top:12px;font-size:11px;color:#ccc;">
+      Try appending <b>?safemode=1</b> to the URL to wipe local storage.
+    </div>
+  </div>
+  <script>
+    (function(){
+      var log = [];
+      function show(){
+        var el = document.getElementById('boot-error');
+        var body = document.getElementById('boot-error-body');
+        if (!el || !body) return;
+        body.textContent = log.join('\n\n');
+        el.style.display = 'block';
+      }
+      window.addEventListener('error', function(e){
+        var msg = '[error] ' + (e.message || '(no message)');
+        if (e.filename) msg += '\n  at ' + e.filename + ':' + (e.lineno||'?') + ':' + (e.colno||'?');
+        if (e.error && e.error.stack) msg += '\n' + e.error.stack;
+        log.push(msg); show();
+      });
+      window.addEventListener('unhandledrejection', function(e){
+        var r = e.reason;
+        log.push('[promise-reject] ' + (r && r.message || r || '(no reason)'));
+        show();
+      });
+      // If globals never define within 5s, assume a script failed silently.
+      // The game files declare their modules as top-level `const` (not on
+      // `window`), so we probe them via new Function() with typeof, which
+      // works whether they're on window or in the global scope.
+      setTimeout(function(){
+        var missing = [];
+        ['GameAudio','LEVELS','Sprites','Maps','Dialogue','NPCs','Engine'].forEach(function(name){
+          try {
+            var t = (new Function('return typeof ' + name))();
+            if (t === 'undefined') missing.push(name);
+          } catch(e) { missing.push(name + ' (probe threw: ' + e.message + ')'); }
+        });
+        // Also verify the canvas is drawing something. If not, log it too.
+        var canvasStatus = '';
+        try {
+          var c = document.getElementById('game-canvas');
+          if (!c) canvasStatus = 'canvas element missing';
+          else if (!c.width || !c.height) canvasStatus = 'canvas has zero size: ' + c.width + 'x' + c.height;
+          else {
+            var cx = c.getContext('2d');
+            var img = cx.getImageData(0, 0, c.width, c.height);
+            var nb = 0;
+            for (var i = 0; i < img.data.length; i += 4) { if (img.data[i]||img.data[i+1]||img.data[i+2]) nb++; }
+            var pct = (nb / (c.width * c.height) * 100).toFixed(1);
+            if (pct === '0.0') canvasStatus = 'canvas is 100% black (' + c.width + 'x' + c.height + ')';
+          }
+        } catch(e) { canvasStatus = 'canvas probe threw: ' + e.message; }
+
+        if (missing.length){
+          log.push('[boot-timeout] These scripts never loaded: ' + missing.join(', ')
+            + '\nUA: ' + navigator.userAgent
+            + '\nURL: ' + location.href);
+          show();
+        } else if (canvasStatus) {
+          log.push('[render-failure] Scripts loaded but ' + canvasStatus
+            + '\nUA: ' + navigator.userAgent
+            + '\nURL: ' + location.href);
+          show();
+        }
+      }, 5000);
+    })();
+  </script>
+
   <div id="game-wrapper">
     <canvas id="game-canvas"></canvas>
     <!-- Mobile controls overlay -->
