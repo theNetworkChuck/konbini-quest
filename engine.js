@@ -1658,6 +1658,159 @@ const Engine = (() => {
     return locBanner.active;
   }
 
+  // ============ DAILY SPECIAL BANNER ============
+  // Kawaii "shelf tag" pop-up shown in the TOP-RIGHT corner when a limited-edition
+  // seasonal product appears in the store. Teaches badge vocabulary like 期間限定 / 春限定.
+  let dsBanner = {
+    active: false,
+    productJp: '',
+    productEn: '',
+    romaji: '',
+    badgeJp: '',
+    badgeEn: '',
+    priceJp: '',
+    color: '#ff6b9d',  // Default kawaii pink (overridden by store color)
+    timer: 0,
+    // Timing: slide-in 0.4s, hold 4.5s, slide-out 0.4s, linger 0.3s
+    duration: 5.6,
+  };
+
+  function showDailySpecialBanner(special, storeColor) {
+    if (!special) return;
+    dsBanner.active = true;
+    dsBanner.productJp = special.productJp || '';
+    dsBanner.productEn = special.productEn || '';
+    dsBanner.romaji = special.romaji || '';
+    dsBanner.badgeJp = special.badgeJp || '';
+    dsBanner.badgeEn = special.badgeEn || '';
+    dsBanner.priceJp = special.priceJp || '';
+    dsBanner.color = storeColor || '#ff6b9d';
+    dsBanner.timer = 0;
+  }
+
+  function updateDailySpecialBanner(dt) {
+    if (!dsBanner.active) return;
+    dsBanner.timer += dt;
+    if (dsBanner.timer >= dsBanner.duration) {
+      dsBanner.active = false;
+    }
+  }
+
+  function renderDailySpecialBanner() {
+    if (!dsBanner.active) return;
+    const t = dsBanner.timer;
+    const cw = CANVAS_W;
+
+    // Banner dimensions -- compact shelf-tag positioned top-right
+    const bw = 130;
+    const bh = 60;
+    const bx0 = cw - bw - 4; // 4px from right edge when fully in
+    const by = 62; // below the location banner (which sits at y=20, h=36)
+
+    // Timing phases (offset from x=off-screen right)
+    const slideInEnd = 0.4;
+    const holdEnd = 4.9; // 4.5s hold
+    const slideOutEnd = 5.3;
+
+    let offsetX = 0;
+    if (t < slideInEnd) {
+      // Slide in from right
+      const p = t / slideInEnd;
+      const ease = 1 - Math.pow(1 - p, 3);
+      offsetX = (bw + 8) * (1 - ease);
+    } else if (t < holdEnd) {
+      offsetX = 0;
+    } else if (t < slideOutEnd) {
+      const p = (t - holdEnd) / (slideOutEnd - holdEnd);
+      const ease = p * p * p;
+      offsetX = (bw + 8) * ease;
+    } else {
+      return;
+    }
+
+    const bx = bx0 + offsetX;
+
+    ctx.save();
+
+    // Soft drop shadow for pop-out feel
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.fillRect(bx + 2, by + 2, bw, bh);
+
+    // Main tag background -- creamy white, kawaii
+    ctx.fillStyle = '#fff8f0';
+    ctx.fillRect(bx, by, bw, bh);
+
+    // Colored top strip (store brand color)
+    ctx.fillStyle = dsBanner.color;
+    ctx.fillRect(bx, by, bw, 12);
+
+    // Colored border (2px accent)
+    ctx.fillStyle = dsBanner.color;
+    ctx.fillRect(bx, by, bw, 2);           // top
+    ctx.fillRect(bx, by + bh - 2, bw, 2);  // bottom
+    ctx.fillRect(bx, by, 2, bh);            // left
+    ctx.fillRect(bx + bw - 2, by, 2, bh);  // right
+
+    // Small decorative kawaii star on left of top strip
+    const starX = bx + 8;
+    const starY = by + 6;
+    ctx.fillStyle = '#ffe066';
+    ctx.fillRect(starX - 1, starY, 3, 1);
+    ctx.fillRect(starX, starY - 1, 1, 3);
+
+    // Badge text (期間限定 / 春限定 / 新発売) on top strip
+    ctx.font = '8px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#fff';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    if (dsBanner.badgeJp) {
+      ctx.fillText(dsBanner.badgeJp, bx + bw / 2 + 5, by + 6);
+    }
+
+    // Product Japanese name (main body, big)
+    ctx.font = '11px "M PLUS Rounded 1c"';
+    ctx.fillStyle = '#2a1a1a';
+    ctx.textAlign = 'center';
+    if (dsBanner.productJp) {
+      ctx.fillText(dsBanner.productJp, bx + bw / 2, by + 24);
+    }
+
+    // Product English name (subtitle)
+    ctx.font = '6px "Press Start 2P"';
+    ctx.fillStyle = dsBanner.color;
+    if (dsBanner.productEn) {
+      // Truncate very long English names
+      let en = dsBanner.productEn;
+      if (en.length > 20) en = en.slice(0, 18) + '..';
+      ctx.fillText(en, bx + bw / 2, by + 36);
+    }
+
+    // Price (bold, bottom-right of tag)
+    if (dsBanner.priceJp) {
+      ctx.font = '10px "M PLUS Rounded 1c"';
+      ctx.fillStyle = '#d43a5a';
+      ctx.textAlign = 'right';
+      ctx.fillText(dsBanner.priceJp, bx + bw - 6, by + 50);
+    }
+
+    // Badge English (bottom-left of tag, small)
+    if (dsBanner.badgeEn) {
+      ctx.font = '5px "Press Start 2P"';
+      ctx.fillStyle = '#888';
+      ctx.textAlign = 'left';
+      let en = dsBanner.badgeEn;
+      if (en.length > 14) en = en.slice(0, 12) + '..';
+      ctx.fillText(en, bx + 6, by + 51);
+    }
+
+    ctx.textAlign = 'left'; // reset
+    ctx.restore();
+  }
+
+  function isDailySpecialBannerActive() {
+    return dsBanner.active;
+  }
+
   // ============ TUTORIAL BUBBLE SYSTEM ============
   // Contextual help bubbles that appear at the moment of need
   let tutBubble = {
@@ -1848,6 +2001,8 @@ const Engine = (() => {
     showSaveIndicator, updateSaveIndicator, renderSaveIndicator,
     // Location banner
     showLocationBanner, updateLocationBanner, renderLocationBanner, isLocationBannerActive,
+    // Daily special banner (seasonal limited-edition products)
+    showDailySpecialBanner, updateDailySpecialBanner, renderDailySpecialBanner, isDailySpecialBannerActive,
     // Tutorial bubbles
     showTutorialBubble, dismissTutorialBubble, updateTutorialBubble, renderTutorialBubble, isTutorialBubbleActive,
   };

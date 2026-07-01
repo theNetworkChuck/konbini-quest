@@ -222,6 +222,7 @@
     Engine.updateParticles(dt);
     Engine.updateSaveIndicator(dt);
     Engine.updateLocationBanner(dt);
+    Engine.updateDailySpecialBanner(dt);
     Engine.updateTutorialBubble(dt);
     Dialogue.update(dt);
 
@@ -907,6 +908,23 @@
           // Show location name banner (Pokemon-style)
           const bannerColor = STORE_COLORS[targetMap.store] || '#888';
           Engine.showLocationBanner(targetMap.nameJp, targetMap.name, bannerColor);
+
+          // Improvement #40: Roll for a daily-special limited-edition banner.
+          // Slides in from the top-right ~3.5s after the location banner so
+          // the two don't visually overlap.
+          try {
+            if (NPCs.shouldTriggerDailySpecial && NPCs.shouldTriggerDailySpecial()) {
+              const special = NPCs.pickDailySpecial();
+              if (special) {
+                setTimeout(() => {
+                  try {
+                    Engine.showDailySpecialBanner(special, bannerColor);
+                    NPCs.markDailySpecialShown(special.id);
+                  } catch (e) { /* ignore */ }
+                }, 3500);
+              }
+            }
+          } catch (e) { /* daily special is optional -- swallow errors */ }
 
           // Helper to run the actual clerk greeting (extracted so we can chain
           // it after the optional customer queue overlay).
@@ -4728,6 +4746,7 @@
 
     // Location name banner (above scene, below door/fade)
     Engine.renderLocationBanner();
+    Engine.renderDailySpecialBanner();
 
     // Sliding door animation overlay (above scene, below fade)
     Engine.renderDoorAnimation();
@@ -4973,6 +4992,23 @@
       onDismiss: () => { console.log('greeting response dismissed'); },
     };
     return state.greetingResponse;
+  };
+
+  // Testing hook: force a daily-special banner (Improvement #40)
+  window.forceDailySpecial = (opts) => {
+    opts = opts || {};
+    let special;
+    if (opts.id) {
+      // Look up a specific special by id
+      special = (NPCs.DAILY_SPECIALS || []).find(s => s.id === opts.id);
+    }
+    if (!special) {
+      try { special = NPCs.pickDailySpecial(); } catch (e) { console.warn(e); return; }
+    }
+    if (!special) return;
+    Engine.showDailySpecialBanner(special, opts.storeColor || '#ff6b9d');
+    NPCs.markDailySpecialShown(special.id);
+    return special;
   };
 
   // Testing hook: set combo for visual testing

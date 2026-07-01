@@ -4316,6 +4316,230 @@ const NPCs = (() => {
     };
   }
 
+  // ============ IMPROVEMENT #40: DAILY SPECIAL ITEMS ============
+  // Real konbini rotate their limited-edition products every few weeks by
+  // season and by day-of-week. Signage uses very specific vocabulary that
+  // learners rarely see in textbooks: 期間限定 (kikan gentei, "limited time"),
+  // 季節限定 (kisetsu gentei, "seasonal"), 新発売 (shin hatsubai, "new release"),
+  // 新商品 (shin shouhin, "new product"), and season-prefixed variants like
+  // 春限定 / 夏限定 / 秋限定 / 冬限定. Learning these badge words is essential
+  // because they signal "buy it now, it won't be here next month."
+  //
+  // Each special includes: emoji-like icon description for the sprite,
+  // Japanese product name, English translation, romaji reading, badge type
+  // (kikan / kisetsu / shin), a cultural/food tip, and the seasons/months
+  // when it should be active (empty months array = always available).
+  const DAILY_SPECIALS = [
+    // ---- SPRING (March-May) ----
+    {
+      id: 'sakura_mochi',
+      season: 'spring',
+      months: [3, 4, 5],
+      productJp: '桜餅',
+      productEn: 'Sakura Mochi',
+      romaji: 'sakura mochi',
+      badgeJp: '春限定',
+      badgeEn: 'SPRING ONLY',
+      badgeRomaji: 'haru gentei',
+      priceJp: '¥198',
+      icon: 'pink_mochi',
+      tip: '桜餅 is a pink rice cake wrapped in a salted cherry leaf. The leaf IS meant to be eaten (unlike the bamboo leaf on chimaki). Appears mid-March through May and disappears when hanami season ends.',
+      vocab: '春限定 (haru gentei) = spring-only. The 限定 suffix on ANY konbini item means "if you want this, buy it now."',
+    },
+    {
+      id: 'ichigo_daifuku',
+      season: 'spring',
+      months: [3, 4],
+      productJp: 'いちご大福',
+      productEn: 'Strawberry Daifuku',
+      romaji: 'ichigo daifuku',
+      badgeJp: '新発売',
+      badgeEn: 'NEW RELEASE',
+      badgeRomaji: 'shin hatsubai',
+      priceJp: '¥248',
+      icon: 'red_daifuku',
+      tip: 'いちご大福 is a whole strawberry wrapped in sweet red bean paste (あんこ) inside a rice mochi shell. Peak strawberry season in Japan is March-April.',
+      vocab: '新発売 (shin hatsubai) = newly released. Different from 新商品 (shin shouhin, "new product") -- 新発売 specifically means the launch date is very recent.',
+    },
+    // ---- SUMMER (June-August) ----
+    {
+      id: 'ramune_soda',
+      season: 'summer',
+      months: [6, 7, 8],
+      productJp: 'ラムネ',
+      productEn: 'Ramune Soda',
+      romaji: 'ramune',
+      badgeJp: '夏限定',
+      badgeEn: 'SUMMER ONLY',
+      badgeRomaji: 'natsu gentei',
+      priceJp: '¥150',
+      icon: 'blue_bottle',
+      tip: 'ラムネ is the iconic blue Codd-neck bottle soda with a glass marble stopper. To open: press the plastic plunger down HARD to push the marble into the neck chamber. The marble makes a rattling sound as you drink.',
+      vocab: '夏限定 (natsu gentei) = summer-only. Also watch for 冷やし中 (hiyashi-chuu, "being chilled") tags on cold drinks in summer -- staff physically move them to the coldest fridge zone.',
+    },
+    {
+      id: 'shaved_ice',
+      season: 'summer',
+      months: [7, 8],
+      productJp: 'かき氷カップ',
+      productEn: 'Shaved Ice Cup',
+      romaji: 'kakigoori kappu',
+      badgeJp: '期間限定',
+      badgeEn: 'LIMITED TIME',
+      badgeRomaji: 'kikan gentei',
+      priceJp: '¥178',
+      icon: 'ice_cup',
+      tip: 'かき氷 (kakigoori) at konbini comes in a cup with a plastic dome lid, usually strawberry, matcha, or Blue Hawaii flavor. Ask the clerk for a spoon: スプーンをお願いします.',
+      vocab: '期間限定 (kikan gentei) = limited time only. The most common badge -- means "we\'ll pull this off the shelf in a few weeks regardless of season."',
+    },
+    // ---- AUTUMN (September-November) ----
+    {
+      id: 'kabocha_montblanc',
+      season: 'autumn',
+      months: [9, 10, 11],
+      productJp: 'かぼちゃモンブラン',
+      productEn: 'Kabocha Mont Blanc',
+      romaji: 'kabocha montoburan',
+      badgeJp: '秋限定',
+      badgeEn: 'AUTUMN ONLY',
+      badgeRomaji: 'aki gentei',
+      priceJp: '¥298',
+      icon: 'orange_cake',
+      tip: 'かぼちゃ (kabocha) is Japanese pumpkin -- sweeter and denser than American pumpkin. Autumn konbini go all-in on kabocha desserts: mont blanc, pudding, muffins, cream buns. Peak season Oct-Nov.',
+      vocab: '秋限定 (aki gentei) = autumn-only. Autumn is konbini\'s biggest "limited-edition sweets" season -- more 限定 badges than any other quarter.',
+    },
+    {
+      id: 'sweet_potato',
+      season: 'autumn',
+      months: [9, 10, 11],
+      productJp: '焼き芋',
+      productEn: 'Baked Sweet Potato',
+      romaji: 'yaki-imo',
+      badgeJp: '季節限定',
+      badgeEn: 'SEASONAL',
+      badgeRomaji: 'kisetsu gentei',
+      priceJp: '¥248',
+      icon: 'purple_potato',
+      tip: '焼き芋 (yaki-imo) is a whole roasted Japanese sweet potato, sold hot in foil at the register counter next to the oden pot. Ask: 焼き芋一つ下さい (yaki-imo hitotsu kudasai).',
+      vocab: '季節限定 (kisetsu gentei) = seasonal-only. Slightly warmer/more nostalgic than 秋限定 -- often used for foods with cultural memory attached.',
+    },
+    // ---- WINTER (December-February) ----
+    {
+      id: 'oden_hot',
+      season: 'winter',
+      months: [11, 12, 1, 2],
+      productJp: 'おでん',
+      productEn: 'Oden Hot Pot',
+      romaji: 'oden',
+      badgeJp: '冬限定',
+      badgeEn: 'WINTER ONLY',
+      badgeRomaji: 'fuyu gentei',
+      priceJp: '¥100/個',
+      icon: 'brown_pot',
+      tip: 'おでん lives in a segmented stainless-steel pot at the register. Point to what you want and the clerk uses tongs. Common picks: 大根 (daikon), こんにゃく (konnyaku), たまご (tamago, boiled egg), ちくわ (chikuwa).',
+      vocab: '冬限定 (fuyu gentei) = winter-only. Oden appears around Nov 1 and vanishes by early March. The 個 (ko) counter is how you order individual pieces: 一個/二個 (ikko / niko).',
+    },
+    {
+      id: 'nikuman_pork',
+      season: 'winter',
+      months: [11, 12, 1, 2, 3],
+      productJp: '肉まん',
+      productEn: 'Steamed Pork Bun',
+      romaji: 'nikuman',
+      badgeJp: '期間限定',
+      badgeEn: 'LIMITED TIME',
+      badgeRomaji: 'kikan gentei',
+      priceJp: '¥150',
+      icon: 'white_bun',
+      tip: '肉まん is a steamed pork bun sold from the heated glass case near the register. Ask: 肉まん一つお願いします. The clerk grabs one with tongs, wraps it in paper, and hands it over hot.',
+      vocab: 'Companion words on the same case: あんまん (anman, sweet red bean bun), ピザまん (pizza-man), カレーまん (curry-man). All まん buns follow the same order pattern.',
+    },
+    // ---- FALLBACK / ALWAYS-ON (no month restriction) ----
+    {
+      id: 'onigiri_new_flavor',
+      season: 'any',
+      months: [],
+      productJp: '新味・ツナマヨおにぎり',
+      productEn: 'New Flavor: Tuna-Mayo Onigiri',
+      romaji: 'shin-mi tsuna-mayo onigiri',
+      badgeJp: '新商品',
+      badgeEn: 'NEW PRODUCT',
+      badgeRomaji: 'shin shouhin',
+      priceJp: '¥138',
+      icon: 'triangle_rice',
+      tip: 'ツナマヨ (tsuna-mayo) is the #1 selling onigiri filling in Japan. 新味 (shin-mi, "new flavor") badges appear on shelf tags when a new variant of an existing product line drops -- different from 新発売 (new release, an entirely new SKU).',
+      vocab: '新商品 (shin shouhin) = new product. Watch for 新味 (shin-mi, new flavor) and 限定味 (gentei-mi, limited flavor) as sub-variants of 新商品.',
+    },
+  ];
+
+  const dailySpecialsState = {
+    lastShownId: null,
+    seenIds: [],
+    lastTriggerTime: 0,
+  };
+
+  function getCurrentSeasonMonth() {
+    const now = new Date();
+    return now.getMonth() + 1; // 1-12
+  }
+
+  function seasonForMonth(m) {
+    if (m >= 3 && m <= 5) return 'spring';
+    if (m >= 6 && m <= 8) return 'summer';
+    if (m >= 9 && m <= 11) return 'autumn';
+    return 'winter';
+  }
+
+  // Return a special appropriate for the current real-world month.
+  // Prefers unseen specials, then falls back to any in-season one, then
+  // finally to a random always-on special.
+  function pickDailySpecial() {
+    const month = getCurrentSeasonMonth();
+    const inSeason = DAILY_SPECIALS.filter(s => s.months && s.months.length > 0 && s.months.includes(month));
+    const anytime = DAILY_SPECIALS.filter(s => !s.months || s.months.length === 0);
+
+    // Prefer unseen in-season specials
+    const unseenInSeason = inSeason.filter(s => !dailySpecialsState.seenIds.includes(s.id));
+    if (unseenInSeason.length > 0) {
+      return unseenInSeason[Math.floor(Math.random() * unseenInSeason.length)];
+    }
+    // Then any in-season
+    if (inSeason.length > 0) {
+      return inSeason[Math.floor(Math.random() * inSeason.length)];
+    }
+    // Fallback to always-on new products
+    if (anytime.length > 0) {
+      return anytime[Math.floor(Math.random() * anytime.length)];
+    }
+    return null;
+  }
+
+  function shouldTriggerDailySpecial() {
+    // Don't fire in tutorial; needs at least 1 completed level
+    if (completedLevelsCount < 1) return false;
+    // 60% chance on store entry (independent of queue and greeting overlays --
+    // this is a passive read-only banner, not an interactive quiz, so it can
+    // coexist with them; we just delay it until after those finish)
+    return Math.random() < 0.60;
+  }
+
+  function markDailySpecialShown(id) {
+    dailySpecialsState.lastShownId = id;
+    dailySpecialsState.lastTriggerTime = Date.now();
+    if (id && !dailySpecialsState.seenIds.includes(id)) {
+      dailySpecialsState.seenIds.push(id);
+    }
+  }
+
+  function getDailySpecialStats() {
+    return {
+      seenCount: dailySpecialsState.seenIds.length,
+      total: DAILY_SPECIALS.length,
+      currentSeason: seasonForMonth(getCurrentSeasonMonth()),
+      currentMonth: getCurrentSeasonMonth(),
+    };
+  }
+
   // ============ SAVE / LOAD SYSTEM ============
   // Persist all game progress to browser storage so nothing is lost on page reload
   const SAVE_KEY = 'konbiniquest_save_v1';
@@ -4528,6 +4752,11 @@ const NPCs = (() => {
         totalAttempts: greetingResponseState.totalAttempts,
         scenariosShown: [...greetingResponseState.scenariosShown],
       },
+      // Daily special items (seasonal limited-edition products)
+      dailySpecialsState: {
+        seenIds: [...dailySpecialsState.seenIds],
+        lastShownId: dailySpecialsState.lastShownId,
+      },
     };
   }
 
@@ -4684,6 +4913,11 @@ const NPCs = (() => {
         greetingResponseState.correctAnswers = data.greetingResponseState.correctAnswers || 0;
         greetingResponseState.totalAttempts = data.greetingResponseState.totalAttempts || 0;
         greetingResponseState.scenariosShown = data.greetingResponseState.scenariosShown || [];
+      }
+      // Daily special items
+      if (data.dailySpecialsState) {
+        dailySpecialsState.seenIds = data.dailySpecialsState.seenIds || [];
+        dailySpecialsState.lastShownId = data.dailySpecialsState.lastShownId || null;
       }
       return true;
     } catch (e) {
@@ -5048,6 +5282,14 @@ const NPCs = (() => {
     buildGreetingResponse,
     recordGreetingResponseResult,
     getGreetingResponseStats,
+    // Daily special items (seasonal limited-edition products)
+    DAILY_SPECIALS,
+    shouldTriggerDailySpecial,
+    pickDailySpecial,
+    markDailySpecialShown,
+    getDailySpecialStats,
+    getCurrentSeasonMonth,
+    seasonForMonth,
     // Progress dashboard
     getProgressDashboard,
     // Ambient speech bubbles
