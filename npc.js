@@ -5155,6 +5155,65 @@ const NPCs = (() => {
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  // ============ WEEKDAY vs WEEKEND AMBIENT LINES (Improvement #43) ============
+  // Third context axis for ambient street chatter. Weekday (Mon-Fri) bubbles
+  // lean into the working-life vocabulary a learner hears in Japan: 出勤 /
+  // 打ち合わせ / 残業 / 定時 etc. Weekend (Sat/Sun) bubbles lean into leisure:
+  // 遊ぶ / お出かけ / のんびり / 家族と etc. Every phrase is one a learner
+  // will genuinely overhear on that kind of day. Uses JS Date().getDay():
+  // 0=Sun, 1=Mon ... 6=Sat -- weekend = 0 or 6, weekday = 1-5.
+  const DAY_TYPE_LINES = {
+    weekday: [
+      { jp: '会社行きたくない', en: 'I do not want to go to work', romaji: 'kaisha ikitakunai' },
+      { jp: '打ち合わせ間に合うかな', en: 'I hope I make the meeting', romaji: 'uchiawase maniau kana' },
+      { jp: 'ランチ何にしよう', en: 'What should I have for lunch', romaji: 'ranchi nani ni shiyou' },
+      { jp: '今日も残業かも', en: 'Might be overtime again today', romaji: 'kyou mo zangyou kamo' },
+      { jp: '定時で帰りたい', en: 'I want to leave on time', romaji: 'teiji de kaeritai' },
+      { jp: '出勤前にコーヒー', en: 'Coffee before work', romaji: 'shukkin mae ni koohii' },
+      { jp: '週末が待ち遠しい', en: 'I cannot wait for the weekend', romaji: 'shuumatsu ga machidooshii' },
+      { jp: '眠い...月曜日きつい', en: 'Sleepy... Mondays are rough', romaji: 'nemui... getsuyoubi kitsui' },
+      { jp: '電車混んでる', en: 'The train is packed', romaji: 'densha konderu' },
+      { jp: 'あと少しで金曜日', en: 'Almost Friday', romaji: 'ato sukoshi de kinyoubi' },
+    ],
+    weekend: [
+      { jp: '今日はゆっくりしよう', en: 'Today I will take it easy', romaji: 'kyou wa yukkuri shiyou' },
+      { jp: 'どこ遊びに行こうかな', en: 'Where should I go hang out', romaji: 'doko asobi ni ikou kana' },
+      { jp: '家族とお出かけ', en: 'Going out with family', romaji: 'kazoku to odekake' },
+      { jp: '朝寝坊しちゃった', en: 'I slept in this morning', romaji: 'asa nebou shichatta' },
+      { jp: '週末最高！', en: 'Weekends are the best!', romaji: 'shuumatsu saikou!' },
+      { jp: '洗濯溜まってる〜', en: 'The laundry is piling up~', romaji: 'sentaku tamatteru~' },
+      { jp: '午後から友達と会う', en: 'Meeting a friend this afternoon', romaji: 'gogo kara tomodachi to au' },
+      { jp: 'のんびりできる日', en: 'A day I can relax', romaji: 'nonbiri dekiru hi' },
+      { jp: 'ブランチしよう', en: 'Let us have brunch', romaji: 'buranchi shiyou' },
+      { jp: '明日も休みだ〜', en: 'Tomorrow is a day off too~', romaji: 'ashita mo yasumi da~' },
+    ],
+  };
+
+  // Test-hook override; values: 'weekday' | 'weekend' | null (use real clock)
+  let _dayTypeOverride = null;
+
+  function setDayTypeOverride(bucket) {
+    if (bucket === null || bucket === undefined) { _dayTypeOverride = null; return; }
+    if (['weekday', 'weekend'].indexOf(bucket) === -1) return;
+    _dayTypeOverride = bucket;
+  }
+
+  function getDayTypeBucket() {
+    if (_dayTypeOverride) return _dayTypeOverride;
+    let d;
+    try { d = new Date().getDay(); } catch (e) { d = 3; }
+    return (d === 0 || d === 6) ? 'weekend' : 'weekday';
+  }
+
+  function pickDayTypeLine() {
+    const bucket = getDayTypeBucket();
+    const pool = DAY_TYPE_LINES[bucket];
+    if (!pool || pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  const DAY_TYPE_BUBBLE_CHANCE = 0.25;
+
   function updateAmbientBubbles(dt) {
     const streetNPCs = getNPCsOnMap(0);
     for (let i = 0; i < streetNPCs.length; i++) {
@@ -5191,6 +5250,7 @@ const NPCs = (() => {
           const isCoach = typeof npc.type === 'string' && /coach|sensei|guide/i.test(npc.type);
           const timeOfDayChance = isCoach ? TIME_OF_DAY_BUBBLE_CHANCE * 0.5 : TIME_OF_DAY_BUBBLE_CHANCE;
           const weatherChance = isCoach ? WEATHER_BUBBLE_CHANCE * 0.5 : WEATHER_BUBBLE_CHANCE;
+          const dayTypeChance = isCoach ? DAY_TYPE_BUBBLE_CHANCE * 0.5 : DAY_TYPE_BUBBLE_CHANCE;
 
           let picked = null;
           if (Math.random() < timeOfDayChance) {
@@ -5202,6 +5262,10 @@ const NPCs = (() => {
             let wt = null;
             try { wt = (typeof Engine !== 'undefined' && Engine.getWeatherType) ? Engine.getWeatherType() : null; } catch (e) { wt = null; }
             picked = pickWeatherLine(wt);
+          }
+          // Improvement #43: weekday vs weekend flavor as the 3rd context axis.
+          if (!picked && Math.random() < dayTypeChance) {
+            picked = pickDayTypeLine();
           }
           if (!picked) {
             const phrases = AMBIENT_PHRASES[npc.type];
@@ -5471,6 +5535,11 @@ const NPCs = (() => {
     // Weather-linked ambient lines (Improvement #42)
     WEATHER_LINES,
     pickWeatherLine,
+    // Weekday vs weekend ambient lines (Improvement #43)
+    DAY_TYPE_LINES,
+    getDayTypeBucket,
+    pickDayTypeLine,
+    setDayTypeOverride,
     getAmbientBubble,
     // Save / Load system
     saveGame,

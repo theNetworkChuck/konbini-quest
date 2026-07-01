@@ -5008,6 +5008,13 @@
     return NPCs.getTimeOfDayBucket();
   };
 
+  // Testing hook: force weekday vs weekend (Improvement #43)
+  // Usage: window.forceDayType('weekday' | 'weekend' | null)
+  window.forceDayType = (bucket) => {
+    NPCs.setDayTypeOverride(bucket || null);
+    return NPCs.getDayTypeBucket();
+  };
+
   // Testing hook: force a daily-special banner (Improvement #40)
   window.forceDailySpecial = (opts) => {
     opts = opts || {};
