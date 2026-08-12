@@ -5066,6 +5066,13 @@
     return NPCs.getDayTypeBucket();
   };
 
+  // Testing hook: force payday bucket (Improvement #44)
+  // Usage: window.forcePaydayBucket('payday_week' | 'regular' | 'broke' | null)
+  window.forcePaydayBucket = (bucket) => {
+    NPCs.setPaydayOverride(bucket || null);
+    return NPCs.getPaydayBucket();
+  };
+
   // Testing hook: force a daily-special banner (Improvement #40)
   window.forceDailySpecial = (opts) => {
     opts = opts || {};

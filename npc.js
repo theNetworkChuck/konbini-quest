@@ -5214,6 +5214,75 @@ const NPCs = (() => {
 
   const DAY_TYPE_BUBBLE_CHANCE = 0.25;
 
+  // ============ PAYDAY / MONTH-END AMBIENT LINES (Improvement #44) ============
+  // Fourth context axis. In Japan the 25th of the month is the traditional
+  // salaryman payday (給料日), and month-end (28-31 or the day before payday
+  // if the 25th falls on a weekend) is when people are most broke. This is
+  // core cultural literacy that never appears in JLPT prep. Three buckets:
+  //   - payday_week: 25th through end-of-month -- flush, spending money
+  //   - regular: 5th through 24th -- normal middle-of-month vibe
+  //   - broke: 1st through 4th -- "waiting for payday", counting yen
+  // NOTE: this is intentionally approximate. Real payday differs by employer
+  // (25th is the most common, but some companies use 15th, 20th, or
+  // end-of-month). We're teaching the salaryman-common flavor.
+  const PAYDAY_LINES = {
+    payday_week: [
+      { jp: '給料日だ！', en: 'Payday!', romaji: 'kyuuryoubi da!' },
+      { jp: '今日は少し贅沢しよう', en: 'Let me splurge a little today', romaji: 'kyou wa sukoshi zeitaku shiyou' },
+      { jp: 'ボーナス入った', en: 'The bonus came in', romaji: 'boonasu haitta' },
+      { jp: 'ここのプリンも買おうかな', en: 'Maybe I will grab a pudding too', romaji: 'koko no purin mo kaou kana' },
+      { jp: '今週はちょっといいビールにしよう', en: 'Going with the slightly nicer beer this week', romaji: 'konshuu wa chotto ii biiru ni shiyou' },
+      { jp: 'お金あると心に余裕がでる', en: 'Having money gives you peace of mind', romaji: 'okane aru to kokoro ni yoyuu ga deru' },
+      { jp: '今月よく頑張った', en: 'I worked hard this month', romaji: 'kongetsu yoku ganbatta' },
+      { jp: 'デザート二つもらっちゃおう', en: 'I will grab two desserts', romaji: 'dezaato futatsu moracchaou' },
+    ],
+    regular: [
+      { jp: '普通にコーヒーだけ', en: 'Just a regular coffee', romaji: 'futsuu ni koohii dake' },
+      { jp: 'ちょうど中間くらい', en: 'About the middle of the month', romaji: 'choudo chuukan kurai' },
+      { jp: 'この値段ならいいか', en: 'This price is OK', romaji: 'kono nedan nara ii ka' },
+      { jp: '弁当にしとこう', en: 'Bento for me today', romaji: 'bentou ni shitokou' },
+      { jp: 'まだ余裕ある', en: 'Still got room in the wallet', romaji: 'mada yoyuu aru' },
+      { jp: 'もうすぐ給料日', en: 'Payday soon', romaji: 'mou sugu kyuuryoubi' },
+    ],
+    broke: [
+      { jp: '給料日まであと少し', en: 'A little longer till payday', romaji: 'kyuuryoubi made ato sukoshi' },
+      { jp: '今月ピンチ', en: 'Tight this month', romaji: 'kongetsu pinchi' },
+      { jp: 'お金ない…', en: 'No money...', romaji: 'okane nai...' },
+      { jp: '一番安いのでいいや', en: 'The cheapest one will do', romaji: 'ichiban yasui no de ii ya' },
+      { jp: 'おにぎり一つだけ', en: 'Just one rice ball', romaji: 'onigiri hitotsu dake' },
+      { jp: '財布寒い…', en: 'My wallet is freezing...', romaji: 'saifu samui...' },
+      { jp: 'PayPayで払おう', en: 'I will pay with PayPay', romaji: 'PayPay de haraou' },
+      { jp: 'もう一週間の辛抱', en: 'One more week of hanging on', romaji: 'mou isshuukan no shinbou' },
+    ],
+  };
+
+  // Test-hook override; values: 'payday_week' | 'regular' | 'broke' | null
+  let _paydayOverride = null;
+
+  function setPaydayOverride(bucket) {
+    if (bucket === null || bucket === undefined) { _paydayOverride = null; return; }
+    if (['payday_week', 'regular', 'broke'].indexOf(bucket) === -1) return;
+    _paydayOverride = bucket;
+  }
+
+  function getPaydayBucket() {
+    if (_paydayOverride) return _paydayOverride;
+    let d;
+    try { d = new Date().getDate(); } catch (e) { d = 15; }
+    if (d >= 25) return 'payday_week';
+    if (d <= 4) return 'broke';
+    return 'regular';
+  }
+
+  function pickPaydayLine() {
+    const bucket = getPaydayBucket();
+    const pool = PAYDAY_LINES[bucket];
+    if (!pool || pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  const PAYDAY_BUBBLE_CHANCE = 0.20;
+
   function updateAmbientBubbles(dt) {
     const streetNPCs = getNPCsOnMap(0);
     for (let i = 0; i < streetNPCs.length; i++) {
@@ -5266,6 +5335,11 @@ const NPCs = (() => {
           // Improvement #43: weekday vs weekend flavor as the 3rd context axis.
           if (!picked && Math.random() < dayTypeChance) {
             picked = pickDayTypeLine();
+          }
+          // Improvement #44: payday / month-end flavor as the 4th context axis.
+          const paydayChance = isCoach ? PAYDAY_BUBBLE_CHANCE * 0.5 : PAYDAY_BUBBLE_CHANCE;
+          if (!picked && Math.random() < paydayChance) {
+            picked = pickPaydayLine();
           }
           if (!picked) {
             const phrases = AMBIENT_PHRASES[npc.type];
@@ -5540,6 +5614,11 @@ const NPCs = (() => {
     getDayTypeBucket,
     pickDayTypeLine,
     setDayTypeOverride,
+    // Payday / month-end ambient lines (Improvement #44)
+    PAYDAY_LINES,
+    getPaydayBucket,
+    pickPaydayLine,
+    setPaydayOverride,
     getAmbientBubble,
     // Save / Load system
     saveGame,
